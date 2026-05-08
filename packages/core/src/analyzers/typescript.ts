@@ -3,11 +3,13 @@ import * as TypeScript from 'tree-sitter-typescript';
 import type { FunctionResult, MetricBreakdown } from '../types';
 
 const parser = new Parser();
+parser.setLanguage(TypeScript.typescript);
 
 const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement',
   'for_statement',
   'for_in_statement',
+  'for_of_statement',
   'while_statement',
   'do_statement',
   'ternary_expression',
@@ -19,6 +21,7 @@ const NESTING_NODE_TYPES = new Set([
   'if_statement',
   'for_statement',
   'for_in_statement',
+  'for_of_statement',
   'while_statement',
   'do_statement',
   'switch_statement',
@@ -67,8 +70,14 @@ function getFunctionName(node: Parser.SyntaxNode): string {
     return node.childForFieldName('name')?.text ?? '<anonymous>';
   }
   const parent = node.parent;
+  // const foo = () => {}
   if (parent?.type === 'variable_declarator') {
     return parent.childForFieldName('name')?.text ?? '<anonymous>';
+  }
+  // export const foo = () => {}  (parent is lexical_declaration)
+  if (parent?.type === 'lexical_declaration') {
+    const declarator = parent.children.find(c => c.type === 'variable_declarator');
+    return declarator?.childForFieldName('name')?.text ?? '<anonymous>';
   }
   return '<anonymous>';
 }
@@ -85,7 +94,6 @@ export function analyzeTypeScript(code: string): {
   metrics: MetricBreakdown;
   smells: never[];
 } {
-  parser.setLanguage(TypeScript.typescript);
   const tree = parser.parse(code);
   const functions: FunctionResult[] = [];
 
@@ -118,7 +126,7 @@ function buildMetrics(functions: FunctionResult[], totalLines: number): MetricBr
   if (functions.length === 0) {
     return {
       cyclomaticComplexity: 1,
-      cognitiveComplexity: 1,
+      cognitiveComplexity: 0, // not computed; placeholder
       maxNestingDepth: 0,
       avgFunctionLength: 0,
       maxFunctionLength: 0,
@@ -131,7 +139,7 @@ function buildMetrics(functions: FunctionResult[], totalLines: number): MetricBr
 
   return {
     cyclomaticComplexity: Math.max(...functions.map(f => f.cyclomaticComplexity)),
-    cognitiveComplexity: Math.max(...functions.map(f => f.cyclomaticComplexity)),
+    cognitiveComplexity: 0, // not computed; placeholder
     maxNestingDepth: Math.max(...functions.map(f => f.nestingDepth)),
     avgFunctionLength: Math.round(
       functions.reduce((s, f) => s + f.length, 0) / functions.length,

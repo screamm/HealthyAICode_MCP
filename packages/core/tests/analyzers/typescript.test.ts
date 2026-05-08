@@ -73,6 +73,13 @@ describe('analyzeTypeScript — function detection', () => {
     expect(functions).toHaveLength(1);
   });
 
+  it('exported const arrow function has its variable name', () => {
+    const code = `export const multiply = (a: number, b: number): number => a * b;`;
+    const { functions } = analyzeTypeScript(code);
+    expect(functions).toHaveLength(1);
+    expect(functions[0].name).toBe('multiply');
+  });
+
   it('detects two functions in same file', () => {
     const { functions } = analyzeTypeScript(TWO_FUNCTIONS);
     expect(functions).toHaveLength(2);
