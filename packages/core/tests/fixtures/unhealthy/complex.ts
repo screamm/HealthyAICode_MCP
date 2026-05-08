@@ -1,0 +1,119 @@
+/**
+ * Unhealthy fixture — expected score: < 6.0 (multiple smells)
+ *
+ * Contains:
+ * - ComplexMethod (cyclomaticComplexity > 10)
+ * - DeepNesting (nestingDepth > 4)
+ * - LongParameterList (parameterCount > 5)
+ * - LargeMethod (length > 30)
+ * - BumpyRoad (3+ functions with deep nesting)
+ */
+
+export function processData(
+  items: number[],
+  config: object,
+  options: object,
+  callback: Function,
+  mode: string,
+  extra: boolean,
+): string {
+  if (items.length > 0) {
+    for (const item of items) {
+      if (item > 0) {
+        while (item > 1) {
+          if (item % 2 === 0) {
+            if (mode === 'fast') {
+              return 'fast-path';
+            } else if (mode === 'slow') {
+              return 'slow-path';
+            } else if (mode === 'normal') {
+              return 'normal-path';
+            }
+          } else {
+            if (extra) {
+              return 'extra-odd';
+            }
+          }
+        }
+      } else if (item < -10) {
+        return 'negative';
+      } else if (item === 0) {
+        return 'zero';
+      }
+    }
+  } else if (extra) {
+    return 'extra';
+  } else {
+    return 'empty';
+  }
+  return 'default';
+}
+
+export function validateInput(
+  value: unknown,
+  type: string,
+  required: boolean,
+  min: number,
+  max: number,
+  pattern: string,
+): boolean {
+  if (required) {
+    if (value === null || value === undefined) {
+      return false;
+    }
+  }
+  if (type === 'number') {
+    if (typeof value === 'number') {
+      if (value < min) {
+        return false;
+      } else if (value > max) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else if (type === 'string') {
+    if (typeof value === 'string') {
+      if (pattern) {
+        if (!new RegExp(pattern).test(value)) {
+          return false;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function parseConfig(
+  raw: string,
+  strict: boolean,
+  fallback: object,
+  schema: object,
+  version: number,
+  debug: boolean,
+): object {
+  if (raw && raw.length > 0) {
+    try {
+      if (strict) {
+        if (version >= 2) {
+          if (debug) {
+            console.log('Parsing in strict v2 mode');
+          }
+          return JSON.parse(raw);
+        } else {
+          return JSON.parse(raw);
+        }
+      } else {
+        return JSON.parse(raw);
+      }
+    } catch {
+      if (strict) {
+        throw new Error('Parse failed in strict mode');
+      }
+      return fallback;
+    }
+  }
+  return fallback;
+}
