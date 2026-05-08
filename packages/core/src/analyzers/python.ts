@@ -5,7 +5,7 @@ import type { FunctionResult, MetricBreakdown } from '../types';
 const parser = new Parser();
 parser.setLanguage(Python as unknown as Parser.Language);
 
-const PY_CYCLOMATIC_NODES = new Set([
+const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement',
   'elif_clause',
   'for_statement',
@@ -15,7 +15,7 @@ const PY_CYCLOMATIC_NODES = new Set([
   'boolean_operator',
 ]);
 
-const PY_NESTING_NODES = new Set([
+const NESTING_NODE_TYPES = new Set([
   'if_statement',
   'for_statement',
   'while_statement',
@@ -26,6 +26,7 @@ const PY_NESTING_NODES = new Set([
 export function analyzePython(code: string): {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
+  smells: never[];
 } {
   const tree = parser.parse(code);
   const functions: FunctionResult[] = [];
@@ -37,16 +38,22 @@ export function analyzePython(code: string): {
       const endLine = node.endPosition.row + 1;
       const params = node.childForFieldName('parameters');
       const paramCount = params
-        ? params.namedChildren.filter(c =>
-            [
-              'identifier',
-              'typed_parameter',
-              'default_parameter',
-              'typed_default_parameter',
-              'list_splat_pattern',
-              'dictionary_splat_pattern',
-            ].includes(c.type)
-          ).length
+        ? params.namedChildren.filter(c => {
+            if (
+              ![
+                'identifier',
+                'typed_parameter',
+                'default_parameter',
+                'typed_default_parameter',
+                'list_splat_pattern',
+                'dictionary_splat_pattern',
+              ].includes(c.type)
+            )
+              return false;
+            if (c.type === 'identifier' && (c.text === 'self' || c.text === 'cls'))
+              return false;
+            return true;
+          }).length
         : 0;
 
       functions.push({
@@ -64,15 +71,15 @@ export function analyzePython(code: string): {
 
   visitNode(tree.rootNode);
 
-  const totalLines = code.length === 0 ? 0 : code.split('\n').length;
+  const totalLines = code === '' ? 0 : code.split('\n').length;
   const metrics = buildMetrics(functions, totalLines);
-  return { functions, metrics };
+  return { functions, metrics, smells: [] };
 }
 
 function calculatePyCyclomatic(node: Parser.SyntaxNode): number {
   let cc = 1;
   function traverse(n: Parser.SyntaxNode): void {
-    if (PY_CYCLOMATIC_NODES.has(n.type)) cc++;
+    if (CYCLOMATIC_NODE_TYPES.has(n.type)) cc++;
     for (const child of n.children) traverse(child);
   }
   traverse(node);
@@ -82,7 +89,7 @@ function calculatePyCyclomatic(node: Parser.SyntaxNode): number {
 function calculatePyNesting(node: Parser.SyntaxNode): number {
   let maxDepth = 0;
   function traverse(n: Parser.SyntaxNode, depth: number): void {
-    const isNesting = PY_NESTING_NODES.has(n.type);
+    const isNesting = NESTING_NODE_TYPES.has(n.type);
     const newDepth = isNesting ? depth + 1 : depth;
     if (isNesting) maxDepth = Math.max(maxDepth, newDepth);
     for (const child of n.children) traverse(child, newDepth);
@@ -95,7 +102,7 @@ function buildMetrics(functions: FunctionResult[], totalLines: number): MetricBr
   if (functions.length === 0) {
     return {
       cyclomaticComplexity: 1,
-      cognitiveComplexity: 0,
+      cognitiveComplexity: 0, // not computed; placeholder
       maxNestingDepth: 0,
       avgFunctionLength: 0,
       maxFunctionLength: 0,

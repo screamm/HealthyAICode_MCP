@@ -28,14 +28,14 @@ export async function analyzeChangeset(
     const language = detectLanguage(absPath);
     if (language === 'unsupported') continue;
 
-    let currentCode: string;
+    let currentCode = '';
     try {
       currentCode = await fsp.readFile(absPath, 'utf-8');
     } catch {
       continue;
     }
 
-    let baseCode: string;
+    let baseCode = '';
     try {
       baseCode = await git.show([`${baseBranch}:${relPath}`]);
     } catch {
