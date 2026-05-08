@@ -27,7 +27,60 @@ export function analyzeCode(
     return buildUnsupportedResult(code, filePath);
   }
 
-  const { functions, metrics } = analyzeByLanguage(code, language);
+  // Edge case: empty or whitespace-only input — nothing to analyse
+  if (code.trim() === '') {
+    return {
+      filePath,
+      language,
+      score: 10.0,
+      category: 'green',
+      smells: [],
+      functions: [],
+      metrics: emptyMetrics(0),
+    };
+  }
+
+  // Edge case: very large file — count lines before parsing to avoid parser limits
+  const totalLinesPrecheck = code.split('\n').length;
+  if (totalLinesPrecheck > 10000) {
+    const largeFileSmell: import('./types').Smell = {
+      type: 'LargeFile',
+      severity: 'medium',
+      line: 1,
+      description: `Fil har ${totalLinesPrecheck} rader — analys kan vara långsam`,
+      suggestion: 'Överväg att dela upp filen i mindre moduler.',
+    };
+    const score = calculateScore([largeFileSmell]);
+    const category = categorize(score);
+    return {
+      filePath,
+      language,
+      score,
+      category,
+      smells: [largeFileSmell],
+      functions: [],
+      metrics: emptyMetrics(totalLinesPrecheck),
+    };
+  }
+
+  let functions: ReturnType<typeof analyzeByLanguage>['functions'];
+  let metrics: ReturnType<typeof analyzeByLanguage>['metrics'];
+
+  try {
+    ({ functions, metrics } = analyzeByLanguage(code, language));
+  } catch {
+    // Edge case: unparseable code — return a safe partial result
+    return {
+      filePath,
+      language,
+      score: 10.0,
+      category: 'green',
+      smells: [],
+      functions: [],
+      metrics: emptyMetrics(code.split('\n').length),
+    };
+  }
+
   const smells = detectSmells(functions, metrics);
   const score = calculateScore(smells);
   const category = categorize(score);
