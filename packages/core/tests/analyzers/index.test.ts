@@ -64,10 +64,9 @@ describe('analyzeByLanguage router', () => {
   });
 
   it('returns empty result for unsupported language', () => {
-    // 'unsupported' is not in the Language union but testing the default branch
-    const result = analyzeByLanguage('some code', 'typescript');
-    expect(result.functions).toBeDefined();
-    expect(result.metrics).toBeDefined();
+    const result = analyzeByLanguage('some code', 'unknown' as unknown as Parameters<typeof analyzeByLanguage>[1]);
+    expect(result.functions).toHaveLength(0);
+    expect(result.metrics.cyclomaticComplexity).toBe(1);
   });
 
   it('metrics object has all required keys', () => {
