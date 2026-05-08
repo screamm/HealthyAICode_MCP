@@ -1,16 +1,24 @@
 {
   "name": "@healthy-ai-code/mcp-server",
   "version": "0.1.0",
-  "description": "MCP server for AI-code health analysis",
+  "description": "MCP server for AI-guided code health analysis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/healthy-ai-code-mcp"
+  },
+  "keywords": ["mcp", "model-context-protocol", "code-health", "ai", "refactoring"],
   "bin": {
     "healthy-ai-code-mcp": "./dist/index.js"
   },
   "main": "./dist/index.js",
+  "files": ["dist/", "README.md"],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "dependencies": {
     "@healthy-ai-code/core": "workspace:*",
@@ -21,5 +29,8 @@
     "typescript": "^5.4.0",
     "vitest": "^1.6.0",
     "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
