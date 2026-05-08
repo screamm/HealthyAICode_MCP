@@ -135,12 +135,7 @@ describe('analyzeFile — error handling', () => {
 // ---- analyzeChangeset ----
 
 describe('analyzeChangeset', () => {
-  it('throws for non-existent repository path', async () => {
-    await expect(analyzeChangeset('/any/path', 'main')).rejects.toThrow();
-  });
-
-  it('throws when path is not a git repository', async () => {
-    // A real directory that is not a git repo would throw; non-existent also throws
+  it('throws for invalid repository path', async () => {
     await expect(analyzeChangeset('/any/path', 'main')).rejects.toThrow();
   });
 });

@@ -51,7 +51,9 @@ public class Foo {
 }
 `;
     const result = analyzeCode(code, 'kotlin', 'Foo.kt');
+    expect(result.functions).toHaveLength(1);
     expect(result.metrics.cyclomaticComplexity).toBe(1);
+    expect(result.metrics.totalLines).toBeGreaterThan(0);
     expect(result.score).toBeGreaterThan(0);
     expect(result.score).toBeLessThanOrEqual(10);
   });
