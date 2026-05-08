@@ -4,7 +4,25 @@ A local MCP server that gives AI assistants objective code health feedback, enab
 
 ## Installation
 
-Add to your MCP client configuration (Claude Code, Cursor, etc.):
+### Claude Code
+
+After publishing to npm, register the server with the Claude Code CLI:
+
+```bash
+claude mcp add healthy-ai-code -s user -- npx @healthy-ai-code/mcp-server
+```
+
+For local development before publishing, point at the built entry directly:
+
+```bash
+claude mcp add healthy-ai-code -s user -- node /absolute/path/to/packages/mcp-server/dist/index.js
+```
+
+Verify the server is connected with `claude mcp get healthy-ai-code`.
+
+### Other MCP clients (Cursor, Claude Desktop, etc.)
+
+Add to your client's MCP configuration:
 
 ```json
 {
@@ -17,8 +35,6 @@ Add to your MCP client configuration (Claude Code, Cursor, etc.):
   }
 }
 ```
-
-For Claude Code specifically, add to `~/.claude/settings.json` under `"mcpServers"`.
 
 ## Agent Setup
 
