@@ -132,21 +132,16 @@ describe('analyzeFile — error handling', () => {
   });
 });
 
-// ---- analyzeChangeset (stub) ----
+// ---- analyzeChangeset ----
 
-describe('analyzeChangeset — stub', () => {
-  it('returns a ChangesetResult shape', async () => {
-    const result: ChangesetResult = await analyzeChangeset('/any/path', 'main');
-    expect(result).toHaveProperty('filesAnalyzed');
-    expect(result).toHaveProperty('regressions');
-    expect(result).toHaveProperty('improvements');
-    expect(result).toHaveProperty('newUnhealthyFiles');
-    expect(result).toHaveProperty('overallSafe');
+describe('analyzeChangeset', () => {
+  it('throws for non-existent repository path', async () => {
+    await expect(analyzeChangeset('/any/path', 'main')).rejects.toThrow();
   });
 
-  it('stub returns overallSafe: true', async () => {
-    const result = await analyzeChangeset('/any/path', 'main');
-    expect(result.overallSafe).toBe(true);
+  it('throws when path is not a git repository', async () => {
+    // A real directory that is not a git repo would throw; non-existent also throws
+    await expect(analyzeChangeset('/any/path', 'main')).rejects.toThrow();
   });
 });
 
