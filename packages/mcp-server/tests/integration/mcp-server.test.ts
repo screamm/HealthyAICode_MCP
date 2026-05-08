@@ -16,8 +16,7 @@ describe('Integration: healthy fixture → loopComplete: true', () => {
     expect(result.category).toBe('green');
     expect(result.smells).toHaveLength(0);
 
-    const loopComplete = result.score >= 9.5;
-    expect(loopComplete).toBe(true);
+    expect(result.score).toBeGreaterThanOrEqual(9.5);
   });
 
   it('pure-functions.ts (TypeScript healthy) yields score >= 9.0', async () => {
@@ -37,8 +36,7 @@ describe('Integration: unhealthy fixture → loopComplete: false', () => {
     expect(result.score).toBeLessThan(7.0);
     expect(result.smells.length).toBeGreaterThan(0);
 
-    const loopComplete = result.score >= 9.5;
-    expect(loopComplete).toBe(false);
+    expect(result.score).toBeLessThan(9.5);
   });
 
   it('complex.ts smells include at least one of: ComplexMethod, DeepNesting, LongParameterList', async () => {
