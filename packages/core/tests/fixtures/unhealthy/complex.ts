@@ -1,12 +1,12 @@
 /**
- * Unhealthy fixture — expected score: < 6.0 (multiple smells)
+ * Unhealthy fixture — expected score: 1.0 (floor — saturates with current weights)
  *
  * Contains:
- * - ComplexMethod (cyclomaticComplexity > 10)
- * - DeepNesting (nestingDepth > 4)
- * - LongParameterList (parameterCount > 5)
- * - LargeMethod (length > 30)
- * - BumpyRoad (3+ functions with deep nesting)
+ * - ComplexMethod (processData + validateInput: cyclomaticComplexity > 10)
+ * - DeepNesting (processData depth 6, parseConfig depth 5)
+ * - LongParameterList (all 3 functions: parameterCount = 6)
+ * - LargeMethod (all 3 functions: length > 30)
+ * - BumpyRoad (all 3 functions have nestingDepth >= 3)
  */
 
 export function processData(
