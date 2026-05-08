@@ -40,28 +40,8 @@ export function analyzeCode(
     };
   }
 
-  // Edge case: very large file — count lines before parsing to avoid parser limits
-  const totalLinesPrecheck = code.split('\n').length;
-  if (totalLinesPrecheck > 10000) {
-    const largeFileSmell: import('./types').Smell = {
-      type: 'LargeFile',
-      severity: 'medium',
-      line: 1,
-      description: `Fil har ${totalLinesPrecheck} rader — analys kan vara långsam`,
-      suggestion: 'Överväg att dela upp filen i mindre moduler.',
-    };
-    const score = calculateScore([largeFileSmell]);
-    const category = categorize(score);
-    return {
-      filePath,
-      language,
-      score,
-      category,
-      smells: [largeFileSmell],
-      functions: [],
-      metrics: emptyMetrics(totalLinesPrecheck),
-    };
-  }
+  // Count lines before parsing — used both for LargeFile detection and the catch fallback
+  const linesForLargeFileCheck = code.split('\n').length;
 
   let functions: ReturnType<typeof analyzeByLanguage>['functions'];
   let metrics: ReturnType<typeof analyzeByLanguage>['metrics'];
@@ -69,19 +49,53 @@ export function analyzeCode(
   try {
     ({ functions, metrics } = analyzeByLanguage(code, language));
   } catch {
-    // Edge case: unparseable code — return a safe partial result
+    // Edge case: unparseable code — a file with syntax errors should not receive a perfect score,
+    // so we return 5.0 / yellow rather than 10.0 / green.
+    if (linesForLargeFileCheck > 10000) {
+      // Very large file caused the parser to fail — surface the LargeFile smell so callers know why
+      const largeFileSmell: import('./types').Smell = {
+        type: 'LargeFile',
+        severity: 'medium',
+        line: 1,
+        description: `Fil har ${linesForLargeFileCheck} rader — analys kan vara långsam`,
+        suggestion: 'Överväg att dela upp filen i mindre moduler.',
+      };
+      const score = calculateScore([largeFileSmell]);
+      const category = categorize(score);
+      return {
+        filePath,
+        language,
+        score,
+        category,
+        smells: [largeFileSmell],
+        functions: [],
+        metrics: emptyMetrics(linesForLargeFileCheck),
+      };
+    }
     return {
       filePath,
       language,
-      score: 10.0,
-      category: 'green',
+      score: 5.0,
+      category: 'yellow',
       smells: [],
       functions: [],
-      metrics: emptyMetrics(code.split('\n').length),
+      metrics: emptyMetrics(linesForLargeFileCheck),
     };
   }
 
   const smells = detectSmells(functions, metrics);
+
+  // Append LargeFile smell for successfully-parsed large files so full analysis is still run
+  if (linesForLargeFileCheck > 10000) {
+    smells.push({
+      type: 'LargeFile',
+      severity: 'medium',
+      line: 1,
+      description: `Fil har ${linesForLargeFileCheck} rader — analys kan vara långsam`,
+      suggestion: 'Överväg att dela upp filen i mindre moduler.',
+    });
+  }
+
   const score = calculateScore(smells);
   const category = categorize(score);
   return { filePath, language, score, category, smells, metrics, functions };
