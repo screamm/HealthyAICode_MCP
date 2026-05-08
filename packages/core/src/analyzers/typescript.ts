@@ -70,14 +70,8 @@ function getFunctionName(node: Parser.SyntaxNode): string {
     return node.childForFieldName('name')?.text ?? '<anonymous>';
   }
   const parent = node.parent;
-  // const foo = () => {}
   if (parent?.type === 'variable_declarator') {
     return parent.childForFieldName('name')?.text ?? '<anonymous>';
-  }
-  // export const foo = () => {}  (parent is lexical_declaration)
-  if (parent?.type === 'lexical_declaration') {
-    const declarator = parent.children.find(c => c.type === 'variable_declarator');
-    return declarator?.childForFieldName('name')?.text ?? '<anonymous>';
   }
   return '<anonymous>';
 }
