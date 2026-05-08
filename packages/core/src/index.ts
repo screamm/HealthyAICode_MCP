@@ -8,19 +8,14 @@ import type { HealthResult, Language, ChangesetResult, MetricBreakdown } from '.
 // Re-export all types so consumers import from one place
 export * from './types';
 
-/**
- * Analysera en fil på disk. Kastar om filen inte kan läsas.
- */
+/** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
   const code = await fs.readFile(filePath, 'utf-8');
   const language = detectLanguage(filePath);
   return analyzeCode(code, language, filePath);
 }
 
-/**
- * Analysera en kodsträng direkt.
- * @param filePath - Används bara för metadata i resultatet, default '<inline>'.
- */
+/** Analyzes a code string directly. filePath is used only as metadata in the result (defaults to '<inline>'). */
 export function analyzeCode(
   code: string,
   language: Language,
@@ -42,10 +37,7 @@ export function analyzeCode(
   return buildStubResult(code, language, filePath);
 }
 
-/**
- * Analysera git-diff mot basgren.
- * Stub — implementeras i Sprint 2.
- */
+/** Stub: analyzes a git diff against the base branch. Full implementation in Sprint 2. */
 export async function analyzeChangeset(
   _repoPath: string,
   _baseBranch: string,
@@ -63,7 +55,7 @@ export async function analyzeChangeset(
 
 function emptyMetrics(totalLines: number): MetricBreakdown {
   return {
-    cyclomaticComplexity: 1,
+    cyclomaticComplexity: 0, // not computed; placeholder for stub/unsupported results
     cognitiveComplexity: 0,
     maxNestingDepth: 0,
     avgFunctionLength: 0,
