@@ -1,0 +1,1 @@
+export { analyzeChangeset } from './git';
