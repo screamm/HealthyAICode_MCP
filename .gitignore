@@ -1,11 +1,38 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
 dist/
 *.tsbuildinfo
+
+# Environment
 .env
 .env.*
-.DS_Store
-coverage/
+*.local
+
+# Logs
 *.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Caches
 .turbo/
 .cache/
-*.local
+.vitest/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
