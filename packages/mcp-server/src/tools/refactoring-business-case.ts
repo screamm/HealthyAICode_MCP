@@ -14,12 +14,19 @@ interface BusinessCase {
   recommendation: string;
 }
 
+type McpToolRegistrar = (
+  name: string,
+  desc: string,
+  schema: z.ZodRawShape,
+  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
+) => void;
+
 export function registerRefactoringBusinessCase(server: McpServer): void {
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'code_health_refactoring_business_case',
     'Beräknar affärsvärdet av att förbättra kodhälsan. Visar ROI i hastighet och defekter.',
     { filePath: z.string().describe('Sökväg till filen att analysera') },
-    async ({ filePath }) => handleBusinessCase(filePath)
+    async ({ filePath }) => handleBusinessCase(filePath as string)
   );
 }
 

@@ -1,3 +1,4 @@
+/** Supported source code languages for analysis. */
 export type Language =
   | 'typescript'
   | 'javascript'
@@ -7,8 +8,10 @@ export type Language =
   | 'csharp'
   | 'unsupported';
 
+/** Health category derived from the numeric score: green ≥9.0, yellow ≥4.0, red <4.0. */
 export type HealthCategory = 'green' | 'yellow' | 'red';
 
+/** Union of all detectable code finding type identifiers. */
 export type SmellType =
   | 'ComplexMethod'
   | 'DeepNesting'
@@ -34,6 +37,7 @@ export type SmellType =
   | 'KnowledgeLoss'
   | 'PrimitiveObsession';
 
+/** A single detected code finding with location, severity, and remediation guidance. */
 export interface Smell {
   type: SmellType;
   severity: 'critical' | 'high' | 'medium' | 'low';
@@ -43,6 +47,7 @@ export interface Smell {
   suggestion: string;
 }
 
+/** Aggregated code metrics for a file or function. */
 export interface MetricBreakdown {
   cyclomaticComplexity: number;
   cognitiveComplexity: number;
@@ -56,6 +61,7 @@ export interface MetricBreakdown {
   maintainabilityIndex?: number;
 }
 
+/** Analysis result for a single function within a file. */
 export interface FunctionResult {
   name: string;
   line: number;
@@ -67,6 +73,7 @@ export interface FunctionResult {
   smells: Smell[];
 }
 
+/** Full health analysis result for a single source file. */
 export interface HealthResult {
   filePath: string;
   language: Language;
@@ -77,6 +84,7 @@ export interface HealthResult {
   functions: FunctionResult[];
 }
 
+/** Aggregated result of analyzing a git diff across multiple files. */
 export interface ChangesetResult {
   filesAnalyzed: number;
   regressions: FileRegression[];
@@ -85,6 +93,7 @@ export interface ChangesetResult {
   overallSafe: boolean;
 }
 
+/** Describes a file whose health score declined in the current changeset. */
 export interface FileRegression {
   filePath: string;
   scoreBefore: number;
@@ -92,6 +101,7 @@ export interface FileRegression {
   newSmells: Smell[];
 }
 
+/** Describes a file whose health score improved in the current changeset. */
 export interface FileImprovement {
   filePath: string;
   scoreBefore: number;
@@ -99,8 +109,10 @@ export interface FileImprovement {
   fixedSmells: Smell[];
 }
 
+/** Discriminator for the next recommended action after a health review. */
 export type NextActionType = 'refactor' | 'commit_safe' | 'review_pr' | 'none';
 
+/** The AI assistant's recommended next step after reviewing code health. */
 export interface NextAction {
   action: NextActionType;
   instruction: string;
@@ -108,6 +120,7 @@ export interface NextAction {
   toolToCallAfter: string | null;
 }
 
+/** Standard MCP tool response payload returned to the AI assistant. */
 export interface ToolResponse {
   score: number;
   category: HealthCategory;

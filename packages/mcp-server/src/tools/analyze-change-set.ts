@@ -2,16 +2,22 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeChangeset, type ChangesetResult } from '@healthy-ai-code/core';
 
+type McpToolRegistrar = (
+  name: string,
+  desc: string,
+  schema: z.ZodRawShape,
+  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
+) => void;
+
 export function registerAnalyzeChangeSet(server: McpServer): void {
-  // @ts-ignore TS2589: MCP SDK tool() overloads exceed TypeScript's type instantiation depth limit
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'analyze_change_set',
     'Analyserar hela diff mot basgrenen. Kör innan PR skapas.',
     {
       repoPath: z.string().describe('Absolut sökväg till git-repositoryt'),
       baseBranch: z.string().optional().describe('Basgren att jämföra mot (default: main)'),
     },
-    async ({ repoPath, baseBranch }) => handleChangeset(repoPath, baseBranch ?? 'main')
+    async ({ repoPath, baseBranch }) => handleChangeset(repoPath as string, (baseBranch as string | undefined) ?? 'main')
   );
 }
 

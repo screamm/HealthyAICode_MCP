@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
 const CODE_HEALTH_EXPLANATION = `
 # Vad är Code Health?
@@ -42,24 +43,29 @@ Sträva efter 9.5+ för AI-redo kod. Refaktorera till 9.5+ innan du låter AI
 modifiera filen — annars riskerar du att AI introducerar buggar.
 `.trim();
 
+type McpToolRegistrar = (
+  name: string,
+  desc: string,
+  schema: z.ZodRawShape,
+  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
+) => void;
+
+/** Registers the explain_code_health tool on the MCP server. */
 export function registerExplainCodeHealth(server: McpServer): void {
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'explain_code_health',
     'Förklarar vad Code Health-poängen betyder och hur den beräknas.',
     {},
-    async () => ({
-      content: [{ type: 'text', text: CODE_HEALTH_EXPLANATION }],
-    })
+    async () => ({ content: [{ type: 'text', text: CODE_HEALTH_EXPLANATION }] })
   );
 }
 
+/** Registers the explain_code_health_productivity tool on the MCP server. */
 export function registerExplainProductivity(server: McpServer): void {
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'explain_code_health_productivity',
     'Förklarar sambandet mellan Code Health och leveranshastighet/defekter.',
     {},
-    async () => ({
-      content: [{ type: 'text', text: PRODUCTIVITY_EXPLANATION }],
-    })
+    async () => ({ content: [{ type: 'text', text: PRODUCTIVITY_EXPLANATION }] })
   );
 }

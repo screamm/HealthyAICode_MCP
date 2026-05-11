@@ -5,6 +5,7 @@ const HIGH_AUTHORS = 10;
 const MEDIUM_AUTHORS = 5;
 const LOW_AUTHORS = 3;
 
+/** Result of a developer-congestion analysis for a single file. */
 export interface CongestionResult {
   filePath: string;
   authorCount: number;

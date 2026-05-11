@@ -6,6 +6,7 @@ import { detectDuplications } from './duplication';
 import { detectLanguageMix } from './language-mix';
 import { detectDeadExports } from './dead-exports';
 
+/** A pair of code blocks found to be structurally similar or duplicated. */
 export interface DuplicationFinding {
   filePathA: string;
   filePathB: string;
@@ -16,18 +17,21 @@ export interface DuplicationFinding {
   severity: 'low' | 'medium' | 'high';
 }
 
+/** A source file that mixes natural languages (e.g. Swedish and English) in its identifiers. */
 export interface LanguageMixFinding {
   filePath: string;
   primaryLanguage: 'sv' | 'en' | 'unknown';
   mixedRegions: Array<{ line: number; detected: string; snippet: string }>;
 }
 
+/** An exported symbol that is never imported by any other file in the project. */
 export interface DeadExportFinding {
   filePath: string;
   exportedName: string;
   line: number;
 }
 
+/** Configuration options for a full-project health analysis run. */
 export interface ProjectAnalysisOptions {
   rootPath: string;
   include?: string[];       // glob patterns, default ['**/*.ts', '**/*.tsx']
@@ -35,6 +39,7 @@ export interface ProjectAnalysisOptions {
   cacheDir?: string;        // default <root>/.healthy-ai-cache/
 }
 
+/** Aggregated findings from a full-project health analysis. */
 export interface ProjectAnalysisResult {
   filesAnalyzed: number;
   duplicationFindings: DuplicationFinding[];
@@ -46,6 +51,7 @@ export interface ProjectAnalysisResult {
 const DEFAULT_INCLUDE = ['**/*.ts', '**/*.tsx'];
 const DEFAULT_EXCLUDE = ['node_modules/**', 'dist/**', '**/*.test.ts', '**/*.d.ts'];
 
+/** Analyzes all source files in a project directory and returns aggregated health findings. */
 export async function analyzeProject(opts: ProjectAnalysisOptions): Promise<ProjectAnalysisResult> {
   const root = path.resolve(opts.rootPath);
   const files = await discoverFiles(root, opts);

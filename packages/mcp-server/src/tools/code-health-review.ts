@@ -4,33 +4,42 @@ import { analyzeFile } from '@healthy-ai-code/core';
 import type { ToolResponse } from '../types';
 import { buildNextAction, formatReviewSummary } from './shared';
 
+type McpToolRegistrar = (
+  name: string,
+  desc: string,
+  schema: z.ZodRawShape,
+  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
+) => void;
+
 export function registerCodeHealthReview(server: McpServer): void {
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'code_health_review',
     'Djupgranskning av kodhälsa med detaljerade problem och refaktoreringsanvisningar. Kör detta i en loop tills loopComplete är true.',
     { filePath: z.string().describe('Absolut eller relativ sökväg till filen') },
-    async ({ filePath }) => {
-      try {
-        const result = await analyzeFile(filePath);
-        const loopComplete = result.score >= 9.5;
-        const response: ToolResponse = {
-          score: result.score,
-          category: result.category,
-          loopComplete,
-          issues: result.smells,
-          summary: formatReviewSummary(filePath, result),
-          nextAction: buildNextAction(result, loopComplete),
-        };
-        return {
-          content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
-        };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: 'text', text: JSON.stringify({ error: message }) }],
-          isError: true,
-        };
-      }
-    }
+    async ({ filePath }) => handleCodeHealthReview(filePath as string)
   );
+}
+
+async function handleCodeHealthReview(filePath: string) {
+  try {
+    const result = await analyzeFile(filePath);
+    const loopComplete = result.score >= 9.5;
+    const response: ToolResponse = {
+      score: result.score,
+      category: result.category,
+      loopComplete,
+      issues: result.smells,
+      summary: formatReviewSummary(filePath, result),
+      nextAction: buildNextAction(result, loopComplete),
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ error: message }) }],
+      isError: true,
+    };
+  }
 }

@@ -9,8 +9,8 @@ const require = createRequire(import.meta.url);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = join(__dirname, '..');
 
-// Load the built core package directly
-const { analyzeFile } = require('./node_modules/@healthy-ai-code/core/dist/index.cjs');
+// Load the built core package from the workspace
+const { analyzeFile } = require('../packages/core/dist/index.js');
 
 const TARGET_SCORE = 9.6;
 const SRC_DIRS = [

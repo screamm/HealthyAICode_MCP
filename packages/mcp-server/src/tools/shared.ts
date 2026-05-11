@@ -1,6 +1,7 @@
 import type { HealthResult, Smell } from '@healthy-ai-code/core';
 import type { NextAction } from '../types';
 
+/** Builds the next recommended action for the AI based on the current health result. */
 export function buildNextAction(result: HealthResult, loopComplete: boolean): NextAction {
   if (loopComplete) {
     return {
@@ -28,6 +29,7 @@ function getPrioritySmell(smells: Smell[]): Smell | null {
   return [...smells].sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))[0];
 }
 
+/** Formats a human-readable review summary for the given file and health result. */
 export function formatReviewSummary(filePath: string, result: HealthResult): string {
   const lines: string[] = [
     `Fil: ${filePath}`,

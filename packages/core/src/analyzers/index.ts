@@ -4,9 +4,13 @@ import { analyzePython } from './python';
 import { analyzeJava } from './java';
 import { analyzeCSharp } from './csharp';
 
+/** Analyzes TypeScript and JavaScript source files. */
 export { analyzeTypeScript } from './typescript';
+/** Analyzes Python source files. */
 export { analyzePython } from './python';
+/** Analyzes Java and Kotlin source files. */
 export { analyzeJava } from './java';
+/** Analyzes C# source files. */
 export { analyzeCSharp } from './csharp';
 
 interface AnalyzerOutput {
@@ -15,6 +19,7 @@ interface AnalyzerOutput {
   smells: Smell[];
 }
 
+/** Dispatches analysis to the appropriate language analyzer and returns functions, metrics, and smells. */
 export function analyzeByLanguage(code: string, language: Language, filePath = '<inline>'): AnalyzerOutput {
   switch (language) {
     case 'typescript':

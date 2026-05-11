@@ -13,15 +13,22 @@ interface FileCheckOk {
 interface FileCheckError { file: string; error: string; }
 type FileCheckResult = FileCheckOk | FileCheckError;
 
+type McpToolRegistrar = (
+  name: string,
+  desc: string,
+  schema: z.ZodRawShape,
+  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
+) => void;
+
 export function registerPreCommitSafeguard(server: McpServer): void {
-  server.tool(
+  (server.tool as unknown as McpToolRegistrar)(
     'pre_commit_code_health_safeguard',
     'Kontrollerar staged/listade filer innan commit. Blockerar om ny röd kod introduceras.',
     {
       repoPath: z.string().describe('Absolut sökväg till git-repositoryt'),
       files: z.array(z.string()).describe('Lista med filsökvägar att kontrollera'),
     },
-    async ({ repoPath, files }) => handlePreCommitCheck(repoPath, files)
+    async ({ repoPath, files }) => handlePreCommitCheck(repoPath as string, files as string[])
   );
 }
 

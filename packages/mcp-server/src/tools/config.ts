@@ -4,57 +4,42 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const CONFIG_DIR = join(homedir(), '.healthy-ai-code');
-const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+const CONFIG_DIR = join(homedir(), '.healthy-ai-code'), CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+type McpToolRegistrar = (n: string, d: string, s: z.ZodRawShape, h: (a: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>) => void;
 
 function readConfig(): Record<string, unknown> {
   if (!existsSync(CONFIG_FILE)) return {};
-  try {
-    return JSON.parse(readFileSync(CONFIG_FILE, 'utf-8')) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(readFileSync(CONFIG_FILE, 'utf-8')) as Record<string, unknown>; } catch { return {}; }
 }
 
-function writeConfig(config: Record<string, unknown>): void {
+function writeConfig(cfg: Record<string, unknown>): void {
   if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+  writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+}
+
+function coerceConfigValue(v: string): unknown {
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  const n = Number(v);
+  return !isNaN(n) && v !== '' ? n : v;
+}
+
+async function handleGetConfig({ key }: Record<string, unknown>) {
+  const cfg = readConfig();
+  return { content: [{ type: 'text', text: JSON.stringify({ key: (key as string) ?? 'all', value: key ? cfg[key as string] : cfg }, null, 2) }] };
+}
+
+async function handleSetConfig({ key, value }: Record<string, unknown>) {
+  const k = key as string, v = value as string | undefined, cfg = readConfig();
+  if (v === undefined) { delete cfg[k]; writeConfig(cfg); return { content: [{ type: 'text', text: JSON.stringify({ deleted: k, cfg }, null, 2) }] }; }
+  cfg[k] = coerceConfigValue(v); writeConfig(cfg);
+  return { content: [{ type: 'text', text: JSON.stringify({ set: k, value: cfg[k], cfg }, null, 2) }] };
 }
 
 export function registerConfigTools(server: McpServer): void {
-  server.tool(
-    'get_config',
-    'Läser konfigurationsvärden för Healthy AI Code MCP. Utan nyckel returneras hela konfigurationen.',
-    { key: z.string().optional().describe('Konfigurationsnyckel att läsa. Utelämna för att få hela konfigurationen.') },
-    async ({ key }) => {
-      const config = readConfig();
-      const value = key ? config[key] : config;
-      return { content: [{ type: 'text', text: JSON.stringify({ key: key ?? 'all', value }, null, 2) }] };
-    }
-  );
-
-  server.tool(
-    'set_config',
-    'Sparar eller tar bort ett konfigurationsvärde för Healthy AI Code MCP. Tillgängliga nycklar: healthyThreshold (number 1-10), aiReadyThreshold (number 1-10), defaultBranch (string), projectName (string).',
-    {
-      key: z.string().describe('Konfigurationsnyckel att sätta eller ta bort'),
-      value: z.string().optional().describe('Värde att sätta. Utelämna för att ta bort nyckeln.'),
-    },
-    async ({ key, value }) => {
-      const config = readConfig();
-      if (value === undefined) {
-        delete config[key];
-        writeConfig(config);
-        return { content: [{ type: 'text', text: JSON.stringify({ deleted: key, config }, null, 2) }] };
-      }
-      // Försök parsa som tal eller boolean, annars behåll som sträng
-      let parsed: unknown = value;
-      if (value === 'true') parsed = true;
-      else if (value === 'false') parsed = false;
-      else if (!isNaN(Number(value)) && value !== '') parsed = Number(value);
-      config[key] = parsed;
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ set: key, value: parsed, config }, null, 2) }] };
-    }
-  );
+  const tool = server.tool.bind(server) as unknown as McpToolRegistrar;
+  tool('get_config', 'Läser konfigurationsvärden för Healthy AI Code MCP. Utan nyckel returneras hela konfigurationen.',
+    { key: z.string().optional().describe('Konfigurationsnyckel att läsa. Utelämna för att få hela konfigurationen.') }, handleGetConfig);
+  tool('set_config', 'Sparar eller tar bort ett konfigurationsvärde för Healthy AI Code MCP. Tillgängliga nycklar: healthyThreshold (number 1-10), aiReadyThreshold (number 1-10), defaultBranch (string), projectName (string).',
+    { key: z.string().describe('Konfigurationsnyckel att sätta eller ta bort'), value: z.string().optional().describe('Värde att sätta. Utelämna för att ta bort nyckeln.') }, handleSetConfig);
 }
