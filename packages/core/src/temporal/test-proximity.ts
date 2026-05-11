@@ -14,10 +14,8 @@ export interface TestProximityFinding {
 const tsParser = new Parser();
 // tree-sitter-typescript exposes both typescript and tsx sub-languages.
 // Use the .typescript property if available, otherwise fall back to the module itself.
-const tsLanguage =
-  (TypeScript as unknown as { typescript?: unknown }).typescript ?? TypeScript;
-// @ts-ignore — setLanguage accepts the language object from tree-sitter-typescript
-tsParser.setLanguage(tsLanguage);
+const tsLanguage = (TypeScript as unknown as Record<string, unknown>).typescript ?? TypeScript;
+tsParser.setLanguage(tsLanguage as object);
 
 /**
  * Detects source files that lack an adjacent test file.
@@ -34,35 +32,17 @@ tsParser.setLanguage(tsLanguage);
  * @param rootPath     Optional project root; improves candidate path resolution
  *                     for `tests/` and `__tests__/` subtree patterns.
  */
-export async function detectTestProximity(
-  sourceFiles: string[],
-  rootPath?: string,
-): Promise<TestProximityFinding[]> {
-  const testFileSet = new Set(
-    sourceFiles.filter(isTestFile).map(f => path.resolve(f)),
-  );
-
-  const onlySource = sourceFiles.filter(f => !isTestFile(f));
-
+export async function detectTestProximity(sourceFiles: string[], rootPath?: string): Promise<TestProximityFinding[]> {
+  const testFileSet = new Set(sourceFiles.filter(isTestFile).map(f => path.resolve(f)));
   const findings: TestProximityFinding[] = [];
-
-  for (const file of onlySource) {
+  for (const file of sourceFiles.filter(f => !isTestFile(f))) {
     const exportCount = await countExports(file);
     if (exportCount === 0) continue;
-
     const root = rootPath ?? inferProjectRoot(file);
     const candidates = candidateTestPaths(root, file);
-    const hasTest = candidates.some(p => testFileSet.has(path.resolve(p)));
-    if (hasTest) continue;
-
-    findings.push({
-      filePath: file,
-      exportCount,
-      searchedPaths: candidates,
-      severity: classifySeverity(file, exportCount),
-    });
+    if (candidates.some(p => testFileSet.has(path.resolve(p)))) continue;
+    findings.push({ filePath: file, exportCount, searchedPaths: candidates, severity: classifySeverity(file, exportCount) });
   }
-
   return findings;
 }
 

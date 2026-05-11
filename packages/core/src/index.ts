@@ -27,38 +27,16 @@ export async function analyzeFile(filePath: string): Promise<HealthResult> {
 }
 
 /** Analyzes a code string directly. filePath is used only as metadata in the result (defaults to '<inline>'). */
-export function analyzeCode(
-  code: string,
-  language: Language,
-  filePath = '<inline>',
-): HealthResult {
+export function analyzeCode(code: string, language: Language, filePath = '<inline>'): HealthResult {
   if (language === 'unsupported') return buildUnsupportedResult(code, filePath);
   if (code.trim() === '') return buildEmptyResult(filePath, language);
-
   const totalLines = code.split('\n').length;
   const parsed = tryAnalyze(code, language, filePath);
-
-  if (parsed === null) {
-    return buildUnparseableResult(filePath, language, totalLines);
-  }
-
-  const smells = [
-    ...parsed.smells,
-    ...detectSmells(parsed.functions, parsed.metrics),
-    ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity),
-  ];
+  if (parsed === null) return buildUnparseableResult(filePath, language, totalLines);
+  const smells = [...parsed.smells, ...detectSmells(parsed.functions, parsed.metrics), ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity)];
   appendLargeFileSmellIfNeeded(smells, totalLines);
-
   const score = calculateScore(smells);
-  return {
-    filePath,
-    language,
-    score,
-    category: categorize(score),
-    smells,
-    metrics: parsed.metrics,
-    functions: parsed.functions,
-  };
+  return { filePath, language, score, category: categorize(score), smells, metrics: parsed.metrics, functions: parsed.functions };
 }
 
 function tryAnalyze(code: string, language: Language, filePath: string): ReturnType<typeof analyzeByLanguage> | null {

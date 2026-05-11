@@ -14,54 +14,28 @@ export interface HotspotFinding {
   rankPercentile: number; // 0–100
 }
 
-export async function detectHotspots(
-  rootPath: string,
-  perFileResults: HealthResult[],
-  window: string = DEFAULT_WINDOW,
-  topN: number = TOP_N_DEFAULT,
-): Promise<HotspotFinding[]> {
-  const git = simpleGit(rootPath);
+type ScoredFile = { filePath: string; commitCount: number; complexity: number; hotspotScore: number };
 
-  let isRepo = false;
-  try {
-    isRepo = await git.checkIsRepo();
-  } catch {
-    isRepo = false;
-  }
-  if (!isRepo) return [];
-
-  const scored: Array<{
-    filePath: string;
-    commitCount: number;
-    complexity: number;
-    hotspotScore: number;
-  }> = [];
-
-  for (const file of perFileResults) {
+async function scoreFiles(git: SimpleGit, files: HealthResult[], rootPath: string, window: string): Promise<ScoredFile[]> {
+  const out: ScoredFile[] = [];
+  for (const file of files) {
     const relPath = path.relative(rootPath, file.filePath);
     const commitCount = await countCommits(git, relPath, window);
     if (commitCount === 0) continue;
     const complexity = complexityScore(file.metrics);
-    scored.push({
-      filePath: file.filePath,
-      commitCount,
-      complexity,
-      hotspotScore: commitCount * complexity,
-    });
+    out.push({ filePath: file.filePath, commitCount, complexity, hotspotScore: commitCount * complexity });
   }
+  return out;
+}
 
-  scored.sort((a, b) => b.hotspotScore - a.hotspotScore);
-
-  // Take top N or top 10%, whichever is larger
+export async function detectHotspots(rootPath: string, perFileResults: HealthResult[], window = DEFAULT_WINDOW, topN = TOP_N_DEFAULT): Promise<HotspotFinding[]> {
+  const git = simpleGit(rootPath);
+  let isRepo = false;
+  try { isRepo = await git.checkIsRepo(); } catch { isRepo = false; }
+  if (!isRepo) return [];
+  const scored = (await scoreFiles(git, perFileResults, rootPath, window)).sort((a, b) => b.hotspotScore - a.hotspotScore);
   const cutoff = Math.max(topN, Math.ceil(scored.length * 0.1));
-  return scored.slice(0, cutoff).map((s, idx) => ({
-    filePath: s.filePath,
-    commitCount: s.commitCount,
-    complexityScore: s.complexity,
-    hotspotScore: s.hotspotScore,
-    severity: classifyHotspotSeverity(idx, scored.length),
-    rankPercentile: Math.round((idx / Math.max(scored.length, 1)) * 100),
-  }));
+  return scored.slice(0, cutoff).map((s, idx) => ({ filePath: s.filePath, commitCount: s.commitCount, complexityScore: s.complexity, hotspotScore: s.hotspotScore, severity: classifyHotspotSeverity(idx, scored.length), rankPercentile: Math.round((idx / Math.max(scored.length, 1)) * 100) }));
 }
 
 async function countCommits(
