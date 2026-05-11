@@ -1,0 +1,41 @@
+import { describe, it, expect } from 'vitest';
+import * as path from 'path';
+import * as os from 'os';
+import { analyzeCodeChurn } from '../../src/temporal/code-churn';
+
+const REPO_ROOT = path.resolve(__dirname, '../../../..');
+// tmpdir exists on disk but is not a git repo
+const NOT_A_REPO = os.tmpdir();
+
+describe('analyzeCodeChurn', () => {
+  it('returns churnRate 0 and null smell for invalid repo path', async () => {
+    const result = await analyzeCodeChurn(NOT_A_REPO, 'any/file.ts', 100);
+    expect(result.churnRate).toBe(0);
+    expect(result.smell).toBeNull();
+  });
+
+  it('returns result with correct shape', async () => {
+    const result = await analyzeCodeChurn(REPO_ROOT, 'packages/core/src/index.ts', 50);
+    expect(result).toHaveProperty('filePath');
+    expect(result).toHaveProperty('linesAdded');
+    expect(result).toHaveProperty('linesDeleted');
+    expect(result).toHaveProperty('churnRate');
+    expect(result).toHaveProperty('smell');
+    expect(result.churnRate).toBeGreaterThanOrEqual(0);
+  });
+
+  it('smell is null when churnRate is low', async () => {
+    // A file with very high LOC has proportionally low churn rate
+    const result = await analyzeCodeChurn(REPO_ROOT, 'packages/core/src/index.ts', 999999);
+    expect(result.smell).toBeNull();
+  });
+
+  it('smell has correct type when fired', async () => {
+    // Use a low LOC to force a high churn rate
+    const result = await analyzeCodeChurn(REPO_ROOT, 'packages/core/src/index.ts', 1);
+    if (result.smell !== null) {
+      expect(result.smell.type).toBe('CodeChurn');
+      expect(['low', 'medium', 'high']).toContain(result.smell.severity);
+    }
+  });
+}, 15000);

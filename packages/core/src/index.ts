@@ -3,12 +3,21 @@ import { detectLanguage } from './language-detect';
 import { analyzeByLanguage } from './analyzers/index';
 import { detectSmells } from './smells/detector';
 import { calculateScore, categorize } from './scoring/scorer';
-import type { HealthResult, Language, MetricBreakdown } from './types';
+import { detectBrainMethods } from './temporal/brain-method';
+import type { HealthResult, Language, MetricBreakdown, Smell } from './types';
 
 // Re-export all types so consumers import from one place
 export * from './types';
 
 export { analyzeChangeset } from './diff';
+export { analyzeCodeChurn } from './temporal/code-churn';
+export { analyzeTemporalCoupling } from './temporal/temporal-coupling';
+export { analyzeDeveloperCongestion } from './temporal/developer-congestion';
+export { analyzeKnowledgeLoss } from './temporal/knowledge-loss';
+export { analyzeProject } from './project';
+
+const LARGE_FILE_THRESHOLD = 10000;
+const UNPARSEABLE_SCORE = 5.0;
 
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
@@ -23,85 +32,100 @@ export function analyzeCode(
   language: Language,
   filePath = '<inline>',
 ): HealthResult {
-  if (language === 'unsupported') {
-    return buildUnsupportedResult(code, filePath);
+  if (language === 'unsupported') return buildUnsupportedResult(code, filePath);
+  if (code.trim() === '') return buildEmptyResult(filePath, language);
+
+  const totalLines = code.split('\n').length;
+  const parsed = tryAnalyze(code, language, filePath);
+
+  if (parsed === null) {
+    return buildUnparseableResult(filePath, language, totalLines);
   }
 
-  // Edge case: empty or whitespace-only input — nothing to analyse
-  if (code.trim() === '') {
-    return {
-      filePath,
-      language,
-      score: 10.0,
-      category: 'green',
-      smells: [],
-      functions: [],
-      metrics: emptyMetrics(0),
-    };
-  }
-
-  // Count lines before parsing — used both for LargeFile detection and the catch fallback
-  const linesForLargeFileCheck = code.split('\n').length;
-
-  let functions: ReturnType<typeof analyzeByLanguage>['functions'];
-  let metrics: ReturnType<typeof analyzeByLanguage>['metrics'];
-
-  try {
-    ({ functions, metrics } = analyzeByLanguage(code, language));
-  } catch {
-    // Edge case: unparseable code — a file with syntax errors should not receive a perfect score,
-    // so we return 5.0 / yellow rather than 10.0 / green.
-    if (linesForLargeFileCheck > 10000) {
-      // Very large file caused the parser to fail — surface the LargeFile smell so callers know why
-      const largeFileSmell: import('./types').Smell = {
-        type: 'LargeFile',
-        severity: 'medium',
-        line: 1,
-        description: `Fil har ${linesForLargeFileCheck} rader — analys kan vara långsam`,
-        suggestion: 'Överväg att dela upp filen i mindre moduler.',
-      };
-      const score = calculateScore([largeFileSmell]);
-      const category = categorize(score);
-      return {
-        filePath,
-        language,
-        score,
-        category,
-        smells: [largeFileSmell],
-        functions: [],
-        metrics: emptyMetrics(linesForLargeFileCheck),
-      };
-    }
-    return {
-      filePath,
-      language,
-      score: 5.0,
-      category: 'yellow',
-      smells: [],
-      functions: [],
-      metrics: emptyMetrics(linesForLargeFileCheck),
-    };
-  }
-
-  const smells = detectSmells(functions, metrics);
-
-  // Append LargeFile smell for successfully-parsed large files so full analysis is still run
-  if (linesForLargeFileCheck > 10000) {
-    smells.push({
-      type: 'LargeFile',
-      severity: 'medium',
-      line: 1,
-      description: `Fil har ${linesForLargeFileCheck} rader — analys kan vara långsam`,
-      suggestion: 'Överväg att dela upp filen i mindre moduler.',
-    });
-  }
+  const smells = [
+    ...parsed.smells,
+    ...detectSmells(parsed.functions, parsed.metrics),
+    ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity),
+  ];
+  appendLargeFileSmellIfNeeded(smells, totalLines);
 
   const score = calculateScore(smells);
-  const category = categorize(score);
-  return { filePath, language, score, category, smells, metrics, functions };
+  return {
+    filePath,
+    language,
+    score,
+    category: categorize(score),
+    smells,
+    metrics: parsed.metrics,
+    functions: parsed.functions,
+  };
 }
 
-// ---- Helpers ----
+function tryAnalyze(code: string, language: Language, filePath: string): ReturnType<typeof analyzeByLanguage> | null {
+  try {
+    return analyzeByLanguage(code, language, filePath);
+  } catch {
+    return null;
+  }
+}
+
+function buildEmptyResult(filePath: string, language: Language): HealthResult {
+  return {
+    filePath,
+    language,
+    score: 10.0,
+    category: 'green',
+    smells: [],
+    functions: [],
+    metrics: emptyMetrics(0),
+  };
+}
+
+function buildUnparseableResult(
+  filePath: string,
+  language: Language,
+  totalLines: number,
+): HealthResult {
+  // Unparseable code should not earn a perfect score; large files surface LargeFile so callers know why.
+  if (totalLines > LARGE_FILE_THRESHOLD) {
+    const smell = buildLargeFileSmell(totalLines);
+    const score = calculateScore([smell]);
+    return {
+      filePath,
+      language,
+      score,
+      category: categorize(score),
+      smells: [smell],
+      functions: [],
+      metrics: emptyMetrics(totalLines),
+    };
+  }
+  return {
+    filePath,
+    language,
+    score: UNPARSEABLE_SCORE,
+    category: 'yellow',
+    smells: [],
+    functions: [],
+    metrics: emptyMetrics(totalLines),
+  };
+}
+
+function appendLargeFileSmellIfNeeded(smells: Smell[], totalLines: number): void {
+  if (totalLines > LARGE_FILE_THRESHOLD) {
+    smells.push(buildLargeFileSmell(totalLines));
+  }
+}
+
+function buildLargeFileSmell(totalLines: number): Smell {
+  return {
+    type: 'LargeFile',
+    severity: 'medium',
+    line: 1,
+    description: `Fil har ${totalLines} rader — analys kan vara långsam`,
+    suggestion: 'Överväg att dela upp filen i mindre moduler.',
+  };
+}
 
 function emptyMetrics(totalLines: number): MetricBreakdown {
   return {
@@ -128,4 +152,3 @@ function buildUnsupportedResult(code: string, filePath: string): HealthResult {
     metrics: emptyMetrics(code.split('\n').length),
   };
 }
-

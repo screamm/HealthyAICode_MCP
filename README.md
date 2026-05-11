@@ -1,4 +1,6 @@
-﻿# Healthy AI Code MCP
+# Healthy AI Code MCP
+
+> **27 biomarkers • CodeScene state-of-the-art parity**
 
 A local MCP server that gives AI assistants objective code health feedback, enabling a self-correcting refactoring loop. The AI refactors until the health score reaches the target level — no human judgment required in the loop.
 
@@ -49,8 +51,69 @@ Copy `AGENTS.md` to the root of each repository where you want AI-guided health 
 | `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Check files before commit |
 | `analyze_change_set` | `repoPath`, `baseBranch` | Check full diff before PR |
 | `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring |
+| `code_health_knowledge_map` | `repoPath` | Knowledge distribution, bus factor, and temporal coupling analysis |
 | `explain_code_health` | *(none)* | What is code health? |
 | `explain_code_health_productivity` | *(none)* | Health → productivity link |
+
+## Biomarkers (27)
+
+Healthy AI Code detects 27 code health biomarkers across four sprint generations, matching and exceeding CodeScene's 26-biomarker coverage.
+
+### Core smells (Sprints 1–4)
+| Biomarker | Description |
+|-----------|-------------|
+| `ComplexMethod` | Cyclomatic complexity above threshold |
+| `LongMethod` | Functions exceeding line-length limits |
+| `LargeClass` | Classes with too many responsibilities |
+| `LongParameterList` | Functions with excessive parameter counts |
+| `DeepNesting` | Deeply nested control structures |
+| `PrimitiveObsession` | Overuse of primitive types |
+| `SpeculativeGenerality` | Unused abstractions and over-engineering |
+
+### Cognitive & type safety (Sprint 5)
+| Biomarker | Description |
+|-----------|-------------|
+| `CognitiveComplexity` | SonarSource S3776 cognitive complexity metric |
+| `TypeSafetyEscape` | Use of `any`, `@ts-ignore`, or unsafe casts |
+| `MagicNumber` | Unexplained numeric or string literals |
+| `LowDocCoverage` | Insufficient documentation on public APIs |
+
+### Duplication & structure (Sprint 6)
+| Biomarker | Description |
+|-----------|-------------|
+| `Duplication` | Token-fingerprint Jaccard similarity detection |
+| `LanguageMix` | Mixed natural languages (e.g. Swedish/English) reducing AI readability |
+| `DeadExports` | Exported symbols never referenced outside their module |
+
+### Hotspot & compound smells (Sprint 7)
+| Biomarker | Description |
+|-----------|-------------|
+| `Hotspot` | High commit frequency × high complexity (change-risk index) |
+| `BrainMethod` | Compound smell combining multiple severe method-level issues |
+| `TestProximity` | Insufficient test coverage near changed code |
+
+### Conditionals & coupling (Sprint 8)
+| Biomarker | Description |
+|-----------|-------------|
+| `ComplexConditional` | Nested ternaries and long boolean chains |
+| `MessageChain` | Law of Demeter violations (train-wreck calls) |
+| `DataClumps` | Recurring groups of parameters/fields that belong together |
+| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) |
+
+### OO design metrics (Sprint 9)
+| Biomarker | Description |
+|-----------|-------------|
+| `GodClass` | ATFD + WMC + LCOM4 composite god-class detector |
+| `FeatureEnvy` | Methods more interested in other classes' data than their own |
+| `LowMaintainability` | Halstead volume + cyclomatic complexity + LOC composite index |
+
+### Temporal & organisational (Sprint 10)
+| Biomarker | Description |
+|-----------|-------------|
+| `CodeChurn` | Nagappan & Ball churn metric — frequently rewritten code |
+| `TemporalCoupling` | Files that change together more than their dependencies suggest |
+| `DeveloperCongestion` | Too many developers touching the same module |
+| `KnowledgeLoss` | Bus factor / DOA — code known only by departed contributors |
 
 ## Supported Languages
 

@@ -5,6 +5,7 @@ import { registerPreCommitSafeguard } from './tools/pre-commit-safeguard';
 import { registerAnalyzeChangeSet } from './tools/analyze-change-set';
 import { registerRefactoringBusinessCase } from './tools/refactoring-business-case';
 import { registerExplainCodeHealth, registerExplainProductivity } from './tools/explain-code-health';
+import { registerKnowledgeMap } from './tools/knowledge-map';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -19,6 +20,7 @@ export async function createServer(): Promise<McpServer> {
   registerRefactoringBusinessCase(server);
   registerExplainCodeHealth(server);
   registerExplainProductivity(server);
+  registerKnowledgeMap(server);
 
   return server;
 }

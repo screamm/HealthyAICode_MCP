@@ -25,6 +25,15 @@ coverage/
 .cache/
 .vitest/
 
+# Code health cache
+.healthy-ai-cache/
+
+# Test fixtures temporary dirs
+packages/core/tests/fixtures/project-hotspot-tmp/
+
+# Node module lock conflicts
+.pnpm-lock-yaml.bak
+
 # OS
 .DS_Store
 Thumbs.db

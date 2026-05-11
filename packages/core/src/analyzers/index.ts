@@ -1,4 +1,4 @@
-import type { Language, FunctionResult, MetricBreakdown } from '../types';
+import type { Language, FunctionResult, MetricBreakdown, Smell } from '../types';
 import { analyzeTypeScript } from './typescript';
 import { analyzePython } from './python';
 import { analyzeJava } from './java';
@@ -9,42 +9,47 @@ export { analyzePython } from './python';
 export { analyzeJava } from './java';
 export { analyzeCSharp } from './csharp';
 
-export function analyzeByLanguage(
-  code: string,
-  language: Language,
-): {
+interface AnalyzerOutput {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
-  smells: never[];
-} {
+  smells: Smell[];
+}
+
+export function analyzeByLanguage(code: string, language: Language, filePath = '<inline>'): AnalyzerOutput {
   switch (language) {
     case 'typescript':
     case 'javascript':
-      return analyzeTypeScript(code);
+      return analyzeTypeScript(code, filePath);
     case 'python':
-      return analyzePython(code);
+      return { ...analyzePython(code), smells: [] };
     case 'java':
     case 'kotlin':
-      return analyzeJava(code);
+      return { ...analyzeJava(code), smells: [] };
     case 'csharp':
-      return analyzeCSharp(code);
-    default: {
-      const totalLines = code.split('\n').length;
-      return {
-        functions: [],
-        smells: [],
-        metrics: {
-          cyclomaticComplexity: 1,
-          cognitiveComplexity: 0, // not computed; placeholder
-          maxNestingDepth: 0,
-          avgFunctionLength: 0,
-          maxFunctionLength: 0,
-          avgParameterCount: 0,
-          maxParameterCount: 0,
-          totalLines,
-          duplicationScore: 0,
-        },
-      };
-    }
+      return { ...analyzeCSharp(code), smells: [] };
+    default:
+      return unsupportedOutput(code);
   }
+}
+
+function unsupportedOutput(code: string): AnalyzerOutput {
+  return {
+    functions: [],
+    smells: [],
+    metrics: stubMetrics(code.split('\n').length),
+  };
+}
+
+function stubMetrics(totalLines: number): MetricBreakdown {
+  return {
+    cyclomaticComplexity: 1,
+    cognitiveComplexity: 0,
+    maxNestingDepth: 0,
+    avgFunctionLength: 0,
+    maxFunctionLength: 0,
+    avgParameterCount: 0,
+    maxParameterCount: 0,
+    totalLines,
+    duplicationScore: 0,
+  };
 }

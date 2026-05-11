@@ -29,34 +29,33 @@ function getPrioritySmell(smells: Smell[]): Smell | null {
 }
 
 export function formatReviewSummary(filePath: string, result: HealthResult): string {
-  const categoryLabel =
-    result.category === 'red'
-      ? 'Röd — Allvarlig teknisk skuld'
-      : result.category === 'yellow'
-      ? 'Gul — Teknisk skuld'
-      : 'Grön — Hälsosam';
-
   const lines: string[] = [
     `Fil: ${filePath}`,
-    `Hälsopoäng: ${result.score}/10.0  (${categoryLabel})`,
+    `Hälsopoäng: ${result.score}/10.0  (${categoryLabel(result.category)})`,
     '',
   ];
 
   if (result.smells.length === 0) {
     lines.push('Inga problem identifierade. Koden är AI-redo.');
-  } else {
-    lines.push('Identifierade problem:');
-    for (const smell of result.smells) {
-      const severity =
-        smell.severity === 'critical'
-          ? '[KRITISK]'
-          : smell.severity === 'high'
-          ? '[HÖG]    '
-          : '[MEDIUM] ';
-      lines.push(`  ${severity} ${smell.type}: ${smell.description}`);
-      lines.push(`             → ${smell.suggestion}`);
-    }
+    return lines.join('\n');
   }
 
+  lines.push('Identifierade problem:');
+  for (const smell of result.smells) {
+    lines.push(`  ${severityLabel(smell.severity)} ${smell.type}: ${smell.description}`);
+    lines.push(`             → ${smell.suggestion}`);
+  }
   return lines.join('\n');
+}
+
+function categoryLabel(category: HealthResult['category']): string {
+  if (category === 'red') return 'Röd — Allvarlig teknisk skuld';
+  if (category === 'yellow') return 'Gul — Teknisk skuld';
+  return 'Grön — Hälsosam';
+}
+
+function severityLabel(severity: Smell['severity']): string {
+  if (severity === 'critical') return '[KRITISK]';
+  if (severity === 'high') return '[HÖG]    ';
+  return '[MEDIUM] ';
 }

@@ -25,45 +25,53 @@ const NESTING_NODE_TYPES = new Set([
   'try_statement',
 ]);
 
+const METHOD_NODE_TYPES = new Set([
+  'method_declaration',
+  'constructor_declaration',
+]);
+
 export function analyzeJava(code: string): {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
   smells: never[];
 } {
   const tree = parser.parse(code);
-  const functions: FunctionResult[] = [];
-
-  function visitNode(node: Parser.SyntaxNode): void {
-    if (
-      node.type === 'method_declaration' ||
-      node.type === 'constructor_declaration'
-    ) {
-      const name = node.childForFieldName('name')?.text ?? '<anonymous>';
-      const startLine = node.startPosition.row + 1;
-      const endLine = node.endPosition.row + 1;
-      const params = node.childForFieldName('parameters');
-      const paramCount = params
-        ? params.namedChildren.filter(c => c.type === 'formal_parameter').length
-        : 0;
-
-      functions.push({
-        name,
-        line: startLine,
-        length: endLine - startLine + 1,
-        cyclomaticComplexity: calculateJavaCyclomatic(node),
-        nestingDepth: calculateJavaNesting(node),
-        parameterCount: paramCount,
-        smells: [],
-      });
-    }
-    for (const child of node.children) visitNode(child);
-  }
-
-  visitNode(tree.rootNode);
-
+  const functions = collectFunctions(tree.rootNode);
   const totalLines = code === '' ? 0 : code.split('\n').length;
   const metrics = buildMetrics(functions, totalLines);
   return { functions, metrics, smells: [] };
+}
+
+function collectFunctions(root: Parser.SyntaxNode): FunctionResult[] {
+  const functions: FunctionResult[] = [];
+  function visit(node: Parser.SyntaxNode): void {
+    if (METHOD_NODE_TYPES.has(node.type)) {
+      functions.push(extractFunction(node));
+    }
+    for (const child of node.children) visit(child);
+  }
+  visit(root);
+  return functions;
+}
+
+function extractFunction(node: Parser.SyntaxNode): FunctionResult {
+  const startLine = node.startPosition.row + 1;
+  const endLine = node.endPosition.row + 1;
+  const params = node.childForFieldName('parameters');
+  const paramCount = params
+    ? params.namedChildren.filter(c => c.type === 'formal_parameter').length
+    : 0;
+
+  return {
+    name: node.childForFieldName('name')?.text ?? '<anonymous>',
+    line: startLine,
+    length: endLine - startLine + 1,
+    cyclomaticComplexity: calculateJavaCyclomatic(node),
+    cognitiveComplexity: 0,
+    nestingDepth: calculateJavaNesting(node),
+    parameterCount: paramCount,
+    smells: [],
+  };
 }
 
 function calculateJavaCyclomatic(node: Parser.SyntaxNode): number {
@@ -94,19 +102,7 @@ function calculateJavaNesting(node: Parser.SyntaxNode): number {
 }
 
 function buildMetrics(functions: FunctionResult[], totalLines: number): MetricBreakdown {
-  if (functions.length === 0) {
-    return {
-      cyclomaticComplexity: 1,
-      cognitiveComplexity: 0, // not computed; placeholder
-      maxNestingDepth: 0,
-      avgFunctionLength: 0,
-      maxFunctionLength: 0,
-      avgParameterCount: 0,
-      maxParameterCount: 0,
-      totalLines,
-      duplicationScore: 0,
-    };
-  }
+  if (functions.length === 0) return emptyMetrics(totalLines);
   return {
     cyclomaticComplexity: Math.max(...functions.map(f => f.cyclomaticComplexity)),
     cognitiveComplexity: 0, // not computed; placeholder
@@ -119,6 +115,20 @@ function buildMetrics(functions: FunctionResult[], totalLines: number): MetricBr
       (functions.reduce((s, f) => s + f.parameterCount, 0) / functions.length).toFixed(1)
     ),
     maxParameterCount: Math.max(...functions.map(f => f.parameterCount)),
+    totalLines,
+    duplicationScore: 0,
+  };
+}
+
+function emptyMetrics(totalLines: number): MetricBreakdown {
+  return {
+    cyclomaticComplexity: 1,
+    cognitiveComplexity: 0, // not computed; placeholder
+    maxNestingDepth: 0,
+    avgFunctionLength: 0,
+    maxFunctionLength: 0,
+    avgParameterCount: 0,
+    maxParameterCount: 0,
     totalLines,
     duplicationScore: 0,
   };

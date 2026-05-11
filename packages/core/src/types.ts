@@ -16,11 +16,26 @@ export type SmellType =
   | 'LargeMethod'
   | 'ComplexConditional'
   | 'LongParameterList'
-  | 'LargeFile';
+  | 'LargeFile'
+  | 'CognitiveComplexity'
+  | 'TypeSafetyEscape'
+  | 'MagicNumber'
+  | 'LowDocCoverage'
+  | 'BrainMethod'
+  | 'TestProximity'
+  | 'MessageChain'
+  | 'DataClumps'
+  | 'SATD'
+  | 'GodClass'
+  | 'FeatureEnvy'
+  | 'LowMaintainability'
+  | 'CodeChurn'
+  | 'DeveloperCongestion'
+  | 'KnowledgeLoss';
 
 export interface Smell {
   type: SmellType;
-  severity: 'critical' | 'high' | 'medium';
+  severity: 'critical' | 'high' | 'medium' | 'low';
   functionName?: string;
   line: number;
   description: string;
@@ -37,6 +52,7 @@ export interface MetricBreakdown {
   maxParameterCount: number;
   totalLines: number;
   duplicationScore: number;
+  maintainabilityIndex?: number;
 }
 
 export interface FunctionResult {
@@ -44,6 +60,7 @@ export interface FunctionResult {
   line: number;
   length: number;
   cyclomaticComplexity: number;
+  cognitiveComplexity: number;
   nestingDepth: number;
   parameterCount: number;
   smells: Smell[];

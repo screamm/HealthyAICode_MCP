@@ -10,23 +10,33 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "fast-glob": "^3.3.3",
+    "simple-git": "^3.22.0",
     "tree-sitter": "^0.21.0",
-    "tree-sitter-typescript": "^0.21.0",
-    "tree-sitter-python": "^0.21.0",
-    "tree-sitter-java": "^0.21.0",
     "tree-sitter-c-sharp": "^0.21.0",
-    "simple-git": "^3.22.0"
+    "tree-sitter-java": "^0.21.0",
+    "tree-sitter-python": "^0.21.0",
+    "tree-sitter-typescript": "^0.21.0"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
-    "@types/node": "^20.0.0"
+    "vitest": "^1.6.0"
   },
-  "files": ["dist/", "README.md"],
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/YOUR_USERNAME/healthy-ai-code-mcp"
   },
-  "keywords": ["code-health", "static-analysis", "ast", "metrics", "refactoring"]
+  "keywords": [
+    "code-health",
+    "static-analysis",
+    "ast",
+    "metrics",
+    "refactoring"
+  ]
 }

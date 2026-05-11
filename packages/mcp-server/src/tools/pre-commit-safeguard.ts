@@ -1,7 +1,26 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { analyzeFile } from '@healthy-ai-code/core';
+import { analyzeFile, type HealthResult } from '@healthy-ai-code/core';
 import { buildNextAction } from './shared';
+
+const SAFE_SCORE_THRESHOLD = 7.0;
+const LOOP_COMPLETE_SCORE = 9.5;
+
+interface FileCheckOk {
+  file: string;
+  score: number;
+  category: HealthResult['category'];
+  safe: boolean;
+  issues: HealthResult['smells'];
+  nextAction: ReturnType<typeof buildNextAction>;
+}
+
+interface FileCheckError {
+  file: string;
+  error: string;
+}
+
+type FileCheckResult = FileCheckOk | FileCheckError;
 
 export function registerPreCommitSafeguard(server: McpServer): void {
   server.tool(
@@ -11,50 +30,53 @@ export function registerPreCommitSafeguard(server: McpServer): void {
       repoPath: z.string().describe('Absolut sökväg till git-repositoryt'),
       files: z.array(z.string()).describe('Lista med filsökvägar att kontrollera'),
     },
-    async ({ repoPath, files }) => {
-      const results = [];
-      let overallSafe = true;
-
-      for (const file of files) {
-        try {
-          const resolvedPath =
-            file.startsWith('/') || file.startsWith('\\') || /^[A-Za-z]:/.test(file)
-              ? file
-              : `${repoPath}/${file}`;
-          const result = await analyzeFile(resolvedPath);
-          const isSafe = result.score >= 7.0;
-          if (!isSafe) overallSafe = false;
-          results.push({
-            file,
-            score: result.score,
-            category: result.category,
-            safe: isSafe,
-            issues: result.smells,
-            nextAction: buildNextAction(result, result.score >= 9.5),
-          });
-        } catch (error: any) {
-          results.push({ file, error: error.message });
-        }
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                overallSafe,
-                message: overallSafe
-                  ? 'Alla filer är säkra att committa.'
-                  : 'STOPPA: Röda filer identifierade. Refaktorera innan commit.',
-                results,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
+    async ({ repoPath, files }) => handlePreCommitCheck(repoPath, files)
   );
+}
+
+async function handlePreCommitCheck(repoPath: string, files: string[]) {
+  const results: FileCheckResult[] = [];
+  for (const file of files) {
+    results.push(await checkSingleFile(repoPath, file));
+  }
+  const overallSafe = results.every(r => 'safe' in r && r.safe);
+  return wrapResponse(overallSafe, results);
+}
+
+async function checkSingleFile(repoPath: string, file: string): Promise<FileCheckResult> {
+  try {
+    const resolvedPath = resolveFilePath(repoPath, file);
+    const result = await analyzeFile(resolvedPath);
+    const safe = result.score >= SAFE_SCORE_THRESHOLD;
+    return {
+      file,
+      score: result.score,
+      category: result.category,
+      safe,
+      issues: result.smells,
+      nextAction: buildNextAction(result, result.score >= LOOP_COMPLETE_SCORE),
+    };
+  } catch (error: any) {
+    return { file, error: error.message };
+  }
+}
+
+function resolveFilePath(repoPath: string, file: string): string {
+  const isAbsolute =
+    file.startsWith('/') || file.startsWith('\\') || /^[A-Za-z]:/.test(file);
+  return isAbsolute ? file : `${repoPath}/${file}`;
+}
+
+function wrapResponse(overallSafe: boolean, results: FileCheckResult[]) {
+  const message = overallSafe
+    ? 'Alla filer är säkra att committa.'
+    : 'STOPPA: Röda filer identifierade. Refaktorera innan commit.';
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify({ overallSafe, message, results }, null, 2),
+      },
+    ],
+  };
 }
