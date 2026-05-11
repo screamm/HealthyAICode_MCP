@@ -40,7 +40,11 @@ Thumbs.db
 Desktop.ini
 
 # Editors / IDE
-.vscode/
+# .vscode/mcp.json is intentionally tracked (VS Code MCP auto-config)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-workspace
 .idea/
 *.swp
 *.swo

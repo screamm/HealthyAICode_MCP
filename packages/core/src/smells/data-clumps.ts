@@ -1,5 +1,5 @@
 import type { SyntaxNode } from 'tree-sitter';
-import type { Smell, SmellType } from '../types';
+import type { Smell } from '../types';
 
 const CLUMP_SIZE = 3;
 const MIN_OCCURRENCES = 2;
@@ -46,8 +46,7 @@ function findClumps(groups: ParamGroup[]): Smell[] {
       if (reported.has(key)) continue;
       reported.add(key);
       smells.push({
-        // @ts-ignore - DataClumps added to SmellType in Wave 2 integration
-        type: 'DataClumps' as SmellType,
+        type: 'DataClumps',
         severity: 'medium',
         description: `Parameters [${[...common].join(', ')}] appear together in multiple signatures — missing abstraction.`,
         suggestion: 'Extract these parameters into a dedicated interface or type.',

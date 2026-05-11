@@ -6,25 +6,27 @@ A local MCP server that gives AI assistants objective code health feedback, enab
 
 ## Installation
 
-### Claude Code
-
-After publishing to npm, register the server with the Claude Code CLI:
+### Claude Code (recommended)
 
 ```bash
 claude mcp add healthy-ai-code -s user -- npx @healthy-ai-code/mcp-server
 ```
 
-For local development before publishing, point at the built entry directly:
+Verify with `claude mcp get healthy-ai-code`.
+
+For local development, point at the built entry directly:
 
 ```bash
 claude mcp add healthy-ai-code -s user -- node /absolute/path/to/packages/mcp-server/dist/index.js
 ```
 
-Verify the server is connected with `claude mcp get healthy-ai-code`.
+### VS Code
 
-### Other MCP clients (Cursor, Claude Desktop, etc.)
+The repository ships a `.vscode/mcp.json` that activates the server automatically when you open the project. No extra steps needed — just open the folder in VS Code with the Claude extension installed.
 
-Add to your client's MCP configuration:
+### Cursor, Claude Desktop, and other MCP clients
+
+Add to your client's MCP configuration file:
 
 ```json
 {
@@ -32,28 +34,91 @@ Add to your client's MCP configuration:
     "healthy-ai-code": {
       "type": "stdio",
       "command": "npx",
-      "args": ["@healthy-ai-code/mcp-server"]
+      "args": ["-y", "@healthy-ai-code/mcp-server"]
     }
   }
 }
 ```
 
+### Docker
+
+```bash
+docker build -t healthy-ai-code-mcp .
+docker run --rm -i healthy-ai-code-mcp
+```
+
+Point your MCP client at the container by replacing `command` / `args` with:
+
+```json
+{
+  "command": "docker",
+  "args": ["run", "--rm", "-i", "healthy-ai-code-mcp"]
+}
+```
+
+### Homebrew (macOS)
+
+```bash
+brew tap YOUR_USERNAME/healthy-ai-code-mcp
+brew install healthy-ai-code-mcp
+```
+
+See `Formula/README.md` for tap setup and SHA256 update instructions for new releases.
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/YOUR_USERNAME/healthy-ai-code-mcp/master/install.ps1 | iex
+```
+
+The script checks for Node ≥ 18, installs the server globally via npm, and prints config snippets for Claude Code, Claude Desktop, VS Code, and Cursor.
+
 ## Agent Setup
 
-Copy `AGENTS.md` to the root of each repository where you want AI-guided health enforcement. This file instructs agents to run health checks before and after every change.
+Copy `AGENTS.md` to the root of each repository where you want AI-guided health enforcement. This file instructs agents to run health checks before and after every change and blocks commits on files scoring below 7.0.
+
+## Skills
+
+The `skills/` directory contains nine prompt templates that teach AI assistants specific code health workflows. Drop the relevant skill into your system prompt or reference it via your AI client's prompt library:
+
+| Skill | Purpose |
+|-------|---------|
+| `installing-and-configuring` | First-time setup and configuration |
+| `explaining-code-health` | Audience-specific explanations (dev / tech lead / PM) |
+| `safeguarding-ai-generated-code` | Mandatory 3-gate review protocol for AI output |
+| `guided-refactoring` | Score-driven refactoring loop |
+| `making-the-business-case` | ROI calculation and stakeholder presentation |
+| `code-health-review-workflow` | Single-file and PR review workflows |
+| `knowledge-risk-assessment` | Bus factor and temporal coupling analysis |
+| `prioritizing-technical-debt` | Health × frequency priority matrix for backlog |
+| `pre-commit-protection` | Manual, Git hook, and CI/CD protection levels |
 
 ## Tools
 
 | Tool | Input | Purpose |
 |------|-------|---------|
-| `code_health_review` | `filePath` | Detailed review with refactoring guidance — use in the feedback loop |
-| `code_health_score` | `filePath` | Quick health score only |
-| `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Check files before commit |
+| `code_health_review` | `filePath` | Detailed review with refactoring guidance — main feedback-loop tool |
+| `code_health_score` | `filePath` | Quick health score for screening |
+| `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Gate files before commit |
 | `analyze_change_set` | `repoPath`, `baseBranch` | Check full diff before PR |
-| `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring |
-| `code_health_knowledge_map` | `repoPath` | Knowledge distribution, bus factor, and temporal coupling analysis |
+| `code_health_auto_refactor` | `filePath` | Returns primary refactoring target with code context and instructions |
+| `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring investment |
+| `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, and temporal coupling |
+| `get_config` | *(none)* | Read current server configuration |
+| `set_config` | key, value | Persist a configuration value |
 | `explain_code_health` | *(none)* | What is code health? |
 | `explain_code_health_productivity` | *(none)* | Health → productivity link |
+
+### Configuration keys
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `targetScore` | `9.5` | Minimum score for `loopComplete: true` |
+| `maxFileLines` | `500` | `LargeFile` threshold |
+| `maxMethodLines` | `30` | `LargeMethod` threshold |
+| `maxComplexity` | `10` | Cyclomatic complexity threshold |
+| `maxNesting` | `4` | Deep nesting threshold |
+| `maxParams` | `5` | Long parameter list threshold |
 
 ## Biomarkers (27)
 
@@ -67,7 +132,7 @@ Healthy AI Code detects 27 code health biomarkers across four sprint generations
 | `LargeClass` | Classes with too many responsibilities |
 | `LongParameterList` | Functions with excessive parameter counts |
 | `DeepNesting` | Deeply nested control structures |
-| `PrimitiveObsession` | Overuse of primitive types |
+| `PrimitiveObsession` | Overuse of primitive types as parameters |
 | `SpeculativeGenerality` | Unused abstractions and over-engineering |
 
 ### Cognitive & type safety (Sprint 5)
@@ -82,7 +147,7 @@ Healthy AI Code detects 27 code health biomarkers across four sprint generations
 | Biomarker | Description |
 |-----------|-------------|
 | `Duplication` | Token-fingerprint Jaccard similarity detection |
-| `LanguageMix` | Mixed natural languages (e.g. Swedish/English) reducing AI readability |
+| `LanguageMix` | Mixed natural languages reducing AI readability |
 | `DeadExports` | Exported symbols never referenced outside their module |
 
 ### Hotspot & compound smells (Sprint 7)
@@ -177,6 +242,12 @@ pnpm --filter @healthy-ai-code/core test
 
 # Run only MCP server tests
 pnpm --filter @healthy-ai-code/mcp-server test
+
+# Typecheck all packages
+pnpm -r typecheck
+
+# Run the self-audit script
+node scripts/health-audit.mjs
 ```
 
 ## Project Structure
@@ -189,7 +260,8 @@ healthy-ai-code-mcp/
 │   │   │   ├── analyzers/       # Language-specific AST parsers
 │   │   │   ├── metrics/         # Individual metrics
 │   │   │   ├── scoring/         # Score aggregation
-│   │   │   ├── smells/          # Code smell detection
+│   │   │   ├── smells/          # Code smell detectors
+│   │   │   ├── temporal/        # Git-history biomarkers
 │   │   │   └── index.ts         # Public API
 │   │   └── tests/
 │   │       └── fixtures/        # healthy/ unhealthy/ edge-cases/
@@ -200,6 +272,13 @@ healthy-ai-code-mcp/
 │       │   └── index.ts         # Entry point (bin)
 │       └── tests/
 │           └── integration/
+├── skills/                      # AI prompt templates for workflows
+├── Formula/                     # Homebrew formula
+├── scripts/                     # Development and audit scripts
+├── .vscode/mcp.json             # VS Code MCP auto-configuration
+├── Dockerfile                   # Multi-stage Docker build
+├── install.ps1                  # Windows PowerShell installer
+├── server.json                  # MCP registry schema
 ├── AGENTS.md                    # Copy to your repo root
 └── README.md
 ```

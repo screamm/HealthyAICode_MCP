@@ -24,9 +24,10 @@ export function registerCodeHealthReview(server: McpServer): void {
         return {
           content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         return {
-          content: [{ type: 'text', text: JSON.stringify({ error: error.message }) }],
+          content: [{ type: 'text', text: JSON.stringify({ error: message }) }],
           isError: true,
         };
       }

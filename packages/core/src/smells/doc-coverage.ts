@@ -11,7 +11,7 @@ interface ExportInfo {
   hasJsDoc: boolean;
 }
 
-export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): any[] {
+export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): Smell[] {
   const exports = collectExports(root, source);
   if (exports.length < MIN_EXPORTS_FOR_CHECK) return [];
 
@@ -20,10 +20,8 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): a
 
   if (ratio >= HIGH_COVERAGE_THRESHOLD) return [];
 
-  // @ts-ignore
   const severity: Smell['severity'] = ratio < MEDIUM_COVERAGE_THRESHOLD ? 'medium' : 'low';
   return [{
-    // @ts-ignore
     type: 'LowDocCoverage',
     severity,
     line: 1,
@@ -35,9 +33,8 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): a
 function collectExports(root: Parser.SyntaxNode, source: string): ExportInfo[] {
   const lines = source.split('\n');
   const exports: ExportInfo[] = [];
-
   function visit(node: Parser.SyntaxNode): void {
-    if (isExportStatement(node)) {
+    if (node.type === 'export_statement') {
       const name = getExportedName(node) ?? '<anonymous>';
       const line = node.startPosition.row + 1;
       const hasJsDoc = lineAboveIsJsDocEnd(lines, line);
@@ -49,12 +46,7 @@ function collectExports(root: Parser.SyntaxNode, source: string): ExportInfo[] {
   return exports;
 }
 
-function isExportStatement(node: Parser.SyntaxNode): boolean {
-  return node.type === 'export_statement';
-}
-
 function getExportedName(node: Parser.SyntaxNode): string | null {
-  // Drill into the declaration the export wraps.
   const decl = node.children.find(c => /declaration$/.test(c.type) || c.type === 'lexical_declaration');
   if (!decl) return null;
   const named = decl.childForFieldName('name');
@@ -62,11 +54,10 @@ function getExportedName(node: Parser.SyntaxNode): string | null {
 }
 
 function lineAboveIsJsDocEnd(lines: string[], exportLine: number): boolean {
-  // exportLine is 1-indexed; the line above is lines[exportLine - 2].
   for (let i = exportLine - 2; i >= 0; i--) {
     const line = lines[i].trim();
-    if (line === '') continue;             // skip blank lines
-    return line.endsWith('*/');            // JSDoc must end immediately above
+    if (line === '') continue;
+    return line.endsWith('*/');
   }
   return false;
 }

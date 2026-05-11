@@ -1,5 +1,5 @@
 import type { SyntaxNode } from 'tree-sitter';
-import type { Smell, SmellType } from '../types';
+import type { Smell } from '../types';
 
 const ENVY_RATIO = 0.6;
 const MIN_FOREIGN_CALLS = 3;
@@ -37,8 +37,7 @@ function checkMethod(method: SyntaxNode, acc: Smell[], importedNames: Set<string
   if (maxCount >= MIN_FOREIGN_CALLS && maxCount / totalCalls >= ENVY_RATIO) {
     const name = method.childForFieldName?.('name')?.text ?? 'anonymous';
     acc.push({
-      // @ts-ignore - FeatureEnvy added to SmellType in Wave 2
-      type: 'FeatureEnvy' as SmellType,
+      type: 'FeatureEnvy',
       severity: 'medium',
       description: `Method "${name}" makes ${maxCount}/${totalCalls} calls to "${maxType}" — more interested in that type than its own class.`,
       suggestion: `Move this method closer to "${maxType}" or extract a service that encapsulates this interaction.`,

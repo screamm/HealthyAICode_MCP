@@ -31,7 +31,8 @@ export type SmellType =
   | 'LowMaintainability'
   | 'CodeChurn'
   | 'DeveloperCongestion'
-  | 'KnowledgeLoss';
+  | 'KnowledgeLoss'
+  | 'PrimitiveObsession';
 
 export interface Smell {
   type: SmellType;

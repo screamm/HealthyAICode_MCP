@@ -3,18 +3,15 @@ import { z } from 'zod';
 import { analyzeChangeset, type ChangesetResult } from '@healthy-ai-code/core';
 
 export function registerAnalyzeChangeSet(server: McpServer): void {
-  // @ts-ignore — TS2589: Zod+MCP SDK deep type inference with .default() chains
+  // @ts-ignore TS2589: MCP SDK tool() overloads exceed TypeScript's type instantiation depth limit
   server.tool(
     'analyze_change_set',
     'Analyserar hela diff mot basgrenen. Kör innan PR skapas.',
     {
       repoPath: z.string().describe('Absolut sökväg till git-repositoryt'),
-      baseBranch: z
-        .string()
-        .default('main')
-        .describe('Basgren att jämföra mot (default: main)'),
+      baseBranch: z.string().optional().describe('Basgren att jämföra mot (default: main)'),
     },
-    async ({ repoPath, baseBranch }) => handleChangeset(repoPath, baseBranch)
+    async ({ repoPath, baseBranch }) => handleChangeset(repoPath, baseBranch ?? 'main')
   );
 }
 
@@ -22,8 +19,8 @@ async function handleChangeset(repoPath: string, baseBranch: string) {
   try {
     const result = await analyzeChangeset(repoPath, baseBranch);
     return successResponse(result);
-  } catch (error: any) {
-    return errorResponse(error.message);
+  } catch (error: unknown) {
+    return errorResponse(error instanceof Error ? error.message : String(error));
   }
 }
 

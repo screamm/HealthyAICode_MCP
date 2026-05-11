@@ -5,7 +5,7 @@ import type { ToolResponse } from '../types';
 import { buildNextAction } from './shared';
 
 export function registerCodeHealthScore(server: McpServer): void {
-  // @ts-ignore — TS2589: Zod+MCP SDK deep type inference
+  // @ts-ignore TS2589: MCP SDK tool() overloads exceed TypeScript's type instantiation depth limit
   server.tool(
     'code_health_score',
     'Beräknar en snabb hälsopoäng (1-10) för en fil. Använd detta för snabb screening.',
@@ -25,9 +25,10 @@ export function registerCodeHealthScore(server: McpServer): void {
         return {
           content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         return {
-          content: [{ type: 'text', text: JSON.stringify({ error: error.message }) }],
+          content: [{ type: 'text', text: JSON.stringify({ error: message }) }],
           isError: true,
         };
       }

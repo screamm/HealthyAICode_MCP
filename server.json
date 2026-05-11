@@ -1,0 +1,73 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "healthy-ai-code-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that analyses code health in real time, guiding AI assistants and developers to write clean, maintainable code. Provides objective 1-10 health scores, deep smell detection, pre-commit gates, branch-level change analysis, bus-factor mapping, and ROI-backed refactoring business cases.",
+  "author": {
+    "name": "David Rydgren",
+    "email": "davidrydgren@gmail.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/healthy-ai-code-mcp"
+  },
+  "keywords": [
+    "code-quality",
+    "developer-tools",
+    "refactoring",
+    "code-health",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "static-analysis",
+    "code-review",
+    "technical-debt"
+  ],
+  "categories": [
+    "code-quality",
+    "developer-tools"
+  ],
+  "deployment": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@healthy-ai-code/mcp-server"]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "tools": [
+    {
+      "name": "code_health_score",
+      "description": "Fast 1-10 code health screening for a single file or snippet. Returns an objective health score without full diagnostic output — use for quick checks before deciding whether a deep review is needed."
+    },
+    {
+      "name": "code_health_review",
+      "description": "Deep code health inspection that detects smells, complexity hotspots, coupling issues, and duplication. Returns actionable refactoring suggestions and a loopComplete flag. Call in a loop until loopComplete is true to surface all issues."
+    },
+    {
+      "name": "pre_commit_code_health_safeguard",
+      "description": "Pre-commit quality gate that evaluates all staged files. Returns pass, warn, or block per file. Blocks commit when any file scores below 7.0, ensuring regressions never reach version control."
+    },
+    {
+      "name": "analyze_change_set",
+      "description": "Branch-level health analysis comparing changed files against a base branch. Returns per-file health deltas, regressions, and improvements — designed to run before opening or merging a pull request."
+    },
+    {
+      "name": "code_health_refactoring_business_case",
+      "description": "Generates a business-case document for a proposed refactoring, including estimated time saved, defect risk reduction, and ROI. Use when refactoring work needs to be justified to stakeholders or engineering management."
+    },
+    {
+      "name": "explain_code_health",
+      "description": "Plain-language explanation of the 1-10 code health scale: what each score band means, how scores are calculated, and why the thresholds (7.0 commit minimum, 9.5 AI-ready target) were chosen."
+    },
+    {
+      "name": "explain_code_health_productivity",
+      "description": "Explains the research-backed relationship between code health and developer productivity, including effects on cycle time, defect rates, and onboarding speed. Use when a team questions whether health scores justify investment."
+    },
+    {
+      "name": "code_health_knowledge_map",
+      "description": "Analyses code ownership and contribution patterns to identify knowledge silos and bus-factor risk across the codebase. Use when planning staffing changes, onboarding new engineers, or assessing handover readiness."
+    }
+  ]
+}

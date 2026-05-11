@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "healthy-ai-code": {
+      "command": "npx",
+      "args": ["-y", "@healthy-ai-code/mcp-server"],
+      "type": "stdio"
+    }
+  }
+}

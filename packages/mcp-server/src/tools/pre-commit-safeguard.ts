@@ -7,19 +7,10 @@ const SAFE_SCORE_THRESHOLD = 7.0;
 const LOOP_COMPLETE_SCORE = 9.5;
 
 interface FileCheckOk {
-  file: string;
-  score: number;
-  category: HealthResult['category'];
-  safe: boolean;
-  issues: HealthResult['smells'];
-  nextAction: ReturnType<typeof buildNextAction>;
+  file: string; score: number; category: HealthResult['category']; safe: boolean;
+  issues: HealthResult['smells']; nextAction: ReturnType<typeof buildNextAction>;
 }
-
-interface FileCheckError {
-  file: string;
-  error: string;
-}
-
+interface FileCheckError { file: string; error: string; }
 type FileCheckResult = FileCheckOk | FileCheckError;
 
 export function registerPreCommitSafeguard(server: McpServer): void {
@@ -36,47 +27,27 @@ export function registerPreCommitSafeguard(server: McpServer): void {
 
 async function handlePreCommitCheck(repoPath: string, files: string[]) {
   const results: FileCheckResult[] = [];
-  for (const file of files) {
-    results.push(await checkSingleFile(repoPath, file));
-  }
+  for (const file of files) results.push(await checkSingleFile(repoPath, file));
   const overallSafe = results.every(r => 'safe' in r && r.safe);
   return wrapResponse(overallSafe, results);
 }
 
 async function checkSingleFile(repoPath: string, file: string): Promise<FileCheckResult> {
   try {
-    const resolvedPath = resolveFilePath(repoPath, file);
+    const isAbsolute = file.startsWith('/') || file.startsWith('\\') || /^[A-Za-z]:/.test(file);
+    const resolvedPath = isAbsolute ? file : `${repoPath}/${file}`;
     const result = await analyzeFile(resolvedPath);
     const safe = result.score >= SAFE_SCORE_THRESHOLD;
-    return {
-      file,
-      score: result.score,
-      category: result.category,
-      safe,
-      issues: result.smells,
-      nextAction: buildNextAction(result, result.score >= LOOP_COMPLETE_SCORE),
-    };
-  } catch (error: any) {
-    return { file, error: error.message };
+    return { file, score: result.score, category: result.category, safe,
+      issues: result.smells, nextAction: buildNextAction(result, result.score >= LOOP_COMPLETE_SCORE) };
+  } catch (error: unknown) {
+    return { file, error: error instanceof Error ? error.message : String(error) };
   }
-}
-
-function resolveFilePath(repoPath: string, file: string): string {
-  const isAbsolute =
-    file.startsWith('/') || file.startsWith('\\') || /^[A-Za-z]:/.test(file);
-  return isAbsolute ? file : `${repoPath}/${file}`;
 }
 
 function wrapResponse(overallSafe: boolean, results: FileCheckResult[]) {
   const message = overallSafe
     ? 'Alla filer är säkra att committa.'
     : 'STOPPA: Röda filer identifierade. Refaktorera innan commit.';
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: JSON.stringify({ overallSafe, message, results }, null, 2),
-      },
-    ],
-  };
+  return { content: [{ type: 'text' as const, text: JSON.stringify({ overallSafe, message, results }, null, 2) }] };
 }

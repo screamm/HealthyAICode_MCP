@@ -1,5 +1,5 @@
 import type { SyntaxNode } from 'tree-sitter';
-import type { Smell, SmellType } from '../types';
+import type { Smell } from '../types';
 
 const CHAIN_THRESHOLD = 4;
 
@@ -14,8 +14,7 @@ function visitAll(node: SyntaxNode, acc: Smell[]): void {
     const depth = chainDepth(node);
     if (depth >= CHAIN_THRESHOLD) {
       acc.push({
-        // @ts-ignore - MessageChain added to SmellType in Wave 2 integration
-        type: 'MessageChain' as SmellType,
+        type: 'MessageChain',
         severity: 'medium',
         description: `Method chain of depth ${depth} — violates Law of Demeter and hides dependencies.`,
         suggestion: 'Introduce intermediate variables or delegate to a helper.',

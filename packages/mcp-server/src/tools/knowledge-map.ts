@@ -1,12 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-// @ts-ignore — temporal exports will be added to @healthy-ai-code/core index in a later wave
 import { analyzeDeveloperCongestion } from '@healthy-ai-code/core';
-// @ts-ignore — temporal exports will be added to @healthy-ai-code/core index in a later wave
 import { analyzeKnowledgeLoss } from '@healthy-ai-code/core';
-// @ts-ignore — temporal exports will be added to @healthy-ai-code/core index in a later wave
 import { analyzeTemporalCoupling } from '@healthy-ai-code/core';
 import { glob } from 'fast-glob';
+
+type CongestionResult = Awaited<ReturnType<typeof analyzeDeveloperCongestion>>;
+type KnowledgeResult = Awaited<ReturnType<typeof analyzeKnowledgeLoss>>;
+type CoupledPair = Awaited<ReturnType<typeof analyzeTemporalCoupling>>[number];
 
 export function registerKnowledgeMap(server: McpServer): void {
   server.tool(
@@ -31,9 +32,9 @@ async function handleKnowledgeMap(projectPath: string) {
       analyzeTemporalCoupling(projectPath, files),
     ]);
 
-    const highCongestion = congestionResults.filter((r: any) => r.authorCount >= 5);
-    const singleOwner = knowledgeResults.filter((r: any) => r.primaryOwnershipRatio >= 0.8);
-    const highCoupling = coupledPairs.filter((p: any) => p.couplingStrength > 0.5);
+    const highCongestion = congestionResults.filter((r: CongestionResult) => r.authorCount >= 5);
+    const singleOwner = knowledgeResults.filter((r: KnowledgeResult) => r.primaryOwnershipRatio >= 0.8);
+    const highCoupling = coupledPairs.filter((p: CoupledPair) => p.couplingStrength > 0.5);
 
     const body = {
       projectPath,
@@ -43,18 +44,18 @@ async function handleKnowledgeMap(projectPath: string) {
         singleOwnerRisk: singleOwner.length,
         hiddenCouplingPairs: highCoupling.length,
       },
-      developerCongestion: highCongestion.map((r: any) => ({
+      developerCongestion: highCongestion.map((r: CongestionResult) => ({
         file: r.filePath,
         authors: r.authorCount,
         severity: r.smell?.severity,
       })),
-      knowledgeRisk: singleOwner.map((r: any) => ({
+      knowledgeRisk: singleOwner.map((r: KnowledgeResult) => ({
         file: r.filePath,
         primaryAuthor: r.primaryAuthor,
         ownershipRatio: (r.primaryOwnershipRatio * 100).toFixed(0) + '%',
         busFactorEstimate: r.busFactorEstimate,
       })),
-      temporalCoupling: highCoupling.slice(0, 10).map((p: any) => ({
+      temporalCoupling: highCoupling.slice(0, 10).map((p: CoupledPair) => ({
         fileA: p.fileA,
         fileB: p.fileB,
         coChanges: p.coChangeCount,

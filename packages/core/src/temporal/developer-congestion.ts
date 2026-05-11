@@ -12,6 +12,10 @@ export interface CongestionResult {
   smell: Smell | null;
 }
 
+/**
+ * Measures how many distinct developers have modified a file recently.
+ * High author counts are a strong predictor of post-release defects.
+ */
 export async function analyzeDeveloperCongestion(
   repoPath: string,
   filePath: string,
@@ -34,14 +38,19 @@ export async function analyzeDeveloperCongestion(
   return { filePath, authorCount, authors, smell };
 }
 
+function congestionSeverity(authorCount: number): Smell['severity'] {
+  if (authorCount >= HIGH_AUTHORS) return 'high';
+  if (authorCount >= MEDIUM_AUTHORS) return 'medium';
+  return 'low';
+}
+
 function buildCongestionSmell(
   filePath: string,
   authorCount: number,
   authors: string[],
 ): Smell | null {
   if (authorCount < LOW_AUTHORS) return null;
-  const severity = authorCount >= HIGH_AUTHORS ? 'high' : authorCount >= MEDIUM_AUTHORS ? 'medium' : 'low';
-  // @ts-ignore — SmellType does not yet include 'DeveloperCongestion'
+  const severity = congestionSeverity(authorCount);
   return {
     type: 'DeveloperCongestion',
     severity,

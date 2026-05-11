@@ -1,5 +1,5 @@
 import type { SyntaxNode } from 'tree-sitter';
-import type { Smell, SmellType } from '../types';
+import type { Smell } from '../types';
 
 const COMMENT_NODES = new Set(['comment', 'line_comment', 'block_comment']);
 
@@ -29,9 +29,7 @@ function checkComment(node: SyntaxNode, acc: Smell[]): void {
     const found = text.match(pattern);
     if (found) {
       acc.push({
-        // @ts-ignore - SATD added to SmellType in Wave 2 integration
-        type: 'SATD' as SmellType,
-        // @ts-ignore - 'low' added to severity in Wave 2 integration
+        type: 'SATD',
         severity,
         description: `${label}: "${found[0]}" in comment — self-admitted technical debt.`,
         suggestion: 'Create a tracked issue for this debt and remove the comment, or resolve it now.',

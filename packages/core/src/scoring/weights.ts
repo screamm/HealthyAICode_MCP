@@ -23,6 +23,7 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   CodeChurn: 0.6,
   DeveloperCongestion: 0.7,
   KnowledgeLoss: 1.0,
+  PrimitiveObsession: 0.5,
 };
 
 export const SMELL_MAX_DEDUCTION = 3.0;

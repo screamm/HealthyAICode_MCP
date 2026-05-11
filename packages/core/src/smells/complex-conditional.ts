@@ -1,9 +1,7 @@
 import type { SyntaxNode } from 'tree-sitter';
 import type { Smell } from '../types';
 
-const TERNARY = 'ternary_expression';
-const BINARY = 'binary_expression';
-const PAREN = 'parenthesized_expression';
+const TERNARY = 'ternary_expression', BINARY = 'binary_expression', PAREN = 'parenthesized_expression';
 const LOGICAL_OPS = new Set(['&&', '||']);
 const BOOLEAN_CHAIN_THRESHOLD = 3;
 
@@ -34,41 +32,28 @@ function checkNestedTernary(node: SyntaxNode, acc: Smell[]): void {
   const a = node.childForFieldName('alternative');
   const cu = c ? unwrapParens(c) : null;
   const au = a ? unwrapParens(a) : null;
-  if (cu?.type === TERNARY || au?.type === TERNARY) {
-    acc.push({
-      type: 'ComplexConditional',
-      severity: 'high',
-      description: 'Nested ternary operator makes logic extremely hard to read.',
-      suggestion: 'Extract to named variables or use if/else blocks.',
-      line: node.startPosition.row + 1,
-    });
-  }
+  if (cu?.type !== TERNARY && au?.type !== TERNARY) return;
+  acc.push({ type: 'ComplexConditional', severity: 'high',
+    description: 'Nested ternary operator makes logic extremely hard to read.',
+    suggestion: 'Extract to named variables or use if/else blocks.',
+    line: node.startPosition.row + 1 });
 }
 
 function logicalOpCount(node: SyntaxNode): number {
   if (node.type !== BINARY) return 0;
   const op = node.childForFieldName('operator')?.text ?? '';
   if (!LOGICAL_OPS.has(op)) return 0;
-  const left = node.child(0);
-  const right = node.child(2);
-  return 1 + (left ? logicalOpCount(left) : 0) + (right ? logicalOpCount(right) : 0);
-}
-
-function isChainRoot(node: SyntaxNode): boolean {
-  const parentOp = node.parent?.childForFieldName?.('operator')?.text ?? '';
-  return !LOGICAL_OPS.has(parentOp);
+  const l = node.child(0), r = node.child(2);
+  return 1 + (l ? logicalOpCount(l) : 0) + (r ? logicalOpCount(r) : 0);
 }
 
 function checkBoolChain(node: SyntaxNode, acc: Smell[]): void {
-  if (!isChainRoot(node)) return;
+  const parentOp = node.parent?.childForFieldName?.('operator')?.text ?? '';
+  if (LOGICAL_OPS.has(parentOp)) return;
   const ops = logicalOpCount(node);
-  if (ops >= BOOLEAN_CHAIN_THRESHOLD) {
-    acc.push({
-      type: 'ComplexConditional',
-      severity: 'medium',
-      description: `Boolean expression has ${ops} logical operators — hard to parse mentally.`,
-      suggestion: 'Extract sub-conditions into named boolean variables.',
-      line: node.startPosition.row + 1,
-    });
-  }
+  if (ops < BOOLEAN_CHAIN_THRESHOLD) return;
+  acc.push({ type: 'ComplexConditional', severity: 'medium',
+    description: `Boolean expression has ${ops} logical operators — hard to parse mentally.`,
+    suggestion: 'Extract sub-conditions into named boolean variables.',
+    line: node.startPosition.row + 1 });
 }
