@@ -29,7 +29,7 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzePython(code, filePath);
     case 'java':
     case 'kotlin':
-      return { ...analyzeJava(code), smells: [] };
+      return analyzeJava(code, filePath);
     case 'csharp':
       return { ...analyzeCSharp(code), smells: [] };
     default:

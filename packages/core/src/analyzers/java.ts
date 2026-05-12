@@ -1,8 +1,9 @@
 import Parser from 'tree-sitter';
 import Java from 'tree-sitter-java';
-import type { FunctionResult, MetricBreakdown } from '../types';
+import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
+import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
 
 const parser = new Parser();
 parser.setLanguage(Java as unknown as object);
@@ -28,10 +29,10 @@ function javaBinaryCheck(n: Parser.SyntaxNode): boolean {
   return op === '&&' || op === '||';
 }
 
-export function analyzeJava(code: string): {
+export function analyzeJava(code: string, filePath = '<inline>'): {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
-  smells: never[];
+  smells: Smell[];
 } {
   const tree = parser.parse(code);
   const fns: FunctionResult[] = [];
@@ -41,7 +42,11 @@ export function analyzeJava(code: string): {
   }
   visit(tree.rootNode);
   const totalLines = code === '' ? 0 : code.split('\n').length;
-  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells: [] };
+  const smells: Smell[] = [
+    ...detectSATDFromText(code),
+    ...detectMagicNumbersFromText(code, filePath),
+  ];
+  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 
 function extractFunction(node: Parser.SyntaxNode): FunctionResult {

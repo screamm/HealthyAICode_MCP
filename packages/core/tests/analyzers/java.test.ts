@@ -139,3 +139,17 @@ public class Foo {
     });
   });
 });
+
+describe('analyzeJava — smell detection', () => {
+  it('detects SATD in Java code with FIXME comment', () => {
+    const code = 'public class P {\n    public void run() {\n        // FIXME: NPE risk\n        doWork();\n    }\n}';
+    const result = analyzeJava(code);
+    expect(result.smells.some(s => s.type === 'SATD')).toBe(true);
+  });
+
+  it('returns no SATD for clean Java code', () => {
+    const code = 'public class Calculator {\n    public int add(int a, int b) {\n        return a + b;\n    }\n}';
+    const result = analyzeJava(code);
+    expect(result.smells.filter(s => s.type === 'SATD')).toHaveLength(0);
+  });
+});
