@@ -34,4 +34,4 @@ export const AI_READY_THRESHOLD = 9.5;
 /** Minimum score for the green (healthy) category. */
 export const HEALTHY_THRESHOLD = 9.0;
 /** Minimum score for the yellow (problematic) category; below this is red. */
-export const PROBLEMATIC_THRESHOLD = 4.0;
+export const PROBLEMATIC_THRESHOLD = 6.0;

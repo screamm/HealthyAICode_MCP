@@ -8,7 +8,7 @@ export type Language =
   | 'csharp'
   | 'unsupported';
 
-/** Health category derived from the numeric score: green ≥9.0, yellow ≥4.0, red <4.0. */
+/** Health category derived from the numeric score: green ≥9.0, yellow ≥6.0, red <6.0. */
 export type HealthCategory = 'green' | 'yellow' | 'red';
 
 /** Union of all detectable code finding type identifiers. */

@@ -99,15 +99,15 @@ describe('categorize', () => {
     expect(categorize(10.0)).toBe('green');
   });
 
-  it('returns yellow for score >= 4.0 and < 9.0', () => {
-    expect(categorize(4.0)).toBe('yellow');
-    expect(categorize(6.5)).toBe('yellow');
+  it('returns yellow for score >= 6.0 and < 9.0', () => {
+    expect(categorize(6.0)).toBe('yellow');
+    expect(categorize(7.5)).toBe('yellow');
     expect(categorize(8.9)).toBe('yellow');
   });
 
-  it('returns red for score < 4.0', () => {
+  it('returns red for score < 6.0', () => {
     expect(categorize(1.0)).toBe('red');
-    expect(categorize(3.9)).toBe('red');
+    expect(categorize(5.9)).toBe('red');
     expect(categorize(2.5)).toBe('red');
   });
 
@@ -115,7 +115,11 @@ describe('categorize', () => {
     expect(categorize(9.0)).toBe('green');
   });
 
-  it('boundary: 4.0 is yellow not red', () => {
-    expect(categorize(4.0)).toBe('yellow');
+  it('boundary: 6.0 is yellow not red', () => {
+    expect(categorize(6.0)).toBe('yellow');
+  });
+
+  it('boundary: 5.9 is red not yellow', () => {
+    expect(categorize(5.9)).toBe('red');
   });
 });
