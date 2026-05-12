@@ -248,6 +248,13 @@ describe('detectSmells — CognitiveComplexity', () => {
     expect(smell?.severity).toBe('high');
   });
 
+  it('CognitiveComplexity is high when cognitiveComplexity = 25 (exact boundary)', () => {
+    const fn = makeFunction({ cognitiveComplexity: 25 });
+    const smells = detectSmells([fn], makeMetrics());
+    const smell = smells.find(s => s.type === 'CognitiveComplexity');
+    expect(smell?.severity).toBe('high');
+  });
+
   it('does NOT flag CognitiveComplexity when cognitiveComplexity = 0 (non-TS language)', () => {
     const fn = makeFunction({ cognitiveComplexity: 0 });
     const smells = detectSmells([fn], makeMetrics());
