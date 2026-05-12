@@ -91,27 +91,27 @@ describe('detectSmells — ComplexMethod', () => {
 });
 
 describe('detectSmells — DeepNesting', () => {
-  it('does NOT flag DeepNesting when nestingDepth = 4', () => {
-    const fn = makeFunction({ nestingDepth: 4 });
+  it('does NOT flag DeepNesting when nestingDepth = 3', () => {
+    const fn = makeFunction({ nestingDepth: 3 });
     const smells = detectSmells([fn], makeMetrics());
     expect(smells.filter(s => s.type === 'DeepNesting')).toHaveLength(0);
   });
 
-  it('flags DeepNesting when nestingDepth = 5', () => {
-    const fn = makeFunction({ nestingDepth: 5 });
+  it('flags DeepNesting when nestingDepth = 4', () => {
+    const fn = makeFunction({ nestingDepth: 4 });
     const smells = detectSmells([fn], makeMetrics());
     expect(smells.filter(s => s.type === 'DeepNesting')).toHaveLength(1);
   });
 
-  it('DeepNesting is critical when nestingDepth > 6', () => {
-    const fn = makeFunction({ nestingDepth: 7 });
+  it('DeepNesting is critical when nestingDepth > 5', () => {
+    const fn = makeFunction({ nestingDepth: 6 });
     const smells = detectSmells([fn], makeMetrics());
     const smell = smells.find(s => s.type === 'DeepNesting');
     expect(smell?.severity).toBe('critical');
   });
 
-  it('DeepNesting is high when nestingDepth = 5', () => {
-    const fn = makeFunction({ nestingDepth: 5 });
+  it('DeepNesting is high when nestingDepth = 4', () => {
+    const fn = makeFunction({ nestingDepth: 4 });
     const smells = detectSmells([fn], makeMetrics());
     const smell = smells.find(s => s.type === 'DeepNesting');
     expect(smell?.severity).toBe('high');
