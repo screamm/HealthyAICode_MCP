@@ -2,7 +2,7 @@ import type { Smell } from '../types';
 
 const SATD_KEYWORDS = ['TODO', 'FIXME', 'HACK', 'XXX', 'BUG', 'KLUDGE'];
 const SATD_LINE_PATTERN = new RegExp(
-  `(?://|#|\\*)\\s*(${SATD_KEYWORDS.join('|')})\\b(.{0,80})`,
+  `(?:(?:^|\\s)\\*|//|#)\\s*(${SATD_KEYWORDS.join('|')})\\b(.{0,80})`,
   'i',
 );
 
@@ -37,7 +37,7 @@ const SKIP_EXTENSIONS = ['.json', '.yml', '.yaml', '.xml', '.toml', '.ini', '.cf
  * Negative: optional minus not preceded by a word char or digit.
  * Skips float member access by requiring no leading dot.
  */
-const MAGIC_PATTERN = /(?<![.\w])(-?)(\b[2-9]\b|\b[1-9]\d+\b)/;
+const MAGIC_PATTERN = /(?<![.\w])(-?)(\b[2-9]\b|\b[1-9]\d+\b)(?!\.\d)/;
 
 /**
  * ALL_CAPS assignment: line starts (after optional whitespace) with one or more

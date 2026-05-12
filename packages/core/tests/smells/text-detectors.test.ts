@@ -45,6 +45,17 @@ describe('detectSATDFromText', () => {
     const results = detectSATDFromText(code);
     expect(results[0].severity).toBe('low');
   });
+
+  it('does not flag block comment opening /* ... */', () => {
+    const code = '/* TODO: this should not match as inline debt */';
+    expect(detectSATDFromText(code)).toHaveLength(0);
+  });
+
+  it('detects Javadoc-style * TODO line (space before asterisk)', () => {
+    const code = ' * TODO: fix before release';
+    const results = detectSATDFromText(code);
+    expect(results).toHaveLength(1);
+  });
 });
 
 describe('detectMagicNumbersFromText', () => {
@@ -81,5 +92,10 @@ describe('detectMagicNumbersFromText', () => {
     const results = detectMagicNumbersFromText(code, 'test.java');
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].severity).toBe('low');
+  });
+
+  it('does not flag float literal like 2.5', () => {
+    const code = 'x = 2.5\ny = 3.14';
+    expect(detectMagicNumbersFromText(code, 'test.py')).toHaveLength(0);
   });
 });
