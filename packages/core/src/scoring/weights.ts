@@ -1,6 +1,6 @@
 import type { SmellType } from '../types';
 
-/** Point deduction per occurrence for each finding type, before capping at SMELL_MAX_DEDUCTION. */
+/** Base weight per occurrence for each finding type; used as `weight × sqrt(count)` in scoring. */
 export const SMELL_WEIGHTS: Record<SmellType, number> = {
   ComplexMethod: 1.5,
   DeepNesting: 1.2,
@@ -27,8 +27,6 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   PrimitiveObsession: 0.5,
 };
 
-/** Maximum total deduction per finding type regardless of occurrence count. */
-export const SMELL_MAX_DEDUCTION = 3.0;
 /** Minimum score at which a file is considered safe for AI-assisted modification. */
 export const AI_READY_THRESHOLD = 9.5;
 /** Minimum score for the green (healthy) category. */

@@ -1,12 +1,11 @@
 import type { Smell, HealthCategory, SmellType } from '../types';
 import {
   SMELL_WEIGHTS,
-  SMELL_MAX_DEDUCTION,
   HEALTHY_THRESHOLD,
   PROBLEMATIC_THRESHOLD,
 } from './weights';
 
-/** Calculates the numeric health score (1.0–10.0) from a list of detected smells. */
+/** Calculates the numeric health score (1.0–10.0) using progressive sqrt penalty per smell type. */
 export function calculateScore(smells: Smell[]): number {
   let score = 10.0;
 
@@ -17,8 +16,7 @@ export function calculateScore(smells: Smell[]): number {
 
   for (const [type, count] of countsByType) {
     const weight = SMELL_WEIGHTS[type];
-    const deduction = Math.min(weight * count, SMELL_MAX_DEDUCTION);
-    score -= deduction;
+    score -= weight * Math.sqrt(count);
   }
 
   return Math.max(1.0, parseFloat(score.toFixed(1)));
