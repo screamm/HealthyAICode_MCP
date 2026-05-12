@@ -147,4 +147,18 @@ public class Foo {
       expect(result.functions[0].cyclomaticComplexity).toBeGreaterThan(1);
     });
   });
+
+  describe('analyzeCSharp — smell detection', () => {
+    it('detects SATD in C# code with HACK comment', () => {
+      const code = 'public class S {\n    public void Run() {\n        // HACK: threading workaround\n        Work();\n    }\n}';
+      const result = analyzeCSharp(code);
+      expect(result.smells.some(s => s.type === 'SATD')).toBe(true);
+    });
+
+    it('returns no SATD for clean C# code', () => {
+      const code = 'public class Calculator {\n    public int Add(int a, int b) => a + b;\n}';
+      const result = analyzeCSharp(code);
+      expect(result.smells.filter(s => s.type === 'SATD')).toHaveLength(0);
+    });
+  });
 });

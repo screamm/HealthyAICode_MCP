@@ -31,7 +31,7 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
     case 'kotlin':
       return analyzeJava(code, filePath);
     case 'csharp':
-      return { ...analyzeCSharp(code), smells: [] };
+      return analyzeCSharp(code, filePath);
     default:
       return unsupportedOutput(code);
   }
