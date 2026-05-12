@@ -32,7 +32,7 @@ async function handleAutoRefactor(filePath: string) {
       return buildReadyResponse({ filePath, score: result.score, category: result.category });
     }
     const target = getTopTarget(result.smells);
-    return buildRefactorResponse(filePath, result, target, fileContent, extractCodeContext(fileContent, target?.line ?? 1));
+    return buildRefactorResponse(filePath, result, target, { fileContent, codeContext: extractCodeContext(fileContent, target?.line ?? 1) });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return { content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }], isError: true };

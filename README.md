@@ -138,7 +138,7 @@ Healthy AI Code detects 27 code health biomarkers across four sprint generations
 |-----------|-------------|
 | `CognitiveComplexity` | SonarSource S3776 cognitive complexity metric |
 | `TypeSafetyEscape` | Use of `any`, `@ts-ignore`, or unsafe casts |
-| `MagicNumber` | Unexplained numeric or string literals |
+| `MagicNumber` | Unexplained numeric or string literals — all 6 languages |
 | `LowDocCoverage` | Insufficient documentation on public APIs |
 
 ### Duplication & structure (Sprint 6)
@@ -161,7 +161,7 @@ Healthy AI Code detects 27 code health biomarkers across four sprint generations
 | `ComplexConditional` | Nested ternaries and long boolean chains |
 | `MessageChain` | Law of Demeter violations (train-wreck calls) |
 | `DataClumps` | Recurring groups of parameters/fields that belong together |
-| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) |
+| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) — all 6 languages |
 
 ### OO design metrics (Sprint 9)
 | Biomarker | Description |
@@ -204,15 +204,23 @@ Multiple smells of the same type compound progressively — two `ComplexMethod` 
 ## Self-Correcting Loop
 
 ```
-AI runs code_health_review
+AI runs code_health_score (quick screen)
         ↓
-score < 9.5? → Yes → AI refactors per nextAction.instruction
-        ↓                        ↓
-      No               AI runs code_health_review again
-        ↓                        ↓
-  loopComplete: true      (repeat until loopComplete: true)
+score ≥ 9.5? ──Yes──→ AI runs pre_commit_code_health_safeguard
+        │
+        No
         ↓
-  AI runs pre_commit_code_health_safeguard
+AI runs code_health_auto_refactor
+  (returns primary target + code context + instructions)
+        ↓
+AI applies the single targeted refactoring
+        ↓
+AI runs code_health_review (verify improvement)
+        ↓
+loopComplete: true? ──Yes──→ pre_commit_code_health_safeguard
+        │
+        No
+        └──────────────────→ repeat from code_health_auto_refactor
 ```
 
 ## Example Response
@@ -231,6 +239,20 @@ When a file has problems, every tool response includes explicit next-step instru
     "toolToCallAfter": "code_health_review"
   }
 }
+```
+
+## Self-Audit
+
+This project uses its own MCP server to monitor its own code health. Current status:
+
+```
+63 / 63 files — 10/10 (green)   ✓ AI-ready
+```
+
+Run the audit yourself:
+
+```bash
+node scripts/health-audit.mjs
 ```
 
 ## Local Development

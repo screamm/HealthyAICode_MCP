@@ -23,7 +23,7 @@ async function handleKnowledgeMap(projectPath: string) {
     const files = await collectProjectFiles(projectPath);
     const [congestionResults, knowledgeResults, coupledPairs] = await analyzeAllFiles(projectPath, files);
     const { highCongestion, singleOwner, highCoupling } = filterRisks(congestionResults, knowledgeResults, coupledPairs);
-    return { content: [{ type: 'text' as const, text: JSON.stringify(buildResponseBody(projectPath, files, highCongestion, singleOwner, highCoupling), null, 2) }] };
+    return { content: [{ type: 'text' as const, text: JSON.stringify(buildResponseBody(projectPath, files, { highCongestion, singleOwner, highCoupling }), null, 2) }] };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return { content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }], isError: true };

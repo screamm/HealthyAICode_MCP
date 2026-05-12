@@ -9,7 +9,7 @@ const TIERS: Tier[] = [
   { pattern: /\b(HACK|XXX|BUG)\b/i,                   severity: 'critical', label: 'Critical debt' },
   { pattern: /\b(FIXME|BROKEN)\b/i,                   severity: 'high',     label: 'Must-fix debt' },
   { pattern: /\b(TODO|TEMP|WORKAROUND|KLUDGE)\b/i,    severity: 'medium',   label: 'Technical debt' },
-  { pattern: /\b(SMELL|REFACTOR)\b/i,                 severity: 'low',      label: 'Refactoring note' },
+  { pattern: /\b(REFACTOR)\b/i,                        severity: 'low',      label: 'Refactoring note' },
 ];
 
 export function detectSATD(tree: SyntaxNode): Smell[] {

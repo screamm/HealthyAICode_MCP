@@ -20,7 +20,7 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   SATD: 0.6,
   GodClass: 1.5,
   FeatureEnvy: 0.7,
-  LowMaintainability: 0.8,
+  LowMaintainability: 0.4,
   CodeChurn: 0.6,
   DeveloperCongestion: 0.7,
   KnowledgeLoss: 1.0,

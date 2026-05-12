@@ -20,7 +20,8 @@ export function extractCodeContext(fileContent: string, targetLine: number) {
 }
 
 /** Builds the MCP response containing refactoring instructions and full code context. */
-export function buildRefactorResponse(filePath: string, result: HealthResult, target: Smell | null, fileContent: string, codeContext: { startLine: number; endLine: number; content: string }) {
+export function buildRefactorResponse(filePath: string, result: HealthResult, target: Smell | null, source: { fileContent: string; codeContext: { startLine: number; endLine: number; content: string } }) {
+  const { fileContent, codeContext } = source;
   return { content: [{ type: 'text' as const, text: JSON.stringify({ filePath, score: result.score, category: result.category, refactoringNeeded: true, allSmells: result.smells, primaryTarget: target, refactoringInstructions: buildInstructions(target, result.score), codeContext, fullFileContent: fileContent, nextStep: 'Genomför refaktoreringen ovan och kör sedan code_health_review för att mäta förbättringen.' }, null, 2) }] };
 }
 

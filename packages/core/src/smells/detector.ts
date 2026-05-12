@@ -1,7 +1,7 @@
 import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 
 const LARGE_FILE_LINES = 500, COMPLEX_METHOD_THRESHOLD = 10, CRITICAL_COMPLEXITY_THRESHOLD = 20;
-const DEEP_NESTING_THRESHOLD = 3, CRITICAL_NESTING_THRESHOLD = 5, LARGE_METHOD_LINES = 30;
+const DEEP_NESTING_THRESHOLD = 3, HIGH_NESTING_THRESHOLD = 4, CRITICAL_NESTING_THRESHOLD = 5, LARGE_METHOD_LINES = 50;
 const LONG_PARAMETER_LIST = 4, BUMPY_ROAD_NESTING = 3, BUMPY_ROAD_MIN_FUNCTIONS = 3;
 const COGNITIVE_COMPLEXITY_THRESHOLD = 15, CRITICAL_COGNITIVE_THRESHOLD = 25;
 
@@ -31,7 +31,15 @@ function detectComplexMethod(fn: FunctionResult): Smell | null {
 
 function detectDeepNesting(fn: FunctionResult): Smell | null {
   if (fn.nestingDepth <= DEEP_NESTING_THRESHOLD) return null;
-  return { type: 'DeepNesting', line: fn.line, functionName: fn.name, severity: fn.nestingDepth > CRITICAL_NESTING_THRESHOLD ? 'critical' : 'high', description: `'${fn.name}' har nestningsdjup ${fn.nestingDepth} (gräns: ${DEEP_NESTING_THRESHOLD})`, suggestion: `Tillämpa early-return pattern i '${fn.name}'` };
+  let severity: 'critical' | 'high' | 'medium';
+  if (fn.nestingDepth > CRITICAL_NESTING_THRESHOLD) {
+    severity = 'critical';
+  } else if (fn.nestingDepth > HIGH_NESTING_THRESHOLD) {
+    severity = 'high';
+  } else {
+    severity = 'medium';
+  }
+  return { type: 'DeepNesting', line: fn.line, functionName: fn.name, severity, description: `'${fn.name}' har nestningsdjup ${fn.nestingDepth} (gräns: ${DEEP_NESTING_THRESHOLD})`, suggestion: `Tillämpa early-return pattern i '${fn.name}'` };
 }
 
 function detectLargeMethod(fn: FunctionResult): Smell | null {

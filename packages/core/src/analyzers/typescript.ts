@@ -35,5 +35,5 @@ export function analyzeTypeScript(code: string, filePath = '<inline>'): { functi
   const totalLines = code === '' ? 0 : code.split('\n').length;
   const avgCC = functions.length > 0 ? functions.reduce((s, f) => s + f.cyclomaticComplexity, 0) / functions.length : 1;
   const mi = computeMaintainability(tree.rootNode, avgCC, totalLines);
-  return { functions, metrics: buildMetrics(functions, totalLines, mi.index), smells: collectTypeScriptSmells(tree.rootNode, { code, filePath }, extractImportedNames(tree.rootNode), mi, avgCC) };
+  return { functions, metrics: buildMetrics(functions, totalLines, mi.index), smells: collectTypeScriptSmells(tree.rootNode, { code, filePath }, { names: extractImportedNames(tree.rootNode), mi, avgCC }) };
 }

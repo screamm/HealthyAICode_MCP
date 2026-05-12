@@ -27,7 +27,8 @@ export function filterRisks(congestionResults: CongestionResult[], knowledgeResu
 }
 
 /** Assembles the final response body from filtered risk results. */
-export function buildResponseBody(projectPath: string, files: string[], highCongestion: CongestionResult[], singleOwner: KnowledgeResult[], highCoupling: CoupledPair[]) {
+export function buildResponseBody(projectPath: string, files: string[], risks: { highCongestion: CongestionResult[]; singleOwner: KnowledgeResult[]; highCoupling: CoupledPair[] }) {
+  const { highCongestion, singleOwner, highCoupling } = risks;
   return {
     projectPath,
     summary: { totalFiles: files.length, congestionRisk: highCongestion.length, singleOwnerRisk: singleOwner.length, hiddenCouplingPairs: highCoupling.length },

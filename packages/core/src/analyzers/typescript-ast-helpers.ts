@@ -19,9 +19,12 @@ export function calculateCyclomaticComplexity(node: Parser.SyntaxNode): number {
   return acc.v;
 }
 
-/** Recursively tracks maximum nesting depth in an AST subtree. */
+/** Recursively tracks maximum nesting depth in an AST subtree.
+ * `else if` chains are excluded: tree-sitter nests them as if_statement inside else_clause,
+ * but they represent branching alternatives, not increased nesting (per Cognitive Complexity spec). */
 export function countNesting(n: Parser.SyntaxNode, depth: number, max: { v: number }): void {
-  const d = NESTING_NODE_TYPES.has(n.type) ? depth + 1 : depth;
+  const isElseIf = n.type === 'if_statement' && n.parent?.type === 'else_clause';
+  const d = (NESTING_NODE_TYPES.has(n.type) && !isElseIf) ? depth + 1 : depth;
   if (d > max.v) max.v = d;
   for (const child of n.children) countNesting(child, d, max);
 }

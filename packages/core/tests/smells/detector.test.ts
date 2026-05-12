@@ -110,8 +110,15 @@ describe('detectSmells — DeepNesting', () => {
     expect(smell?.severity).toBe('critical');
   });
 
-  it('DeepNesting is high when nestingDepth = 4', () => {
+  it('DeepNesting is medium when nestingDepth = 4', () => {
     const fn = makeFunction({ nestingDepth: 4 });
+    const smells = detectSmells([fn], makeMetrics());
+    const smell = smells.find(s => s.type === 'DeepNesting');
+    expect(smell?.severity).toBe('medium');
+  });
+
+  it('DeepNesting is high when nestingDepth = 5', () => {
+    const fn = makeFunction({ nestingDepth: 5 });
     const smells = detectSmells([fn], makeMetrics());
     const smell = smells.find(s => s.type === 'DeepNesting');
     expect(smell?.severity).toBe('high');
@@ -125,14 +132,20 @@ describe('detectSmells — LargeMethod', () => {
     expect(smells.filter(s => s.type === 'LargeMethod')).toHaveLength(0);
   });
 
-  it('flags LargeMethod when length = 31', () => {
-    const fn = makeFunction({ length: 31 });
+  it('does NOT flag LargeMethod when length = 50', () => {
+    const fn = makeFunction({ length: 50 });
+    const smells = detectSmells([fn], makeMetrics());
+    expect(smells.filter(s => s.type === 'LargeMethod')).toHaveLength(0);
+  });
+
+  it('flags LargeMethod when length = 51', () => {
+    const fn = makeFunction({ length: 51 });
     const smells = detectSmells([fn], makeMetrics());
     expect(smells.filter(s => s.type === 'LargeMethod')).toHaveLength(1);
   });
 
   it('LargeMethod has severity medium', () => {
-    const fn = makeFunction({ length: 50 });
+    const fn = makeFunction({ length: 51 });
     const smells = detectSmells([fn], makeMetrics());
     const smell = smells.find(s => s.type === 'LargeMethod');
     expect(smell?.severity).toBe('medium');
