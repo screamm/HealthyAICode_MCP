@@ -8,6 +8,7 @@ function makeFunction(overrides: Partial<FunctionResult> = {}): FunctionResult {
     line: 1,
     length: 10,
     cyclomaticComplexity: 1,
+    cognitiveComplexity: 0,
     nestingDepth: 0,
     parameterCount: 2,
     smells: [],
@@ -217,5 +218,39 @@ describe('detectSmells — smell descriptions and suggestions', () => {
     for (const smell of smells) {
       expect(smell.suggestion.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('detectSmells — CognitiveComplexity', () => {
+  it('does NOT flag CognitiveComplexity when cognitiveComplexity = 15', () => {
+    const fn = makeFunction({ cognitiveComplexity: 15 });
+    const smells = detectSmells([fn], makeMetrics());
+    expect(smells.filter(s => s.type === 'CognitiveComplexity')).toHaveLength(0);
+  });
+
+  it('flags CognitiveComplexity when cognitiveComplexity = 16', () => {
+    const fn = makeFunction({ cognitiveComplexity: 16 });
+    const smells = detectSmells([fn], makeMetrics());
+    expect(smells.filter(s => s.type === 'CognitiveComplexity')).toHaveLength(1);
+  });
+
+  it('CognitiveComplexity is critical when cognitiveComplexity > 25', () => {
+    const fn = makeFunction({ cognitiveComplexity: 26 });
+    const smells = detectSmells([fn], makeMetrics());
+    const smell = smells.find(s => s.type === 'CognitiveComplexity');
+    expect(smell?.severity).toBe('critical');
+  });
+
+  it('CognitiveComplexity is high when cognitiveComplexity = 20', () => {
+    const fn = makeFunction({ cognitiveComplexity: 20 });
+    const smells = detectSmells([fn], makeMetrics());
+    const smell = smells.find(s => s.type === 'CognitiveComplexity');
+    expect(smell?.severity).toBe('high');
+  });
+
+  it('does NOT flag CognitiveComplexity when cognitiveComplexity = 0 (non-TS language)', () => {
+    const fn = makeFunction({ cognitiveComplexity: 0 });
+    const smells = detectSmells([fn], makeMetrics());
+    expect(smells.filter(s => s.type === 'CognitiveComplexity')).toHaveLength(0);
   });
 });

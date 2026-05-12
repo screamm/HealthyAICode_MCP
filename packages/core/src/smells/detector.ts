@@ -3,6 +3,7 @@ import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 const LARGE_FILE_LINES = 500, COMPLEX_METHOD_THRESHOLD = 10, CRITICAL_COMPLEXITY_THRESHOLD = 20;
 const DEEP_NESTING_THRESHOLD = 4, CRITICAL_NESTING_THRESHOLD = 6, LARGE_METHOD_LINES = 30;
 const LONG_PARAMETER_LIST = 5, BUMPY_ROAD_NESTING = 3, BUMPY_ROAD_MIN_FUNCTIONS = 3;
+const COGNITIVE_COMPLEXITY_THRESHOLD = 15, CRITICAL_COGNITIVE_THRESHOLD = 25;
 
 export function detectSmells(functions: FunctionResult[], metrics: MetricBreakdown): Smell[] {
   const smells: Smell[] = [];
@@ -12,6 +13,7 @@ export function detectSmells(functions: FunctionResult[], metrics: MetricBreakdo
     const dn = detectDeepNesting(fn); if (dn) smells.push(dn);
     const lm = detectLargeMethod(fn); if (lm) smells.push(lm);
     const pl = detectLongParameterList(fn); if (pl) smells.push(pl);
+    const cc = detectHighCognitiveComplexity(fn); if (cc) smells.push(cc);
   }
   const br = detectBumpyRoad(functions); if (br) smells.push(br);
   return smells;
@@ -40,6 +42,18 @@ function detectLargeMethod(fn: FunctionResult): Smell | null {
 function detectLongParameterList(fn: FunctionResult): Smell | null {
   if (fn.parameterCount <= LONG_PARAMETER_LIST) return null;
   return { type: 'LongParameterList', severity: 'medium', line: fn.line, functionName: fn.name, description: `'${fn.name}' har ${fn.parameterCount} parametrar (gräns: ${LONG_PARAMETER_LIST})`, suggestion: 'Gruppera parametrar i ett options-objekt' };
+}
+
+function detectHighCognitiveComplexity(fn: FunctionResult): Smell | null {
+  if (fn.cognitiveComplexity <= COGNITIVE_COMPLEXITY_THRESHOLD) return null;
+  return {
+    type: 'CognitiveComplexity',
+    line: fn.line,
+    functionName: fn.name,
+    severity: fn.cognitiveComplexity > CRITICAL_COGNITIVE_THRESHOLD ? 'critical' : 'high',
+    description: `'${fn.name}' har kognitiv komplexitet ${fn.cognitiveComplexity} (gräns: ${COGNITIVE_COMPLEXITY_THRESHOLD})`,
+    suggestion: `Förenkla '${fn.name}' — extrahera villkorliga grenar till namngivna hjälpfunktioner`,
+  };
 }
 
 function detectBumpyRoad(functions: FunctionResult[]): Smell | null {
