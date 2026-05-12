@@ -1,8 +1,9 @@
 import Parser from 'tree-sitter';
 import Python from 'tree-sitter-python';
-import type { FunctionResult, MetricBreakdown } from '../types';
+import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
+import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
 
 const parser = new Parser();
 parser.setLanguage(Python as unknown as object);
@@ -24,10 +25,10 @@ const PARAMETER_NODE_TYPES = new Set([
 
 const IMPLICIT_PARAMS = new Set(['self', 'cls']);
 
-export function analyzePython(code: string): {
+export function analyzePython(code: string, filePath = '<inline>'): {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
-  smells: never[];
+  smells: Smell[];
 } {
   const tree = parser.parse(code);
   const fns: FunctionResult[] = [];
@@ -37,7 +38,11 @@ export function analyzePython(code: string): {
   }
   visit(tree.rootNode);
   const totalLines = code === '' ? 0 : code.split('\n').length;
-  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells: [] };
+  const smells: Smell[] = [
+    ...detectSATDFromText(code),
+    ...detectMagicNumbersFromText(code, filePath),
+  ];
+  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 
 function extractFunction(node: Parser.SyntaxNode): FunctionResult {

@@ -26,7 +26,7 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
     case 'javascript':
       return analyzeTypeScript(code, filePath);
     case 'python':
-      return { ...analyzePython(code), smells: [] };
+      return analyzePython(code, filePath);
     case 'java':
     case 'kotlin':
       return { ...analyzeJava(code), smells: [] };

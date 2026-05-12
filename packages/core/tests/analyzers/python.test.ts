@@ -126,3 +126,17 @@ def outer(x):
     });
   });
 });
+
+describe('analyzePython — smell detection', () => {
+  it('detects SATD in Python code with TODO comment', () => {
+    const code = 'def process_data(items):\n    # TODO: add input validation\n    return items';
+    const result = analyzePython(code);
+    expect(result.smells.some(s => s.type === 'SATD')).toBe(true);
+  });
+
+  it('returns no SATD for clean Python code', () => {
+    const code = 'def add(a, b):\n    return a + b';
+    const result = analyzePython(code);
+    expect(result.smells.filter(s => s.type === 'SATD')).toHaveLength(0);
+  });
+});
