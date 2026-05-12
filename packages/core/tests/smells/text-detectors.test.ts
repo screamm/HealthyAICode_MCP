@@ -98,4 +98,15 @@ describe('detectMagicNumbersFromText', () => {
     const code = 'x = 2.5\ny = 3.14';
     expect(detectMagicNumbersFromText(code, 'test.py')).toHaveLength(0);
   });
+
+  it('detects multiple magic numbers on the same line', () => {
+    const code = 'if (x > 10 && y < 200) {}';
+    const results = detectMagicNumbersFromText(code, 'test.py');
+    expect(results.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not flag Python private constant _MAX_SIZE = 100', () => {
+    const code = '_MAX_SIZE = 100\n__VERSION = 42';
+    expect(detectMagicNumbersFromText(code, 'test.py')).toHaveLength(0);
+  });
 });

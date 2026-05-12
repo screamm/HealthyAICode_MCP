@@ -34,21 +34,24 @@ const SKIP_EXTENSIONS = ['.json', '.yml', '.yaml', '.xml', '.toml', '.ini', '.cf
 
 /**
  * Matches integers whose absolute value is >= 2 (i.e. not 0 or +-1).
+ * Global flag enables matchAll for detecting multiple magic numbers per line.
  * Negative: optional minus not preceded by a word char or digit.
  * Skips float member access by requiring no leading dot.
  */
-const MAGIC_PATTERN = /(?<![.\w])(-?)(\b[2-9]\b|\b[1-9]\d+\b)(?!\.\d)/;
+const MAGIC_PATTERN = /(?<![.\w])(-?)(\b[2-9]\b|\b[1-9]\d+\b)(?!\.\d)/g;
 
 /**
  * ALL_CAPS assignment: line starts (after optional whitespace) with one or more
- * uppercase letters/digits/underscores followed by optional whitespace and `=`
- * but NOT `==` or `===`.
+ * uppercase letters/digits/underscores (including leading underscore for Python
+ * private constants like _MAX_SIZE or __VERSION) followed by optional whitespace
+ * and `=` but NOT `==` or `===`.
  */
-const CONSTANT_ASSIGNMENT = /^[A-Z][A-Z0-9_]*\s*=(?!=)/;
+const CONSTANT_ASSIGNMENT = /^[A-Z_][A-Z0-9_]*\s*=(?!=)/;
 
 /**
  * Detects magic numeric literals in non-TypeScript/JavaScript source files.
  * Skips 0, +-1, ALL_CAPS constant assignments, comment lines, and import lines.
+ * Reports all magic numbers per line using matchAll with the global regex.
  * All findings are severity "low" for text-based detection.
  */
 export function detectMagicNumbersFromText(code: string, filePath: string): Smell[] {
@@ -65,21 +68,16 @@ export function detectMagicNumbersFromText(code: string, filePath: string): Smel
     ) return [];
     // Skip import / using / package lines
     if (SKIP_LINE_PREFIXES.some(p => trimmed.startsWith(p))) return [];
-    // Skip ALL_CAPS constant assignments (e.g. MAX_SIZE = 100)
+    // Skip ALL_CAPS constant assignments (e.g. MAX_SIZE = 100, _MAX = 100)
     if (CONSTANT_ASSIGNMENT.test(trimmed)) return [];
 
-    const match = MAGIC_PATTERN.exec(trimmed);
-    if (!match) return [];
-
-    const rawNumber = `${match[1]}${match[2]}`;
-    return [
-      {
-        type: 'MagicNumber' as const,
-        severity: 'low' as const,
-        line: idx + 1,
-        description: `Magiskt tal ${rawNumber} — bör ersättas med namngiven konstant`,
-        suggestion: 'Extrahera till en namngiven konstant med beskrivande namn.',
-      },
-    ];
+    const matches = [...trimmed.matchAll(MAGIC_PATTERN)];
+    return matches.map(match => ({
+      type: 'MagicNumber' as const,
+      severity: 'low' as const,
+      line: idx + 1,
+      description: `Magiskt tal ${match[0].trim()} — bör ersättas med namngiven konstant`,
+      suggestion: 'Extrahera till en namngiven konstant med beskrivande namn.',
+    }));
   });
 }
