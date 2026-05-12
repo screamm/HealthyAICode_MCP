@@ -111,14 +111,12 @@ The `skills/` directory contains nine prompt templates that teach AI assistants 
 
 ### Configuration keys
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `targetScore` | `9.5` | Minimum score for `loopComplete: true` |
-| `maxFileLines` | `500` | `LargeFile` threshold |
-| `maxMethodLines` | `30` | `LargeMethod` threshold |
-| `maxComplexity` | `10` | Cyclomatic complexity threshold |
-| `maxNesting` | `4` | Deep nesting threshold |
-| `maxParams` | `5` | Long parameter list threshold |
+| Key | Type | Description |
+|-----|------|-------------|
+| `healthyThreshold` | number 1–10 | Minimum score for the healthy (green) category. Default: `9.0` |
+| `aiReadyThreshold` | number 1–10 | Minimum score for `loopComplete: true`. Default: `9.5` |
+| `defaultBranch` | string | Base branch used by `analyze_change_set`. Default: `main` |
+| `projectName` | string | Project name shown in reports |
 
 ## Biomarkers (27)
 
@@ -190,8 +188,18 @@ TypeScript, JavaScript, Python, Java, Kotlin, C#
 |-------|----------|---------|
 | 9.5–10.0 | Green | AI-ready — loop complete |
 | 9.0–9.4 | Green | Healthy |
-| 4.0–8.9 | Yellow | Technical debt present |
-| 1.0–3.9 | Red | Severe technical debt |
+| 6.0–8.9 | Yellow | Technical debt present |
+| 1.0–5.9 | Red | Severe technical debt |
+
+## Scoring Formula
+
+Each detected smell deducts points from a base score of 10.0 using a progressive formula:
+
+```
+deduction = weight × √count   (per smell type)
+```
+
+Multiple smells of the same type compound progressively — two `ComplexMethod` smells hurt more than one, but the penalty grows sub-linearly (square root), reflecting that a few extra smells are worse than none, but the file isn't four times as bad as having one. The floor is always 1.0.
 
 ## Self-Correcting Loop
 
