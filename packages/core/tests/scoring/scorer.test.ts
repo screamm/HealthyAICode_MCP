@@ -17,78 +17,82 @@ describe('calculateScore', () => {
     expect(calculateScore([])).toBe(10.0);
   });
 
-  it('deducts 1.5 for one ComplexMethod smell', () => {
-    const smells = [makeSmell('ComplexMethod')];
-    expect(calculateScore(smells)).toBe(8.5);
+  it('deducts weight×sqrt(1) = weight for single ComplexMethod', () => {
+    // weight=1.5, sqrt(1)=1 → 10 - 1.5 = 8.5
+    expect(calculateScore([makeSmell('ComplexMethod')])).toBe(8.5);
   });
 
-  it('deducts 1.2 for one DeepNesting smell', () => {
-    const smells = [makeSmell('DeepNesting')];
-    expect(calculateScore(smells)).toBe(8.8);
+  it('deducts weight×sqrt(1) = weight for single DeepNesting', () => {
+    // weight=1.2, sqrt(1)=1 → 10 - 1.2 = 8.8
+    expect(calculateScore([makeSmell('DeepNesting')])).toBe(8.8);
   });
 
-  it('deducts 0.8 for one BumpyRoad smell', () => {
-    const smells = [makeSmell('BumpyRoad')];
-    expect(calculateScore(smells)).toBe(9.2);
+  it('deducts weight×sqrt(1) for single BumpyRoad', () => {
+    // weight=0.8 → 10 - 0.8 = 9.2
+    expect(calculateScore([makeSmell('BumpyRoad')])).toBe(9.2);
   });
 
-  it('caps deduction at SMELL_MAX_DEDUCTION (3.0) per smell type', () => {
-    // ComplexMethod weight=1.5, three instances = 4.5 — capped at 3.0
+  it('single smell deductions are unchanged from before (sqrt(1) = 1)', () => {
+    expect(calculateScore([makeSmell('LargeMethod')])).toBe(9.4);    // 10 - 0.6
+    expect(calculateScore([makeSmell('ComplexConditional')])).toBe(9.5); // 10 - 0.5
+    expect(calculateScore([makeSmell('LargeFile')])).toBe(9.7);      // 10 - 0.3
+  });
+
+  it('two ComplexMethod smells deduct weight×sqrt(2)', () => {
+    // weight=1.5, sqrt(2)≈1.414 → 1.5×1.414 = 2.121 → 10 - 2.121 = 7.879 → rounds to 7.9
+    const smells = [makeSmell('ComplexMethod'), makeSmell('ComplexMethod')];
+    expect(calculateScore(smells)).toBe(7.9);
+  });
+
+  it('three ComplexMethod smells deduct weight×sqrt(3)', () => {
+    // weight=1.5, sqrt(3)≈1.732 → 1.5×1.732 = 2.598 → 10 - 2.598 = 7.402 → rounds to 7.4
     const smells = [
       makeSmell('ComplexMethod'),
       makeSmell('ComplexMethod'),
       makeSmell('ComplexMethod'),
     ];
-    expect(calculateScore(smells)).toBe(7.0);
+    expect(calculateScore(smells)).toBe(7.4);
   });
 
-  it('applies independent caps per smell type when multiple types present', () => {
-    // ComplexMethod x3 capped at 3.0 + DeepNesting x1 = 1.2 → 10 - 3.0 - 1.2 = 5.8
-    const smells = [
+  it('more smells always results in lower score than fewer (progressive penalty)', () => {
+    const score2 = calculateScore([makeSmell('ComplexMethod'), makeSmell('ComplexMethod')]);
+    const score3 = calculateScore([
       makeSmell('ComplexMethod'),
+      makeSmell('ComplexMethod'),
+      makeSmell('ComplexMethod'),
+    ]);
+    const score10 = calculateScore(Array(10).fill(makeSmell('ComplexMethod')));
+    expect(score3).toBeLessThan(score2);
+    expect(score10).toBeLessThan(score3);
+  });
+
+  it('multiple smell types combine independently', () => {
+    // ComplexMethod x2: 1.5×sqrt(2)=2.121 | DeepNesting x1: 1.2×sqrt(1)=1.2
+    // total: 3.321 → 10 - 3.321 = 6.679 → rounds to 6.7
+    const smells = [
       makeSmell('ComplexMethod'),
       makeSmell('ComplexMethod'),
       makeSmell('DeepNesting'),
     ];
-    expect(calculateScore(smells)).toBe(5.8);
+    expect(calculateScore(smells)).toBe(6.7);
   });
 
   it('never returns a score below 1.0', () => {
-    const smells = [
-      makeSmell('ComplexMethod'),
-      makeSmell('ComplexMethod'),
+    const smells = Array(20).fill(null).flatMap(() => [
       makeSmell('ComplexMethod'),
       makeSmell('DeepNesting'),
-      makeSmell('DeepNesting'),
-      makeSmell('DeepNesting'),
       makeSmell('BumpyRoad'),
-      makeSmell('BumpyRoad'),
-      makeSmell('BumpyRoad'),
-      makeSmell('LargeMethod'),
       makeSmell('LargeMethod'),
       makeSmell('LargeFile'),
       makeSmell('LongParameterList'),
-    ];
+    ]);
     expect(calculateScore(smells)).toBeGreaterThanOrEqual(1.0);
   });
 
   it('returns score with one decimal place', () => {
-    const smells = [makeSmell('LongParameterList')]; // 10 - 0.4 = 9.6
-    const score = calculateScore(smells);
+    const score = calculateScore([makeSmell('LongParameterList')]); // 10 - 0.4 = 9.6
     expect(score).toBe(9.6);
     expect(score.toString()).toMatch(/^\d+\.\d$/);
-  });
-
-  it('deducts 0.6 for one LargeMethod smell', () => {
-    expect(calculateScore([makeSmell('LargeMethod')])).toBe(9.4);
-  });
-
-  it('deducts 0.5 for one ComplexConditional smell', () => {
-    expect(calculateScore([makeSmell('ComplexConditional')])).toBe(9.5);
-  });
-
-  it('deducts 0.3 for one LargeFile smell', () => {
-    expect(calculateScore([makeSmell('LargeFile')])).toBe(9.7);
   });
 });
 
