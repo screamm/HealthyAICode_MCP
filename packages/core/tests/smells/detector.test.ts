@@ -140,10 +140,16 @@ describe('detectSmells — LargeMethod', () => {
 });
 
 describe('detectSmells — LongParameterList', () => {
-  it('does NOT flag LongParameterList when parameterCount = 5', () => {
-    const fn = makeFunction({ parameterCount: 5 });
+  it('does NOT flag LongParameterList when parameterCount = 4', () => {
+    const fn = makeFunction({ parameterCount: 4 });
     const smells = detectSmells([fn], makeMetrics());
     expect(smells.filter(s => s.type === 'LongParameterList')).toHaveLength(0);
+  });
+
+  it('flags LongParameterList when parameterCount = 5', () => {
+    const fn = makeFunction({ parameterCount: 5 });
+    const smells = detectSmells([fn], makeMetrics());
+    expect(smells.filter(s => s.type === 'LongParameterList')).toHaveLength(1);
   });
 
   it('flags LongParameterList when parameterCount = 6', () => {
