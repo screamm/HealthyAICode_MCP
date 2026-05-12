@@ -57,6 +57,11 @@ export interface MetricBreakdown {
   avgParameterCount: number;
   maxParameterCount: number;
   totalLines: number;
+  /**
+   * Always 0 — per-file duplication scoring is not yet implemented.
+   * Cross-file analysis lives in packages/core/src/project/duplication.ts
+   * but is not wired into per-file MetricBreakdown.
+   */
   duplicationScore: number;
   maintainabilityIndex?: number;
 }

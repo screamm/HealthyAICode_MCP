@@ -12,7 +12,7 @@ export function buildMetrics(functions: FunctionResult[], totalLines: number, ma
     avgParameterCount: parseFloat((functions.reduce((s, f) => s + f.parameterCount, 0) / functions.length).toFixed(1)),
     maxParameterCount: Math.max(...functions.map(f => f.parameterCount)),
     totalLines,
-    duplicationScore: 0,
+    duplicationScore: 0, // not yet computed per-file — see project/duplication.ts
     maintainabilityIndex,
   };
 }
