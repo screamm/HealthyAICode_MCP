@@ -6,6 +6,11 @@ export type Language =
   | 'java'
   | 'kotlin'
   | 'csharp'
+  | 'rust'
+  | 'go'
+  | 'php'
+  | 'ruby'
+  | 'swift'
   | 'unsupported';
 
 /** Health category derived from the numeric score: green ≥9.0, yellow ≥6.0, red <6.0. */
@@ -52,6 +57,8 @@ export interface Smell {
    * Each entry is 1-indexed and inclusive.
    */
   chunkRanges?: Array<{ startLine: number; endLine: number }>;
+  /** The raw metric value that triggered this smell (used for threshold calibration sweeps) */
+  metricValue?: number;
 }
 
 /** Aggregated code metrics for a file or function. */

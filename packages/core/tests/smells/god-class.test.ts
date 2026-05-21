@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import Parser from 'tree-sitter';
 import TypeScript from 'tree-sitter-typescript';
 import { detectGodClass } from '../../src/smells/god-class';
+import { typescriptProfile } from '../../src/smells/language-profile';
 
 const parser = new Parser();
 parser.setLanguage((TypeScript as any).typescript);
@@ -18,6 +19,6 @@ describe('GodClass', () => {
         setValue(v: number) { this.value = v; }
       }
     `;
-    expect(detectGodClass(parse(src), new Set())).toHaveLength(0);
+    expect(detectGodClass(parse(src), new Set(), typescriptProfile)).toHaveLength(0);
   });
 });

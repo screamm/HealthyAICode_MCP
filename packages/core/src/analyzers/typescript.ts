@@ -7,7 +7,7 @@ import { computeMaintainability } from '../metrics/maintainability';
 import { collectTypeScriptSmells } from './typescript-smells';
 
 const parser = new Parser();
-parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript);
+parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript as Parser.Language);
 const FN_TYPES = new Set(['function_declaration', 'method_definition', 'arrow_function', 'function_expression']);
 
 function collectFunctions(root: Parser.SyntaxNode): { results: FunctionResult[]; nodes: Parser.SyntaxNode[] } {

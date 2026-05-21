@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import Parser from 'tree-sitter';
 import TypeScript from 'tree-sitter-typescript';
 import { detectDataClumps } from '../../src/smells/data-clumps';
+import { typescriptProfile } from '../../src/smells/language-profile';
 
 const parser = new Parser();
 parser.setLanguage((TypeScript as any).typescript);
@@ -13,7 +14,7 @@ describe('DataClumps', () => {
       function a(x: number, y: number, z: number) {}
       function b(x: number, y: number, z: number, extra: string) {}
     `;
-    expect(detectDataClumps(parse(src)).some(s => s.type === 'DataClumps')).toBe(true);
+    expect(detectDataClumps(parse(src), typescriptProfile).some(s => s.type === 'DataClumps')).toBe(true);
   });
 
   it('does not flag when only two params match', () => {
@@ -21,6 +22,6 @@ describe('DataClumps', () => {
       function a(x: number, y: number) {}
       function b(x: number, y: number) {}
     `;
-    expect(detectDataClumps(parse(src))).toHaveLength(0);
+    expect(detectDataClumps(parse(src), typescriptProfile)).toHaveLength(0);
   });
 });

@@ -4,9 +4,19 @@ import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
 import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
+import { javaProfile } from '../smells/language-profile';
+import { detectGodClass } from '../smells/god-class';
+import { detectFeatureEnvy } from '../smells/feature-envy';
+import { detectMessageChain } from '../smells/message-chain';
+import { detectDataClumps } from '../smells/data-clumps';
+import { detectPrimitiveObsession } from '../smells/primitive-obsession';
+import { detectComplexConditional } from '../smells/complex-conditional';
+import { detectLowDocCoverage } from '../smells/doc-coverage';
+import { computeCognitiveComplexity } from '../smells/cognitive-complexity';
+import { detectBumpyRoadChunks } from '../smells/bumpy-road';
 
 const parser = new Parser();
-parser.setLanguage(Java as unknown as object);
+parser.setLanguage(Java as unknown as Parameters<(typeof parser)['setLanguage']>[0]);
 
 const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement', 'for_statement', 'enhanced_for_statement',
@@ -35,17 +45,45 @@ export function analyzeJava(code: string, filePath = '<inline>'): {
   smells: Smell[];
 } {
   const tree = parser.parse(code);
+
+  // Collect method nodes for per-function analysis
+  const fnNodes: Parser.SyntaxNode[] = [];
   const fns: FunctionResult[] = [];
   function visit(node: Parser.SyntaxNode): void {
-    if (METHOD_NODE_TYPES.has(node.type)) fns.push(extractFunction(node));
+    if (METHOD_NODE_TYPES.has(node.type)) {
+      fnNodes.push(node);
+      fns.push(extractFunction(node));
+    }
     for (const child of node.children) visit(child);
   }
   visit(tree.rootNode);
+
   const totalLines = code === '' ? 0 : code.split('\n').length;
+
+  // Text-based detectors (language-agnostic)
   const smells: Smell[] = [
     ...detectSATDFromText(code),
     ...detectMagicNumbersFromText(code, filePath),
   ];
+
+  // AST-based profile detectors
+  const emptyNames = new Set<string>();
+  smells.push(
+    ...detectGodClass(tree.rootNode, emptyNames, javaProfile),
+    ...detectFeatureEnvy(tree.rootNode, emptyNames, javaProfile),
+    ...detectMessageChain(tree.rootNode, javaProfile),
+    ...detectDataClumps(tree.rootNode, javaProfile),
+    ...detectPrimitiveObsession(tree.rootNode, javaProfile),
+    ...detectComplexConditional(tree.rootNode, javaProfile),
+    ...detectLowDocCoverage(tree.rootNode, code, javaProfile),
+  );
+
+  // Per-function BumpyRoad detection
+  for (const fnNode of fnNodes) {
+    const br = detectBumpyRoadChunks(fnNode);
+    if (br) smells.push(br);
+  }
+
   return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 
@@ -61,7 +99,7 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
     line: startLine,
     length: endLine - startLine + 1,
     cyclomaticComplexity: countCyclomaticNodes(node, CYCLOMATIC_NODE_TYPES, javaBinaryCheck),
-    cognitiveComplexity: 0,
+    cognitiveComplexity: computeCognitiveComplexity(node, javaProfile),
     nestingDepth: calculateMaxNestingDepth(node, NESTING_NODE_TYPES),
     parameterCount: paramCount,
     smells: [],

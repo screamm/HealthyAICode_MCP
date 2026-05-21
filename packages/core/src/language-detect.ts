@@ -13,6 +13,14 @@ const EXTENSION_MAP: Record<string, Language> = {
   '.kt': 'kotlin',
   '.kts': 'kotlin',
   '.cs': 'csharp',
+  '.rs': 'rust',
+  '.go': 'go',
+  '.php': 'php',
+  '.phtml': 'php',
+  '.rb': 'ruby',
+  '.rake': 'ruby',
+  '.gemspec': 'ruby',
+  '.swift': 'swift',
 };
 
 /**

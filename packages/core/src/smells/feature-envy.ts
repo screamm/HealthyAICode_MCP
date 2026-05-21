@@ -1,28 +1,27 @@
 import type { SyntaxNode } from 'tree-sitter';
 import type { Smell } from '../types';
+import type { LanguageProfile } from './language-profile';
 
 const ENVY_RATIO = 0.6;
 const MIN_FOREIGN_CALLS = 3;
 
-export function detectFeatureEnvy(tree: SyntaxNode, importedTypeNames: Set<string>): Smell[] {
+export function detectFeatureEnvy(tree: SyntaxNode, importedTypeNames: Set<string>, profile: LanguageProfile): Smell[] {
   const smells: Smell[] = [];
-  collectMethods(tree, smells, importedTypeNames);
+  collectMethods(tree, smells, importedTypeNames, profile);
   return smells;
 }
 
-const METHOD_TYPES = new Set(['method_definition', 'function_declaration', 'arrow_function']);
-
-function collectMethods(node: SyntaxNode, acc: Smell[], importedNames: Set<string>): void {
-  if (METHOD_TYPES.has(node.type)) {
-    checkMethod(node, acc, importedNames);
+function collectMethods(node: SyntaxNode, acc: Smell[], importedNames: Set<string>, profile: LanguageProfile): void {
+  if (profile.methodNodeTypes.has(node.type)) {
+    checkMethod(node, acc, importedNames, profile);
   }
-  for (const child of node.children) collectMethods(child, acc, importedNames);
+  for (const child of node.children) collectMethods(child, acc, importedNames, profile);
 }
 
-function checkMethod(method: SyntaxNode, acc: Smell[], importedNames: Set<string>): void {
+function checkMethod(method: SyntaxNode, acc: Smell[], importedNames: Set<string>, profile: LanguageProfile): void {
   const foreignCallCounts = new Map<string, number>();
   let ownCalls = 0;
-  countCalls(method, foreignCallCounts, importedNames, () => { ownCalls++; });
+  countCalls(method, foreignCallCounts, importedNames, profile, () => { ownCalls++; });
   if (foreignCallCounts.size === 0) return;
 
   const totalCalls = ownCalls + [...foreignCallCounts.values()].reduce((s, c) => s + c, 0);
@@ -50,16 +49,17 @@ function countCalls(
   node: SyntaxNode,
   foreign: Map<string, number>,
   importedNames: Set<string>,
+  profile: LanguageProfile,
   countOwn: () => void,
 ): void {
-  if (node.type === 'member_expression') {
-    const obj = node.childForFieldName?.('object');
+  if (node.type === profile.memberAccessNodeType) {
+    const obj = node.childForFieldName?.(profile.memberObjectField);
     if (obj) {
-      if (obj.text === 'this') { countOwn(); }
+      if (obj.text === profile.selfKeyword) { countOwn(); }
       else if (importedNames.has(obj.text)) {
         foreign.set(obj.text, (foreign.get(obj.text) ?? 0) + 1);
       }
     }
   }
-  for (const child of node.children) countCalls(child, foreign, importedNames, countOwn);
+  for (const child of node.children) countCalls(child, foreign, importedNames, profile, countOwn);
 }

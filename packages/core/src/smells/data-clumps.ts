@@ -1,34 +1,34 @@
 import type { SyntaxNode } from 'tree-sitter';
 import type { Smell } from '../types';
+import type { LanguageProfile } from './language-profile';
 
 const CLUMP_SIZE = 3;
 const MIN_OCCURRENCES = 2;
-const PARAM_LIST_NODES = new Set(['formal_parameters', 'parameter_list']);
 
 interface ParamGroup { names: Set<string>; line: number }
 
-export function detectDataClumps(tree: SyntaxNode): Smell[] {
-  const groups = collectGroups(tree);
+export function detectDataClumps(tree: SyntaxNode, profile: LanguageProfile): Smell[] {
+  const groups = collectGroups(tree, profile);
   return groups.length < MIN_OCCURRENCES ? [] : findClumps(groups);
 }
 
-function collectGroups(node: SyntaxNode): ParamGroup[] {
+function collectGroups(node: SyntaxNode, profile: LanguageProfile): ParamGroup[] {
   const result: ParamGroup[] = [];
-  walkForParams(node, result);
+  walkForParams(node, profile, result);
   return result;
 }
 
-function walkForParams(node: SyntaxNode, acc: ParamGroup[]): void {
-  if (PARAM_LIST_NODES.has(node.type)) {
+function walkForParams(node: SyntaxNode, profile: LanguageProfile, acc: ParamGroup[]): void {
+  if (profile.parameterListNodeTypes.has(node.type)) {
     const names = new Set<string>();
     for (const child of node.namedChildren) {
-      const id = child.type === 'identifier' ? child.text
-        : child.childForFieldName?.('pattern')?.text ?? '';
-      if (id && !id.startsWith('_')) names.add(id);
+      if (!profile.parameterNodeTypes.has(child.type)) continue;
+      const id = child.childForFieldName?.('name')?.text ?? child.text;
+      if (id && !profile.implicitParameters.has(id)) names.add(id);
     }
     if (names.size >= CLUMP_SIZE) acc.push({ names, line: node.startPosition.row + 1 });
   }
-  for (const child of node.children) walkForParams(child, acc);
+  for (const child of node.children) walkForParams(child, profile, acc);
 }
 
 function intersect(a: Set<string>, b: Set<string>): Set<string> {

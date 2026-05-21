@@ -1,13 +1,14 @@
 import type { SyntaxNode } from 'tree-sitter';
+import type { LanguageProfile } from './language-profile';
 
 /** Computes LCOM4 (Lack of Cohesion in Methods, version 4) for a class. */
-export function computeLCOM4(methods: SyntaxNode[], cls: SyntaxNode): number {
+export function computeLCOM4(methods: SyntaxNode[], cls: SyntaxNode, profile: LanguageProfile): number {
   if (methods.length === 0) return 0;
-  const fieldNames = collectFieldNames(cls);
+  const fieldNames = collectFieldNames(cls, profile);
   const adjacency = new Map<number, Set<number>>();
   for (let i = 0; i < methods.length; i++) adjacency.set(i, new Set());
   for (const field of fieldNames) {
-    const using = methods.map((m, i) => usesField(m, field) ? i : -1).filter(i => i >= 0);
+    const using = methods.map((m, i) => usesField(m, field, profile) ? i : -1).filter(i => i >= 0);
     for (let i = 0; i < using.length; i++) {
       const a = using[i]!;
       for (const b of using.slice(i + 1)) { adjacency.get(a)!.add(b); adjacency.get(b)!.add(a); }
@@ -16,16 +17,19 @@ export function computeLCOM4(methods: SyntaxNode[], cls: SyntaxNode): number {
   return connectedComponents(adjacency, methods.length);
 }
 
-function collectFieldNames(cls: SyntaxNode): string[] {
-  const FIELD_TYPES = new Set(['public_field_definition', 'field_definition']);
+function collectFieldNames(cls: SyntaxNode, profile: LanguageProfile): string[] {
   return cls.namedChildren.flatMap(ch => {
     const b = ch.childForFieldName?.('body');
     if (!b) return [];
-    return b.namedChildren.filter(m => FIELD_TYPES.has(m.type)).map(m => m.childForFieldName?.('name')?.text).filter((n): n is string => Boolean(n));
+    return b.namedChildren
+      .map(m => profile.collectFieldName(m))
+      .filter((n): n is string => Boolean(n));
   });
 }
 
-function usesField(m: SyntaxNode, f: string): boolean { return m.text.includes(`this.${f}`); }
+function usesField(m: SyntaxNode, f: string, profile: LanguageProfile): boolean {
+  return m.text.includes(`${profile.selfKeyword}.${f}`);
+}
 
 function connectedComponents(adj: Map<number, Set<number>>, n: number): number {
   const visited = new Set<number>();

@@ -3,7 +3,7 @@ import TypeScript from 'tree-sitter-typescript';
 import { createHash } from 'crypto';
 
 const parser = new Parser();
-parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript);
+parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript as Parser.Language);
 const N_GRAM_SIZE = 10, MIN_TOKENS = 30;
 
 /** Structural n-gram fingerprint of a single function. */

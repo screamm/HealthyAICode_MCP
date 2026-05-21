@@ -1,5 +1,6 @@
 import Parser from 'tree-sitter';
 import type { Smell } from '../types';
+import type { LanguageProfile } from './language-profile';
 
 const MIN_EXPORTS_FOR_CHECK = 2;
 const HIGH_COVERAGE_THRESHOLD = 0.8;
@@ -11,8 +12,8 @@ interface ExportInfo {
   hasJsDoc: boolean;
 }
 
-export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): Smell[] {
-  const exports = collectExports(root, source);
+export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, profile: LanguageProfile): Smell[] {
+  const exports = collectExports(root, source, profile);
   if (exports.length < MIN_EXPORTS_FOR_CHECK) return [];
 
   const documented = exports.filter(e => e.hasJsDoc).length;
@@ -30,14 +31,14 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string): S
   }];
 }
 
-function collectExports(root: Parser.SyntaxNode, source: string): ExportInfo[] {
+function collectExports(root: Parser.SyntaxNode, source: string, profile: LanguageProfile): ExportInfo[] {
   const lines = source.split('\n');
   const exports: ExportInfo[] = [];
   function visit(node: Parser.SyntaxNode): void {
-    if (node.type === 'export_statement') {
+    if (profile.exportableNodeTypes.has(node.type)) {
       const name = getExportedName(node) ?? '<anonymous>';
       const line = node.startPosition.row + 1;
-      const hasJsDoc = lineAboveIsJsDocEnd(lines, line);
+      const hasJsDoc = lineAboveMatchesDocPattern(lines, line, profile.docCommentPattern);
       exports.push({ name, line, hasJsDoc });
     }
     for (const child of node.children) visit(child);
@@ -53,11 +54,14 @@ function getExportedName(node: Parser.SyntaxNode): string | null {
   return named?.text ?? null;
 }
 
-function lineAboveIsJsDocEnd(lines: string[], exportLine: number): boolean {
+function lineAboveMatchesDocPattern(lines: string[], exportLine: number, pattern: RegExp): boolean {
+  // Collect the block of non-empty lines immediately above the export line
+  const commentLines: string[] = [];
   for (let i = exportLine - 2; i >= 0; i--) {
     const line = lines[i].trim();
-    if (line === '') continue;
-    return line.endsWith('*/');
+    if (line === '') break;
+    commentLines.unshift(line);
   }
-  return false;
+  if (commentLines.length === 0) return false;
+  return pattern.test(commentLines.join('\n'));
 }

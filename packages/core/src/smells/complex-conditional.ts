@@ -1,20 +1,20 @@
 import type { SyntaxNode } from 'tree-sitter';
 import type { Smell } from '../types';
+import type { LanguageProfile } from './language-profile';
 
-const TERNARY = 'ternary_expression', BINARY = 'binary_expression', PAREN = 'parenthesized_expression';
-const LOGICAL_OPS = new Set(['&&', '||']);
+const TERNARY = 'ternary_expression', PAREN = 'parenthesized_expression';
 const BOOLEAN_CHAIN_THRESHOLD = 3;
 
-export function detectComplexConditional(tree: SyntaxNode): Smell[] {
+export function detectComplexConditional(tree: SyntaxNode, profile: LanguageProfile): Smell[] {
   const smells: Smell[] = [];
-  visitAll(tree, smells);
+  visitAll(tree, profile, smells);
   return smells;
 }
 
-function visitAll(node: SyntaxNode, acc: Smell[]): void {
+function visitAll(node: SyntaxNode, profile: LanguageProfile, acc: Smell[]): void {
   if (node.type === TERNARY) checkNestedTernary(node, acc);
-  if (node.type === BINARY) checkBoolChain(node, acc);
-  for (const child of node.children) visitAll(child, acc);
+  if (node.type === profile.binaryExpressionNodeType) checkBoolChain(node, profile, acc);
+  for (const child of node.children) visitAll(child, profile, acc);
 }
 
 function unwrapParens(node: SyntaxNode): SyntaxNode {
@@ -39,18 +39,18 @@ function checkNestedTernary(node: SyntaxNode, acc: Smell[]): void {
     line: node.startPosition.row + 1 });
 }
 
-function logicalOpCount(node: SyntaxNode): number {
-  if (node.type !== BINARY) return 0;
-  const op = node.childForFieldName('operator')?.text ?? '';
-  if (!LOGICAL_OPS.has(op)) return 0;
+function logicalOpCount(node: SyntaxNode, profile: LanguageProfile): number {
+  if (node.type !== profile.binaryExpressionNodeType) return 0;
+  const op = node.childForFieldName(profile.binaryOperatorField)?.text ?? '';
+  if (!profile.logicalOperators.has(op)) return 0;
   const l = node.child(0), r = node.child(2);
-  return 1 + (l ? logicalOpCount(l) : 0) + (r ? logicalOpCount(r) : 0);
+  return 1 + (l ? logicalOpCount(l, profile) : 0) + (r ? logicalOpCount(r, profile) : 0);
 }
 
-function checkBoolChain(node: SyntaxNode, acc: Smell[]): void {
-  const parentOp = node.parent?.childForFieldName?.('operator')?.text ?? '';
-  if (LOGICAL_OPS.has(parentOp)) return;
-  const ops = logicalOpCount(node);
+function checkBoolChain(node: SyntaxNode, profile: LanguageProfile, acc: Smell[]): void {
+  const parentOp = node.parent?.childForFieldName?.(profile.binaryOperatorField)?.text ?? '';
+  if (profile.logicalOperators.has(parentOp)) return;
+  const ops = logicalOpCount(node, profile);
   if (ops < BOOLEAN_CHAIN_THRESHOLD) return;
   acc.push({ type: 'ComplexConditional', severity: 'medium',
     description: `Boolean expression has ${ops} logical operators — hard to parse mentally.`,

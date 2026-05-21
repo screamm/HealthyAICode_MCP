@@ -6,6 +6,7 @@ import { detectLowDocCoverage } from '../smells/doc-coverage';
 import { detectComplexConditional } from '../smells/complex-conditional';
 import { detectMessageChain } from '../smells/message-chain';
 import { detectDataClumps } from '../smells/data-clumps';
+import { typescriptProfile } from '../smells/language-profile';
 import { detectSATD } from '../smells/satd';
 import { detectGodClass } from '../smells/god-class';
 import { detectFeatureEnvy } from '../smells/feature-envy';
@@ -24,14 +25,14 @@ export function collectTypeScriptSmells(
   const findings: Smell[] = [
     ...(detectTypeSafetyEscapes(root, ctx.code) as Smell[]),
     ...(detectMagicNumbers(root, ctx.filePath) as Smell[]),
-    ...(detectLowDocCoverage(root, ctx.code) as Smell[]),
-    ...detectComplexConditional(root),
-    ...detectMessageChain(root),
-    ...detectDataClumps(root),
+    ...(detectLowDocCoverage(root, ctx.code, typescriptProfile) as Smell[]),
+    ...detectComplexConditional(root, typescriptProfile),
+    ...detectMessageChain(root, typescriptProfile),
+    ...detectDataClumps(root, typescriptProfile),
     ...detectSATD(root),
-    ...detectGodClass(root, names),
-    ...detectFeatureEnvy(root, names),
-    ...detectPrimitiveObsession(root),
+    ...detectGodClass(root, names, typescriptProfile),
+    ...detectFeatureEnvy(root, names, typescriptProfile),
+    ...detectPrimitiveObsession(root, typescriptProfile),
   ];
 
   for (const fnNode of functionNodes) {

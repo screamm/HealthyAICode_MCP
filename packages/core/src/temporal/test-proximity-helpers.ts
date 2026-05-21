@@ -4,8 +4,7 @@ import Parser from 'tree-sitter';
 import TypeScript from 'tree-sitter-typescript';
 
 const tsParser = new Parser();
-const tsLanguage = (TypeScript as unknown as Record<string, unknown>).typescript ?? TypeScript;
-tsParser.setLanguage(tsLanguage as object);
+tsParser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript as Parser.Language);
 
 /** Counts exported declarations in a TypeScript file using AST parsing with regex fallback. */
 export async function countExports(filePath: string): Promise<number> {

@@ -5,7 +5,7 @@ import TypeScript from 'tree-sitter-typescript';
 import type { DeadExportFinding } from '.';
 import { walkNodes } from '../analyzers/traversal-helpers';
 const parser = new Parser();
-parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript);
+parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript as Parser.Language);
 interface ExportRecord { filePath: string; name: string; line: number; isReExport: boolean; }
 interface ImportRecord { fromPath: string; importedNames: string[]; }
 export async function detectDeadExports(files: string[]): Promise<DeadExportFinding[]> {

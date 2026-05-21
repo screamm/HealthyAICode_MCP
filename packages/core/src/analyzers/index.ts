@@ -3,6 +3,11 @@ import { analyzeTypeScript } from './typescript';
 import { analyzePython } from './python';
 import { analyzeJava } from './java';
 import { analyzeCSharp } from './csharp';
+import { analyzeGo } from './go';
+import { analyzeRust } from './rust';
+import { analyzePhp } from './php';
+import { analyzeRuby } from './ruby';
+import { analyzeSwift } from './swift';
 
 /** Analyzes TypeScript and JavaScript source files. */
 export { analyzeTypeScript } from './typescript';
@@ -12,6 +17,16 @@ export { analyzePython } from './python';
 export { analyzeJava } from './java';
 /** Analyzes C# source files. */
 export { analyzeCSharp } from './csharp';
+/** Analyzes Go source files. */
+export { analyzeGo } from './go';
+/** Analyzes Rust source files. */
+export { analyzeRust } from './rust';
+/** Analyzes PHP source files. */
+export { analyzePhp } from './php';
+/** Analyzes Ruby source files. */
+export { analyzeRuby } from './ruby';
+/** Analyzes Swift source files. */
+export { analyzeSwift } from './swift';
 
 interface AnalyzerOutput {
   functions: FunctionResult[];
@@ -32,6 +47,16 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeJava(code, filePath);
     case 'csharp':
       return analyzeCSharp(code, filePath);
+    case 'go':
+      return analyzeGo(code, filePath);
+    case 'rust':
+      return analyzeRust(code, filePath);
+    case 'php':
+      return analyzePhp(code, filePath);
+    case 'ruby':
+      return analyzeRuby(code, filePath);
+    case 'swift':
+      return analyzeSwift(code, filePath);
     default:
       return unsupportedOutput(code);
   }

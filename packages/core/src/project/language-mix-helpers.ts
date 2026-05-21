@@ -3,7 +3,7 @@ import TypeScript from 'tree-sitter-typescript';
 import type { LanguageMixFinding } from '.';
 
 const parser = new Parser();
-parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript);
+parser.setLanguage((TypeScript as unknown as Record<string, unknown>).typescript as Parser.Language);
 const SV_STOP = new Set('och att är kan ska inte inga redan med för till som eller mellan har varit vara blir blev denna dessa'.split(' '));
 const EN_STOP = new Set('the and is of to if else not with for from as or between has have been this these into about because'.split(' '));
 const SV_CHARS = /[åäöÅÄÖ]/;

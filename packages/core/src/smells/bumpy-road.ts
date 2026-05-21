@@ -12,34 +12,42 @@ export const BUMPY_ROAD_HIGH_SEVERITY_CHUNKS = 5;
 /**
  * AST node types that count as a "chunk" when appearing as a top-level sibling inside a function body.
  *
- * Note: `for_of_statement` is intentionally absent — tree-sitter-typescript parses both
- * `for...in` and `for...of` as `for_in_statement`. `for_of_statement` is never emitted.
+ * Covers TypeScript, Python, Java, and C# node names:
+ * - `for_in_statement`   covers both for...in and for...of in tree-sitter-typescript
+ * - `enhanced_for_statement` covers Java's for-each
+ * - `foreach_statement`  covers C# foreach
+ * - `do_statement`       Java/C#
+ * - `with_statement`     Python `with`
  */
 const CHUNK_NODE_TYPES = new Set([
+  // TypeScript / shared
   'if_statement',
   'for_statement',
-  'for_in_statement',   // covers both for...in and for...of in tree-sitter-typescript
+  'for_in_statement',
   'while_statement',
   'do_statement',
   'switch_statement',
   'try_statement',
+  // Python-specific
+  'with_statement',
+  // Java-specific
+  'enhanced_for_statement',
+  // C#-specific
+  'foreach_statement',
 ]);
 
 /**
- * Tree-sitter field names whose value is the function body block.
- *
- * Note: `'value'` is intentionally absent — none of the relevant TS function node types
- * (function_declaration, arrow_function, function_expression, method_definition) use a `value`
- * field for their body in tree-sitter-typescript.
+ * Body node types that represent a function's statement block.
+ * - TypeScript: `statement_block`
+ * - Python / Java / C#: `block`
  */
-const BODY_FIELD_NAMES = ['body'];
+const BODY_NODE_TYPES = new Set(['statement_block', 'block']);
 
-/** Locates the statement_block that forms a function's body. */
+/** Locates the statement block that forms a function's body. */
 function findFunctionBody(fnNode: Parser.SyntaxNode): Parser.SyntaxNode | null {
-  for (const fieldName of BODY_FIELD_NAMES) {
-    const candidate = fnNode.childForFieldName(fieldName);
-    if (candidate && candidate.type === 'statement_block') return candidate;
-  }
+  // Try the 'body' field first (works for TypeScript, Python, Java, C#)
+  const candidate = fnNode.childForFieldName('body');
+  if (candidate && BODY_NODE_TYPES.has(candidate.type)) return candidate;
   // Arrow function expressions without braces have a body that's an expression — no chunks possible.
   return null;
 }
@@ -70,11 +78,10 @@ function collectChunkRanges(body: Parser.SyntaxNode): Array<{ startLine: number;
  * Both levels are 'high' because a 4-chunk Bumpy Road is already a significant smell.
  * A future sprint may introduce 'critical' for ≥7 chunks if self-audit data justifies it.
  *
- * BACKWARD COMPATIBILITY NOTE (Sprint 17):
- * The old file-level detectBumpyRoad() in detector.ts ran for ALL languages (TS/JS/Python/Java/Kotlin/C#).
- * This new per-function detector is wired ONLY into TypeScript. Python/Java/Kotlin/C# will not
- * emit BumpyRoad smells after this sprint. This is an acknowledged regression; chunk-detection
- * for other languages is deferred to a future sprint (requires per-language CHUNK_NODE_TYPES sets).
+ * MULTI-LANGUAGE SUPPORT (Sprint 17 C1):
+ * CHUNK_NODE_TYPES and findFunctionBody now cover TypeScript, Python, Java, and C#.
+ * Python/Java/C# analyzers call detectBumpyRoadChunks per function node exactly as TypeScript does.
+ * Kotlin support is deferred to a future sprint.
  */
 export function detectBumpyRoadChunks(fnNode: Parser.SyntaxNode): Smell | null {
   const body = findFunctionBody(fnNode);
@@ -83,7 +90,11 @@ export function detectBumpyRoadChunks(fnNode: Parser.SyntaxNode): Smell | null {
   const chunkRanges = collectChunkRanges(body);
   if (chunkRanges.length < BUMPY_ROAD_CHUNK_THRESHOLD) return null;
 
-  const name = getFunctionName(fnNode);
+  // getFunctionName handles TypeScript-specific patterns; for other languages fall back to the
+  // 'name' field on the function node (Python function_definition, Java method_declaration, etc.)
+  const name = getFunctionName(fnNode) !== '<anonymous>'
+    ? getFunctionName(fnNode)
+    : (fnNode.childForFieldName('name')?.text ?? '<anonymous>');
   // Severity is always 'high' — matches legacy detector default and avoids silent downgrade to 'medium'.
   // (C3: preserving 'high' to avoid severity shift with no documentation.)
   const severity: 'high' = 'high';
