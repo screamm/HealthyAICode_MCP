@@ -1,4 +1,8 @@
-// Triggers: DeepNesting, ComplexMethod, BumpyRoad
+// Triggers: DeepNesting, ComplexMethod
+// NOTE (Sprint 17): BumpyRoad is NOT triggered by this file under the new chunk-based definition.
+// resolvePermission has only 1 top-level sibling chunk (the outer `if (user)` block).
+// All nested control flow lives inside that single top-level chunk.
+// The old file-level heuristic (3+ functions with nestingDepth >= 3) is no longer used.
 export function resolvePermission(
   user: Record<string, unknown>,
   resource: Record<string, unknown>,

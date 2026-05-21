@@ -6,7 +6,13 @@
  * - DeepNesting (processData depth 6, parseConfig depth 5)
  * - LongParameterList (all 3 functions: parameterCount = 6)
  * - LargeMethod (all 3 functions: length > 30)
- * - BumpyRoad (all 3 functions have nestingDepth >= 3)
+ *
+ * NOTE (Sprint 17): BumpyRoad is NOT triggered by this file under the new chunk-based definition.
+ * - processData: 1 top-level chunk (single if/else-if/else chain)
+ * - validateInput: 2 top-level chunks (if(required) + if(type==='number')/else-if chain)
+ * - parseConfig: 1 top-level chunk (single if)
+ * None reach the threshold of 4 top-level sibling control-flow chunks.
+ * For an actual BumpyRoad fixture, see tests/fixtures/unhealthy/bumpy-road-fixture.ts
  */
 
 export function processData(
