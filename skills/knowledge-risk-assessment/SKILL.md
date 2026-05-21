@@ -121,6 +121,11 @@ Kombinera resultaten för att identifiera kritiska prioriteter:
 | Låg          | < 5           | Medium — teknisk skuld att planera in |
 | Låg          | > 7           | Låg — bevaka |
 
+Notera: Hög kunskapsrisk är aldrig en giltig safeguard-override-reason. En fil med
+busFactorEstimate = 1 och låg kodhälsopoäng är en akut prioritering — men commit-gaten
+i AGENTS.md §3.2 gäller ändå. Lös knowledge-risken genom dokumentation och pair
+programming, inte genom att kringgå hälsogaten.
+
 ---
 
 ## Steg 6 — Sammanfattning och åtgärdsplan

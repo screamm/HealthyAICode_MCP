@@ -48,6 +48,9 @@ Verktyget kan returnera resultaten i omgångar — fortsätt anropa tills `loopC
 - Varför det är ett problem (vad det gör svårare i praktiken)
 - Vilken del av koden det berör
 
+**Loopa till `loopComplete: true`.** Att avsluta loopen tidigt är likvärdigt med att inte
+ha kört granskningen. Detta är icke-förhandlingsbart enligt AGENTS.md §8.
+
 ### Steg A.3 — Rapportera
 
 Sammanfatta granskningen med tre delar:
@@ -147,6 +150,8 @@ Uppdatera PRn och begär ny granskning när åtgärderna är genomförda.
 
 En PR är redo att mergas när samtliga följande villkor uppfylls:
 
+- 3–5 stegs refaktoreringskadens följd — varje smell adresserad i en egen, individuellt
+  granskbar commit, med ny mätning efter varje steg (AGENTS.md §4)
 - `overallSafe: true` — inga filer bryter hälsogränsen
 - Inga röda filer — inga ändrade eller nya filer med score under 4.0
 - Inga regressioner — inga befintliga filer vars score försämrats av PRns ändringar

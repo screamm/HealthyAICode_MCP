@@ -334,9 +334,11 @@ Da finns tva alternativ:
 **Alt 1 — Dela upp PR:en.** Skapa en separat refaktoreringsbranch som avslutas innan
 feature-branchen mergas. Det ar den rena lösningen.
 
-**Alt 2 — Dokumenterat undantag.** Om det ar omöjligt at refaktorera nu, dokumentera
-beslutet i PR-beskrivningen med en commit till tech debt-backloggen. Undvik att göra
-detta till praxis — varje undantag ökar skulden.
+**Alt 2 — Safeguard Override.** Om det är omöjligt att refaktorera nu, följ
+*Safeguard Override Protocol* i AGENTS.md §6. Det är inte ett alternativ AI:n får
+föreslå — användaren måste begära det aktivt. Protokollet kräver dokumenterad
+reason, accepted-by, follow-up-issue och ett `Expires`-datum (max 30 dagar).
+Utan ett komplett OVERRIDE-block får commit inte föreslås.
 
 ---
 
@@ -349,3 +351,5 @@ detta till praxis — varje undantag ökar skulden.
 | Niva 3   | CI/CD-gate vid PR            | Alla branches  | Ja — obligatorisk  |
 
 Rekommendationen är att implementera alla tre nivåer. Nivå 3 ar det yttersta skyddsnatet.
+
+Ingen nivå får kringgås tyst. Varje undantag kräver dokumenterad override per AGENTS.md §6.

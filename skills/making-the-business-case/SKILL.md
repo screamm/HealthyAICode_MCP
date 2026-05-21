@@ -124,6 +124,18 @@ Hör av dig om du vill diskutera.
 
 ---
 
+---
+
+## Affärscaset är inte ett override-argument
+
+Affärscaset (`code_health_refactoring_business_case`) är ett verktyg för att *prioritera
+in* refaktorering — inte för att *prioritera bort* en blockerande safeguard. Om verktyget
+visar låg ROI för en fil betyder det inte att den filen får kringgås vid commit. Det betyder
+att den får vänta med proaktiv refaktorering. Pre-commit-safeguarden gäller fortfarande
+(AGENTS.md §3.2 och §6).
+
+---
+
 ## Viktiga principer
 
 **Använd verktygets siffror — lägg inte till egna gissningar.** Om verktyget säger +18% leveranshastighet, skriv +18%. Om du lägger till "ungefär", "troligen" eller "vi tror" tappar siffrorna sin trovärdighet.

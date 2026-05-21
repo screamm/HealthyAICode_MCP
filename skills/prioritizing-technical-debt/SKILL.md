@@ -176,6 +176,20 @@ Det är ett beslutsunderlag — inte en åsikt.
 
 ---
 
+---
+
+## Prioritering får aldrig bli en bypass
+
+Prioriteringsmatrisen är ett *planeringsverktyg* — den hjälper teamet välja vilken skuld
+som ska åtgärdas först. Den är **inte** ett verktyg för att skjuta upp filer som
+`pre_commit_code_health_safeguard` blockerar idag.
+
+Om en fil blockeras vid commit gäller AGENTS.md §3.2: ingen commit förrän filen passerar
+eller en *Safeguard Override* (AGENTS.md §6) har dokumenterats. "Vi prioriterade ner den
+i backloggen" är inte en giltig override-reason.
+
+---
+
 ## Exempelformat: Prioriterad teknisk skuld-backlogg
 
 ```

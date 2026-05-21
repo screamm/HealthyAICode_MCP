@@ -76,6 +76,9 @@ Följ `refactoringInstructions` noggrant. Använd `fullFileContent` och `codeCon
 
 **Steg 2.3 — Verifiera förbättringen**
 
+**Mät efter varje steg. Inte efter flera. Inte i slutet.** Det här är 3–5-stegskadensen
+från AGENTS.md §4: en smell per steg, ny mätning, ny commit, sedan nästa steg.
+
 Anropa `code_health_review` igen på samma fil:
 
 ```
@@ -135,7 +138,8 @@ Kontrollera `overallSafe` och att inga regressioner introducerats i filer som in
 - **Mät efter varje steg** — subjektiv känsla av förbättring räknas inte
 - **Commit ofta** — varje löst problem är en egen commit
 - **Ändra inte beteende** — refaktorering ska bevara exakt samma funktionalitet
-- **Lita på verktygen** — om `code_health_review` säger att ett problem kvarstår, kvarstår det
+- **Lita på verktygen** — om `code_health_review` säger att ett problem kvarstår, kvarstår
+  det. Du får inte argumentera bort en smell — den är auktoritativ (AGENTS.md §1).
 
 ---
 

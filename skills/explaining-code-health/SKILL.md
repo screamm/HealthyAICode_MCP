@@ -80,7 +80,10 @@ Chefer och PMs behöver ett affärsspråk, inte ett tekniskt.
 | 5.0–6.4 | Orange | Märkbar teknisk skuld, varje ändring har förhöjd risk för regressioner |
 | 1.0–4.9 | Röd | Kritisk hälsa, ändringar är oförutsägbara, refaktorering bör prioriteras |
 
-Tröskeln **9.5** är det AI-reddiness-tröskeln: under den gränsen är koden för komplex för att en AI-assistent ska kunna göra ändringar med tillförlitligt resultat utan mänsklig kontroll.
+Tröskeln **9.5** är inte en ambition — den är `loopComplete`-villkoret. Under den
+gränsen är loopen inte färdigkörd. Tröskeln **10.0** är målet för all AI-genererad eller
+AI-ändrad kod i ett repo som följer AGENTS.md. Allt däremellan är ett uttryckligt
+accepterat gap som måste dokumenteras (se AGENTS.md §6).
 
 ---
 

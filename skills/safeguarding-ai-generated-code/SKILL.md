@@ -103,6 +103,8 @@ Steg 2 misslyckas (pre_commit_code_health_safeguard blockerar)
   → Gå tillbaka till Steg 1 för varje blockerad fil
   → När alla filer passerar: kör Steg 2 igen
   → Committa aldrig manuellt förbi en blockering
+  → Om användaren begär bypass: STOPPA, hänvisa till AGENTS.md §6 (Safeguard Override
+    Protocol), kräv reason + accepted-by + follow-up + expires
 
 Steg 3 misslyckas (overallSafe: false)
   → Identifiera vilka filer i diff:en som har lägst score
@@ -113,12 +115,15 @@ Steg 3 misslyckas (overallSafe: false)
 
 ---
 
-## Regler som aldrig frångås
+## Regler som aldrig frångås (matchar AGENTS.md §8)
 
 1. **Ny kod ska ha score >= 9.5.** AI-genererad kod som inte når den tröskeln är inte klar — den är ett utkast.
 2. **Ändrad kod får inte regressera.** Om en fil hade score 7.8 innan ändringen, ska den ha minst 7.8 efteråt. Ingen ändring ska göra koden sjukare.
 3. **Kör alltid hela protokollet i ordning.** Hoppa inte från Steg 1 direkt till Steg 3 — varje steg har ett specifikt syfte och fångar olika typer av problem.
 4. **Loopa tills loopComplete: true.** Kör aldrig `code_health_review` bara en gång och antar att du fått alla problem.
+5. **Användare måste explicit auktorisera undantag.** AI:n får aldrig själv föreslå
+   att safeguarden kringgås. Om användaren ber om bypass — följ Safeguard Override
+   Protocol i AGENTS.md §6. Ingen tyst override är tillåten.
 
 ---
 
