@@ -35,7 +35,8 @@ export type SmellType =
   | 'CodeChurn'
   | 'DeveloperCongestion'
   | 'KnowledgeLoss'
-  | 'PrimitiveObsession';
+  | 'PrimitiveObsession'
+  | 'MethodTemporalCoupling';
 
 /** A single detected code finding with location, severity, and remediation guidance. */
 export interface Smell {
@@ -45,6 +46,12 @@ export interface Smell {
   line: number;
   description: string;
   suggestion: string;
+  /**
+   * Optional line ranges for sub-sections of the finding.
+   * Used by BumpyRoad to expose each sequential chunk so AI assistants can extract them precisely.
+   * Each entry is 1-indexed and inclusive.
+   */
+  chunkRanges?: Array<{ startLine: number; endLine: number }>;
 }
 
 /** Aggregated code metrics for a file or function. */
@@ -104,6 +111,27 @@ export interface FileRegression {
   scoreBefore: number;
   scoreAfter: number;
   newSmells: Smell[];
+}
+
+/** A pair of methods within the same file that frequently change together (X-Ray-light). */
+export interface MethodCouplingPair {
+  methodA: string;
+  methodB: string;
+  coChangeCount: number;
+  /** max(touches(A), touches(B)) — commits where at least one of them changed */
+  combinedTouches: number;
+  /** coChangeCount / combinedTouches, in [0..1] */
+  couplingStrength: number;
+  severity: 'low' | 'medium' | 'high';
+}
+
+/** Result of analyzing method-level temporal coupling for a single file. */
+export interface MethodCouplingResult {
+  filePath: string;
+  commitsAnalyzed: number;
+  threshold: number;
+  /** Pairs sorted by couplingStrength descending; only pairs above threshold included. */
+  pairs: MethodCouplingPair[];
 }
 
 /** Describes a file whose health score improved in the current changeset. */
