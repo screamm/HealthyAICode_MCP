@@ -21,6 +21,8 @@ export { analyzeDeveloperCongestion } from './temporal/developer-congestion';
 export { analyzeKnowledgeLoss } from './temporal/knowledge-loss';
 /** Analyzes overall project code health. */
 export { analyzeProject } from './project';
+/** Analyzes method-level temporal coupling (X-Ray-light) for a single file. */
+export { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
 
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {

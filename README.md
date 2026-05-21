@@ -104,6 +104,7 @@ The `skills/` directory contains nine prompt templates that teach AI assistants 
 | `code_health_auto_refactor` | `filePath` | Returns primary refactoring target with code context and instructions |
 | `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring investment |
 | `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, and temporal coupling |
+| `code_health_method_coupling` | `repoPath`, `filePath` | X-Ray-light: method pairs that change together in git history |
 | `get_config` | *(none)* | Read current server configuration |
 | `set_config` | key, value | Persist a configuration value |
 | `explain_code_health` | *(none)* | What is code health? |
@@ -118,9 +119,9 @@ The `skills/` directory contains nine prompt templates that teach AI assistants 
 | `defaultBranch` | string | Base branch used by `analyze_change_set`. Default: `main` |
 | `projectName` | string | Project name shown in reports |
 
-## Biomarkers (27)
+## Biomarkers (28)
 
-Healthy AI Code detects 27 code health biomarkers across four sprint generations, matching and exceeding CodeScene's 26-biomarker coverage.
+Healthy AI Code detects 28 code health biomarkers across sprint generations, matching and exceeding CodeScene's 26-biomarker coverage.
 
 ### Core smells (Sprints 1–4)
 | Biomarker | Description |
@@ -170,13 +171,14 @@ Healthy AI Code detects 27 code health biomarkers across four sprint generations
 | `FeatureEnvy` | Methods more interested in other classes' data than their own |
 | `LowMaintainability` | Halstead volume + cyclomatic complexity + LOC composite index |
 
-### Temporal & organisational (Sprint 10)
+### Temporal & organisational (Sprints 10, 19)
 | Biomarker | Description |
 |-----------|-------------|
 | `CodeChurn` | Nagappan & Ball churn metric — frequently rewritten code |
 | `TemporalCoupling` | Files that change together more than their dependencies suggest |
 | `DeveloperCongestion` | Too many developers touching the same module |
 | `KnowledgeLoss` | Bus factor / DOA — code known only by departed contributors |
+| `MethodTemporalCoupling` | X-Ray-light: method pairs that co-change in git history — advisory (weight 0 until sprint 20 validation) |
 
 ## Supported Languages
 

@@ -11,6 +11,17 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
   StdioServerTransport: vi.fn().mockImplementation(() => ({})),
 }));
 
+// Prevent tree-sitter native addon from loading in the Vitest bundler context
+// (same pre-existing issue as all other mcp-server tool tests)
+vi.mock('@healthy-ai-code/core', () => ({
+  analyzeFile: vi.fn(),
+  analyzeChangeset: vi.fn(),
+  analyzeTemporalCoupling: vi.fn(),
+  analyzeKnowledgeLoss: vi.fn(),
+  analyzeDeveloperCongestion: vi.fn(),
+  analyzeMethodCoupling: vi.fn(),
+}));
+
 import { createServer } from '../../src/server';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -24,7 +35,7 @@ describe('createServer', () => {
     });
   });
 
-  it('registrerar alla sju verktyg', async () => {
+  it('registrerar alla verktyg inklusive code_health_method_coupling', async () => {
     const toolNames: string[] = [];
     vi.mocked(McpServer).mockImplementationOnce(() => ({
       tool: (name: string) => { toolNames.push(name); },
@@ -40,6 +51,11 @@ describe('createServer', () => {
     expect(toolNames).toContain('code_health_refactoring_business_case');
     expect(toolNames).toContain('explain_code_health');
     expect(toolNames).toContain('explain_code_health_productivity');
-    expect(toolNames).toHaveLength(7);
+    expect(toolNames).toContain('code_health_knowledge_map');
+    expect(toolNames).toContain('code_health_method_coupling');
+    expect(toolNames).toContain('get_config');
+    expect(toolNames).toContain('set_config');
+    expect(toolNames).toContain('code_health_auto_refactor');
+    expect(toolNames).toHaveLength(12);
   });
 });

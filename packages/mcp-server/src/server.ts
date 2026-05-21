@@ -6,6 +6,7 @@ import { registerAnalyzeChangeSet } from './tools/analyze-change-set';
 import { registerRefactoringBusinessCase } from './tools/refactoring-business-case';
 import { registerExplainCodeHealth, registerExplainProductivity } from './tools/explain-code-health';
 import { registerKnowledgeMap } from './tools/knowledge-map';
+import { registerMethodCoupling } from './tools/method-coupling';
 import { registerConfigTools } from './tools/config';
 import { registerAutoRefactor } from './tools/auto-refactor';
 
@@ -23,6 +24,7 @@ export async function createServer(): Promise<McpServer> {
   registerExplainCodeHealth(server);
   registerExplainProductivity(server);
   registerKnowledgeMap(server);
+  registerMethodCoupling(server);
   registerConfigTools(server);
   registerAutoRefactor(server);
 

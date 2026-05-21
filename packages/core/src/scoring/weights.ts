@@ -25,6 +25,8 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   DeveloperCongestion: 0.7,
   KnowledgeLoss: 1.0,
   PrimitiveObsession: 0.5,
+  // Advisory-only; weight 0 until false-positive rate is validated in sprint 20
+  MethodTemporalCoupling: 0,
 };
 
 /** Minimum score at which a file is considered safe for AI-assisted modification. */
