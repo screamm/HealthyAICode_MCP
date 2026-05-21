@@ -1,0 +1,15 @@
+{
+  "language": "java",
+  "generatedAt": "2026-05-21T00:00:00Z",
+  "datasetVersion": "defects4j-v2.0.0 (placeholder — run pipeline to generate real values)",
+  "thresholds": {
+    "complexMethodThreshold": 10,
+    "deepNestingThreshold": 3,
+    "longParameterList": 4
+  },
+  "metrics": {
+    "f1Score": null,
+    "baselineF1": null,
+    "note": "Placeholder. Run scripts/calibration/*.mjs to generate real values."
+  }
+}

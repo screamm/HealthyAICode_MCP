@@ -23,6 +23,10 @@ export { analyzeKnowledgeLoss } from './temporal/knowledge-loss';
 export { analyzeProject } from './project';
 /** Analyzes method-level temporal coupling (X-Ray-light) for a single file. */
 export { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
+/** Global runtime configuration (opt-in flags such as useCalibratedThresholds). */
+export { setConfig, getConfig } from './config';
+/** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
+export { loadCalibration, getThresholds, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
 
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
@@ -38,7 +42,7 @@ export function analyzeCode(code: string, language: Language, filePath = '<inlin
   const totalLines = code.split('\n').length;
   const parsed = tryAnalyze(code, { language, filePath });
   if (parsed === null) return buildUnparseableResult({ filePath, language }, totalLines);
-  const smells = [...parsed.smells, ...detectSmells(parsed.functions, parsed.metrics), ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity)];
+  const smells = [...parsed.smells, ...detectSmells(parsed.functions, parsed.metrics, language), ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity)];
   appendLargeFileSmellIfNeeded(smells, totalLines);
   const score = calculateScore(smells);
   return { filePath, language, score, category: categorize(score), smells, metrics: parsed.metrics, functions: parsed.functions };

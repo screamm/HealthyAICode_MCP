@@ -28,6 +28,9 @@ coverage/
 # Code health cache
 .healthy-ai-cache/
 
+# Defects4J calibration cache (checkouts, labels, predictions, sweep results)
+.calibration-cache/
+
 # Test fixtures temporary dirs
 packages/core/tests/fixtures/project-*-tmp/
 
