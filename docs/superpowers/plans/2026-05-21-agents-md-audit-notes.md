@@ -42,3 +42,25 @@ Följande strängliteraler i `packages/mcp-server/src/tools/shared.ts` (funktion
 Vi placerar Safeguard Override Protocol som §6 i AGENTS.md istället för i en separat
 fil. Anledning: AGENTS.md är den enda fil vi förlitar oss på att alla AI-klienter
 läser. En extern referensfil riskerar att hamna utanför kontext.
+
+## Task 4: Verifiering av §6-komplettering
+
+AGENTS.md §6 verifierad som komplett (2026-05-21):
+- §6.1 — Override is User-Initiated: FINNS
+- §6.2 — Required Documentation (med fullt OVERRIDE-blockformat): FINNS
+- §6.3 — What the AI Must Do During an Override (inkl. "warn about long-term maintainability"): FINNS
+- §6.4 — What an Override is NOT (inklusive expiry-regeln): FINNS
+
+Separat `docs/override-protocol.md` skapas INTE. Protokollet hålls inline i AGENTS.md §6.
+
+OVERRIDE-blockformatet i §6.2:
+```
+OVERRIDE: Safeguard bypassed under AGENTS.md §6
+File:        <relative path>
+Current score: <X.X>/10.0  (target 10.0, floor 7.0)
+Smells left: <comma-separated list of smell types>
+Reason:      <one sentence from the user>
+Accepted by: <user identifier — name, email, or username>
+Follow-up:   <issue number, ticket ID, or "next sprint">
+Expires:     <YYYY-MM-DD — max 30 days from commit date>
+```
