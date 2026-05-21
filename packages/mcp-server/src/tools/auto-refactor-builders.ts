@@ -31,8 +31,40 @@ export function getTopTarget(smells: Smell[]): Smell | null {
   return [...smells].sort((a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4))[0];
 }
 
+/** Builds specific BumpyRoad extraction instructions using chunkRanges from the smell. */
+function buildBumpyRoadInstructions(target: Smell): string {
+  const ranges = target.chunkRanges ?? [];
+  if (ranges.length === 0) return target.suggestion;
+
+  const fnName = target.functionName ?? 'denna funktion';
+  const chunkLines = ranges
+    .map((r, i) => `  Chunk ${i + 1}: rader ${r.startLine}–${r.endLine} → extrahera till hjälpfunktion (föreslaget namn: handleChunk${i + 1}Of${fnName.charAt(0).toUpperCase() + fnName.slice(1)})`)
+    .join('\n');
+
+  return [
+    `'${fnName}' innehåller ${ranges.length} sekventiella kontrollflödes-chunks som ska extraheras:`,
+    chunkLines,
+    '',
+    'Efter extraktion ska originalfunktionen läsa som en kort sekvens av namngivna anrop — funktionens story blir tydlig och varje chunk testbar isolerat.',
+    'Behåll ordning och sidoeffekter; ändra inte logik inom respektive chunk.',
+  ].join('\n');
+}
+
 /** Formats step-by-step refactoring instructions for the primary target finding. */
 export function buildInstructions(target: Smell | null, currentScore: number): string {
   if (!target) return 'Inga specifika problem identifierade. Förbättra den generella kodstrukturen.';
-  return [`PRIMÄRT MÅL: ${target.type} (${target.severity}) på rad ${target.line}`, `Problem: ${target.description}`, `Åtgärd: ${target.suggestion}`, '', `Nuvarande score: ${currentScore}/10.0`, 'Genomför ENBART denna ändring, undvik att ändra annan logik.', 'Kör code_health_review efter ändringen för att verifiera förbättringen.'].join('\n');
+
+  const targetSuggestion = target.type === 'BumpyRoad' && target.chunkRanges
+    ? buildBumpyRoadInstructions(target)
+    : target.suggestion;
+
+  return [
+    `PRIMÄRT MÅL: ${target.type} (${target.severity}) på rad ${target.line}`,
+    `Problem: ${target.description}`,
+    `Åtgärd: ${targetSuggestion}`,
+    '',
+    `Nuvarande score: ${currentScore}/10.0`,
+    'Genomför ENBART denna ändring, undvik att ändra annan logik.',
+    'Kör code_health_review efter ändringen för att verifiera förbättringen.',
+  ].join('\n');
 }
