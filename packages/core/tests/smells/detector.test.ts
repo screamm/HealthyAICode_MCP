@@ -172,37 +172,6 @@ describe('detectSmells — LongParameterList', () => {
   });
 });
 
-describe('detectSmells — BumpyRoad', () => {
-  it('does NOT flag BumpyRoad when fewer than 3 deeply nested functions', () => {
-    const fns = [
-      makeFunction({ nestingDepth: 3 }),
-      makeFunction({ nestingDepth: 3, line: 20 }),
-    ];
-    const smells = detectSmells(fns, makeMetrics());
-    expect(smells.filter(s => s.type === 'BumpyRoad')).toHaveLength(0);
-  });
-
-  it('flags BumpyRoad when 3 or more functions have nestingDepth >= 3', () => {
-    const fns = [
-      makeFunction({ nestingDepth: 3 }),
-      makeFunction({ nestingDepth: 4, line: 20 }),
-      makeFunction({ nestingDepth: 3, line: 40 }),
-    ];
-    const smells = detectSmells(fns, makeMetrics());
-    expect(smells.filter(s => s.type === 'BumpyRoad')).toHaveLength(1);
-  });
-
-  it('BumpyRoad has severity high', () => {
-    const fns = [
-      makeFunction({ nestingDepth: 3 }),
-      makeFunction({ nestingDepth: 3, line: 20 }),
-      makeFunction({ nestingDepth: 3, line: 40 }),
-    ];
-    const smells = detectSmells(fns, makeMetrics());
-    const smell = smells.find(s => s.type === 'BumpyRoad');
-    expect(smell?.severity).toBe('high');
-  });
-});
 
 describe('detectSmells — clean code produces no smells', () => {
   it('returns empty array for simple functions below all thresholds', () => {

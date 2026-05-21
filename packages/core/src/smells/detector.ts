@@ -2,7 +2,7 @@ import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 
 const LARGE_FILE_LINES = 500, COMPLEX_METHOD_THRESHOLD = 10, CRITICAL_COMPLEXITY_THRESHOLD = 20;
 const DEEP_NESTING_THRESHOLD = 3, HIGH_NESTING_THRESHOLD = 4, CRITICAL_NESTING_THRESHOLD = 5, LARGE_METHOD_LINES = 50;
-const LONG_PARAMETER_LIST = 4, BUMPY_ROAD_NESTING = 3, BUMPY_ROAD_MIN_FUNCTIONS = 3;
+const LONG_PARAMETER_LIST = 4;
 const COGNITIVE_COMPLEXITY_THRESHOLD = 15, CRITICAL_COGNITIVE_THRESHOLD = 25;
 
 export function detectSmells(functions: FunctionResult[], metrics: MetricBreakdown): Smell[] {
@@ -15,7 +15,6 @@ export function detectSmells(functions: FunctionResult[], metrics: MetricBreakdo
     const pl = detectLongParameterList(fn); if (pl) smells.push(pl);
     const cc = detectHighCognitiveComplexity(fn); if (cc) smells.push(cc);
   }
-  const br = detectBumpyRoad(functions); if (br) smells.push(br);
   return smells;
 }
 
@@ -64,8 +63,3 @@ function detectHighCognitiveComplexity(fn: FunctionResult): Smell | null {
   };
 }
 
-function detectBumpyRoad(functions: FunctionResult[]): Smell | null {
-  const bumpy = functions.filter(f => f.nestingDepth >= BUMPY_ROAD_NESTING);
-  if (bumpy.length < BUMPY_ROAD_MIN_FUNCTIONS) return null;
-  return { type: 'BumpyRoad', severity: 'high', line: bumpy[0].line, description: `${bumpy.length} funktioner med djup nestning — bumpy road-mönster`, suggestion: 'Förenkla kontrollflödet med early returns och hjälpfunktioner' };
-}
