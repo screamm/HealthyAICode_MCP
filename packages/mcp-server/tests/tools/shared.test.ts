@@ -84,6 +84,31 @@ describe('buildNextAction', () => {
   });
 });
 
+describe('buildNextAction — authoritative voice (sprint 15)', () => {
+  it('includes AGENTS.md §3.2 reference when loopComplete', () => {
+    const result = { score: 9.7, category: 'green', smells: [] } as any;
+    const action = buildNextAction(result, true);
+    expect(action.instruction).toMatch(/AGENTS\.md §3\.2|obligatorisk/);
+  });
+
+  it('includes 3–5 step cadence phrase when refactor needed without primary smell', () => {
+    const result = { score: 6.0, category: 'yellow', smells: [] } as any;
+    const action = buildNextAction(result, false);
+    expect(action.instruction).toMatch(/3.{1,3}5/);
+    expect(action.instruction).toMatch(/loopComplete/);
+  });
+
+  it('forbids batching when primary smell present', () => {
+    const result = {
+      score: 5.0, category: 'yellow',
+      smells: [{ type: 'ComplexMethod', severity: 'high', suggestion: 'Reducera komplexitet.', line: 1, description: '' }],
+    } as any;
+    const action = buildNextAction(result, false);
+    expect(action.instruction).toMatch(/ett \(1\)|inte fler ändringar/);
+    expect(action.instruction).toMatch(/§4/);
+  });
+});
+
 describe('formatReviewSummary', () => {
   it('formaterar grön fil korrekt', () => {
     const summary = formatReviewSummary('src/utils.ts', greenResult);

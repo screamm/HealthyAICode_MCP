@@ -6,7 +6,7 @@ export function buildNextAction(result: HealthResult, loopComplete: boolean): Ne
   if (loopComplete) {
     return {
       action: 'commit_safe',
-      instruction: `Koden är AI-redo (${result.score}/10.0). Inga problem identifierade. Kör pre_commit_code_health_safeguard innan commit.`,
+      instruction: `Koden är AI-redo (${result.score}/10.0). Inga problem identifierade. Kör pre_commit_code_health_safeguard innan commit — den är obligatorisk enligt AGENTS.md §3.2.`,
       priority: null,
       toolToCallAfter: null,
     };
@@ -16,8 +16,8 @@ export function buildNextAction(result: HealthResult, loopComplete: boolean): Ne
   return {
     action: 'refactor',
     instruction: prioritySmell
-      ? `${prioritySmell.suggestion} Kör sedan code_health_review igen för att mäta förbättringen.`
-      : `Förbättra kodens hälsa från ${result.score}/10.0. Kör code_health_review igen efter ändringar.`,
+      ? `${prioritySmell.suggestion} Detta är ett (1) refaktoreringssteg — gör inte fler ändringar i samma commit. Kör code_health_review direkt efteråt för att verifiera att score gått upp och inga nya smells introducerats (AGENTS.md §4).`
+      : `Förbättra kodens hälsa från ${result.score}/10.0 mot mål 10.0. Refaktorera i 3–5 steg — en smell per steg, kör code_health_review efter varje. Avbryt inte loopen förrän loopComplete: true.`,
     priority: prioritySmell,
     toolToCallAfter: 'code_health_review',
   };
