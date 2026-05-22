@@ -4,9 +4,14 @@ import {
   HEALTHY_THRESHOLD,
   PROBLEMATIC_THRESHOLD,
 } from './weights';
+import { getWeights } from './calibration-loader';
+import { getConfig } from '../config';
 
 /** Calculates the numeric health score (1.0–10.0) using progressive sqrt penalty per smell type. */
-export function calculateScore(smells: Smell[]): number {
+export function calculateScore(smells: Smell[], language = 'typescript'): number {
+  const { useCalibratedThresholds } = getConfig();
+  const calibratedWeights = getWeights(language, { useCalibratedThresholds });
+
   let score = 10.0;
 
   const countsByType = new Map<SmellType, number>();
@@ -15,7 +20,8 @@ export function calculateScore(smells: Smell[]): number {
   }
 
   for (const [type, count] of countsByType) {
-    const weight = SMELL_WEIGHTS[type];
+    // Use calibrated weight if available, otherwise fall back to the static SMELL_WEIGHTS table.
+    const weight = calibratedWeights[type] ?? SMELL_WEIGHTS[type];
     score -= weight * Math.sqrt(count);
   }
 

@@ -70,3 +70,10 @@ export function getThresholds(language: string, options: { useCalibratedThreshol
   if (!options.useCalibratedThresholds) return DEFAULT_THRESHOLDS;
   return loadCalibration(language).thresholds;
 }
+
+/** Returns calibrated per-smell weights for the given language, or an empty object (fall back to
+ *  SMELL_WEIGHTS from weights.ts) when calibration is disabled or no calibration file exists. */
+export function getWeights(language: string, options: { useCalibratedThresholds?: boolean } = {}): CalibratedWeights {
+  if (!options.useCalibratedThresholds) return {};
+  return loadCalibration(language).weights;
+}
