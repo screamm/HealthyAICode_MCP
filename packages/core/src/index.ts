@@ -23,6 +23,34 @@ export { analyzeKnowledgeLoss } from './temporal/knowledge-loss';
 export { analyzeProject } from './project';
 /** Analyzes method-level temporal coupling (X-Ray-light) for a single file. */
 export { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
+/** Sprint 22: Architecture debt analysis � FAN-IN/OUT, propagation cost, dependency cycles. */
+export { analyzeArchitectureDebt, computeFanInFanOut, computePropagationCost } from './analyzers/architecture-debt';
+/** Sprint 23: Shannon entropy-based bus factor analysis per file. */
+export { analyzeBusFactor, computeNormalizedEntropy, computeBusFactorEstimate } from './temporal/bus-factor';
+/** Sprint 23: 14-day sprint-window developer congestion analysis. */
+export { analyzeSprintCongestion } from './temporal/sprint-congestion';
+/** Sprint 23: Knowledge Loss Index via git blame (inactive contributor ratio). */
+export { analyzeKnowledgeLossIndex, parseBlameOutput } from './temporal/knowledge-loss-index';
+/** Sprint 23: Documentation Debt Index (complexity * (1 - docCoverage)). */
+export { analyzeDocDebt, computeDocCoverage } from './analyzers/doc-debt';
+/** Sprint 23: Intent Clarity Score (doc + type annotations + name quality). */
+export { analyzeIntentClarity, computeTypeAnnotationRatio, computeNameQualityScore } from './analyzers/intent-clarity';
+/** Identifies hotspots: files with high complexity × high churn rate (Sprint 27). */
+export { analyzeHotspots } from './temporal/behavioral-analytics';
+/** Analyzes file-level change coupling with rolling time windows (Sprint 27). */
+export { analyzeFileCoupling } from './temporal/file-coupling';
+/** Analyzes complexity trends over git history via linear regression sampling (Sprint 27). */
+export { analyzeComplexityTrend, linearRegressionSlope, sampleComplexityPoints } from './temporal/complexity-trend';
+/** Computes the Architectural Decay Index (ADI 0-10) combining 5 weighted dimensions (Sprint 27). */
+export { computeArchitecturalDecayIndex } from './temporal/decay-index';
+/** Reads project source files recursively from disk (Sprint 22). */
+export { readProjectFiles } from './analyzers/project-file-reader';
+/** Builds a directed dependency graph from source file import statements (Sprint 22). */
+export { buildDependencyGraph, extractImports } from './analyzers/dependency-graph';
+/** Iterative Tarjan's SCC algorithm for dependency cycle detection (Sprint 22). */
+export { findStronglyConnectedComponents } from './analyzers/scc';
+/** Returns commit count per file from git history (Sprint 22). */
+export { getChangeFrequency } from './analyzers/change-frequency';
 /** Global runtime configuration (opt-in flags such as useCalibratedThresholds). */
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */

@@ -9,6 +9,10 @@ import { registerKnowledgeMap } from './tools/knowledge-map';
 import { registerMethodCoupling } from './tools/method-coupling';
 import { registerConfigTools } from './tools/config';
 import { registerAutoRefactor } from './tools/auto-refactor';
+import { registerBusFactor } from './tools/bus-factor';
+import { registerArchitectureDebt } from './tools/architecture-debt';
+import { registerHotspots } from './tools/hotspots';
+import { registerTrendAnalysis } from './tools/trend-analysis';
 import { registerAIReadiness } from './tools/ai-readiness';
 
 export async function createServer(): Promise<McpServer> {
@@ -26,8 +30,12 @@ export async function createServer(): Promise<McpServer> {
   registerExplainProductivity(server);
   registerKnowledgeMap(server);
   registerMethodCoupling(server);
+  registerArchitectureDebt(server);
   registerConfigTools(server);
   registerAutoRefactor(server);
+  registerBusFactor(server);
+  registerHotspots(server);
+  registerTrendAnalysis(server);
   registerAIReadiness(server);
 
   return server;
