@@ -55,13 +55,20 @@ function getExportedName(node: Parser.SyntaxNode): string | null {
 }
 
 function lineAboveMatchesDocPattern(lines: string[], exportLine: number, pattern: RegExp): boolean {
-  // Collect the block of non-empty lines immediately above the export line
-  const commentLines: string[] = [];
-  for (let i = exportLine - 2; i >= 0; i--) {
-    const line = lines[i].trim();
-    if (line === '') break;
-    commentLines.unshift(line);
+  // The line immediately above the export (index exportLine-2) must close a doc comment.
+  // Requiring it to end with '*/' prevents false positives when there is no blank line
+  // between consecutive exports and an earlier JSDoc would otherwise be collected.
+  const closingIdx = exportLine - 2;
+  if (closingIdx < 0) return false;
+  const closingLine = lines[closingIdx].trim();
+  if (!closingLine.endsWith('*/')) return false;
+  // Walk upward to collect the full comment block so multi-line JSDoc is matched correctly.
+  const commentLines: string[] = [closingLine];
+  for (let i = closingIdx - 1; i >= 0; i--) {
+    const l = lines[i].trim();
+    commentLines.unshift(l);
+    if (l.startsWith('/**') || l.startsWith('/*')) break;
+    if (l === '') break;
   }
-  if (commentLines.length === 0) return false;
   return pattern.test(commentLines.join('\n'));
 }

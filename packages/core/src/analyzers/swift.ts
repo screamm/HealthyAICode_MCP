@@ -14,7 +14,8 @@ function getParser(): Parser | null {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Swift = require('tree-sitter-swift');
     const p = new Parser();
-    p.setLanguage(Swift as unknown as object);
+    type Language = Parameters<(typeof p)['setLanguage']>[0];
+    p.setLanguage(Swift as unknown as Language);
     swiftParser = p;
     return p;
   } catch {
@@ -22,24 +23,24 @@ function getParser(): Parser | null {
   }
 }
 
+// NOTE: verify against tree-sitter-swift grammar if counts are off.
+// Node types confirmed from src/node-types.json in tree-sitter-swift@0.6.0.
+// 'conditional_expression' does NOT exist — use 'ternary_expression'.
+// 'for_statement' is the correct name (not 'for_in_statement').
+// 'switch_entry' is one branch in a switch (not 'switch_case').
 const CYCLOMATIC_NODE_TYPES = new Set([
-  'if_statement', 'for_in_statement', 'while_statement', 'repeat_while_statement',
-  'switch_case', 'catch_clause', 'guard_statement',
+  'if_statement', 'guard_statement', 'for_statement', 'while_statement',
+  'repeat_while_statement', 'switch_entry', 'ternary_expression',
 ]);
 
 const NESTING_NODE_TYPES = new Set([
-  'if_statement', 'for_in_statement', 'while_statement',
-  'repeat_while_statement', 'do_statement',
+  'if_statement', 'guard_statement', 'for_statement', 'while_statement',
+  'repeat_while_statement', 'switch_statement',
 ]);
 
 const FUNCTION_NODE_TYPES = new Set([
-  'function_declaration', 'initializer_declaration', 'deinit_declaration',
+  'function_declaration',
 ]);
-
-function swiftBinaryCheck(n: Parser.SyntaxNode): boolean {
-  if (n.type !== 'conjunction_expression' && n.type !== 'disjunction_expression') return false;
-  return true;
-}
 
 export function analyzeSwift(code: string, filePath = '<inline>'): {
   functions: FunctionResult[];
@@ -54,7 +55,7 @@ export function analyzeSwift(code: string, filePath = '<inline>'): {
   ];
 
   if (!p) {
-    // No native build — return stub metrics (similar to unsupported language)
+    // No native build available — return stub metrics (similar to unsupported language).
     return { functions: [], metrics: emptySimpleMetrics(totalLines), smells };
   }
 
@@ -75,7 +76,7 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
     name: node.childForFieldName('name')?.text ?? '<anonymous>',
     line: startLine,
     length: endLine - startLine + 1,
-    cyclomaticComplexity: countCyclomaticNodes(node, CYCLOMATIC_NODE_TYPES, swiftBinaryCheck),
+    cyclomaticComplexity: countCyclomaticNodes(node, CYCLOMATIC_NODE_TYPES),
     cognitiveComplexity: 0,
     nestingDepth: calculateMaxNestingDepth(node, NESTING_NODE_TYPES),
     parameterCount: countParameters(node),
@@ -84,7 +85,7 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
 }
 
 function countParameters(node: Parser.SyntaxNode): number {
-  const params = node.childForFieldName('parameters');
-  if (!params) return 0;
-  return params.namedChildren.filter(c => c.type === 'parameter').length;
+  // Swift function_declaration has 'parameter' nodes as direct children (not a field).
+  // NOTE: verify against tree-sitter-swift grammar if counts are off.
+  return node.namedChildren.filter(c => c.type === 'parameter').length;
 }

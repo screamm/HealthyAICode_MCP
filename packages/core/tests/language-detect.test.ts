@@ -55,19 +55,40 @@ describe('detectLanguage', () => {
     expect(detectLanguage('src/Controllers/HomeController.cs')).toBe('csharp');
   });
 
+  // Ruby
+  it('detects .rb as ruby', () => {
+    expect(detectLanguage('app.rb')).toBe('ruby');
+  });
+
+  it('detects .rake as ruby', () => {
+    expect(detectLanguage('tasks/deploy.rake')).toBe('ruby');
+  });
+
+  it('detects .gemspec as ruby', () => {
+    expect(detectLanguage('my_gem.gemspec')).toBe('ruby');
+  });
+
+  // Swift
+  it('detects .swift as swift', () => {
+    expect(detectLanguage('Sources/App.swift')).toBe('swift');
+  });
+
+  // Go
+  it('detects .go as go', () => {
+    expect(detectLanguage('main.go')).toBe('go');
+  });
+
+  // Rust
+  it('detects .rs as rust', () => {
+    expect(detectLanguage('src/lib.rs')).toBe('rust');
+  });
+
+  // PHP
+  it('detects .php as php', () => {
+    expect(detectLanguage('index.php')).toBe('php');
+  });
+
   // Unsupported
-  it('returns unsupported for .rb', () => {
-    expect(detectLanguage('app.rb')).toBe('unsupported');
-  });
-
-  it('returns unsupported for .go', () => {
-    expect(detectLanguage('main.go')).toBe('unsupported');
-  });
-
-  it('returns unsupported for .rs', () => {
-    expect(detectLanguage('src/lib.rs')).toBe('unsupported');
-  });
-
   it('returns unsupported for files with no extension', () => {
     expect(detectLanguage('Makefile')).toBe('unsupported');
   });

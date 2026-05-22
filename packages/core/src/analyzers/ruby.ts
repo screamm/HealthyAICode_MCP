@@ -6,24 +6,35 @@ import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-help
 import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
 
 const parser = new Parser();
-parser.setLanguage(Ruby as unknown as object);
+type Language = Parameters<(typeof parser)['setLanguage']>[0];
+parser.setLanguage(Ruby as unknown as Language);
 
+// NOTE: Ruby's a ? b : c ternary is 'conditional' in tree-sitter-ruby, NOT 'ternary'.
 const CYCLOMATIC_NODE_TYPES = new Set([
-  'if', 'elsif', 'unless', 'for', 'while', 'until',
-  'rescue', 'when', 'case',
+  'if', 'elsif', 'unless', 'while', 'until', 'for', 'when',
+  'rescue', 'if_modifier', 'unless_modifier', 'while_modifier',
+  'until_modifier', 'conditional',
 ]);
 
 const NESTING_NODE_TYPES = new Set([
-  'if', 'unless', 'for', 'while', 'until', 'begin',
+  'if', 'unless', 'while', 'until', 'for',
+  'case', 'begin', 'block', 'do_block',
 ]);
 
-const FUNCTION_NODE_TYPES = new Set([
-  'method', 'singleton_method',
+const METHOD_NODE_TYPES = new Set([
+  'method',           // instance methods: def foo(...)
+  'singleton_method', // class-level methods: def self.foo(...)
 ]);
 
-function rubyBinaryCheck(n: Parser.SyntaxNode): boolean {
-  return n.type === 'and' || n.type === 'or';
-}
+const PARAMETER_NODE_TYPES = new Set([
+  'identifier',
+  'optional_parameter',
+  'keyword_parameter',
+  'splat_parameter',
+  'hash_splat_parameter',
+  'block_parameter',
+  'destructured_parameter',
+]);
 
 export function analyzeRuby(code: string, filePath = '<inline>'): {
   functions: FunctionResult[];
@@ -33,7 +44,7 @@ export function analyzeRuby(code: string, filePath = '<inline>'): {
   const tree = parser.parse(code);
   const fns: FunctionResult[] = [];
   function visit(node: Parser.SyntaxNode): void {
-    if (FUNCTION_NODE_TYPES.has(node.type)) fns.push(extractFunction(node));
+    if (METHOD_NODE_TYPES.has(node.type)) fns.push(extractFunction(node));
     for (const child of node.children) visit(child);
   }
   visit(tree.rootNode);
@@ -52,7 +63,7 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
     name: node.childForFieldName('name')?.text ?? '<anonymous>',
     line: startLine,
     length: endLine - startLine + 1,
-    cyclomaticComplexity: countCyclomaticNodes(node, CYCLOMATIC_NODE_TYPES, rubyBinaryCheck),
+    cyclomaticComplexity: countCyclomaticNodes(node, CYCLOMATIC_NODE_TYPES),
     cognitiveComplexity: 0,
     nestingDepth: calculateMaxNestingDepth(node, NESTING_NODE_TYPES),
     parameterCount: countParameters(node),
@@ -63,11 +74,5 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
 function countParameters(node: Parser.SyntaxNode): number {
   const params = node.childForFieldName('parameters');
   if (!params) return 0;
-  return params.namedChildren.filter(c =>
-    c.type === 'identifier' ||
-    c.type === 'optional_parameter' ||
-    c.type === 'splat_parameter' ||
-    c.type === 'hash_splat_parameter' ||
-    c.type === 'block_parameter',
-  ).length;
+  return params.namedChildren.filter(c => PARAMETER_NODE_TYPES.has(c.type)).length;
 }

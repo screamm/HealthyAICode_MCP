@@ -63,6 +63,19 @@ describe('analyzeByLanguage router', () => {
     expect(result.functions[0].name).toBe('Add');
   });
 
+  it('routes ruby to Ruby analyzer', () => {
+    const result = analyzeByLanguage('def add(a, b)\n  a + b\nend\n', 'ruby');
+    expect(result.functions).toHaveLength(1);
+    expect(result.functions[0].name).toBe('add');
+  });
+
+  it('routes swift to Swift analyzer', () => {
+    const result = analyzeByLanguage('func add(a: Int, b: Int) -> Int { return a + b }\n', 'swift');
+    // Swift may not have native binary on all platforms — just verify no throw and valid metrics
+    expect(result.metrics).toHaveProperty('totalLines');
+    expect(Array.isArray(result.functions)).toBe(true);
+  });
+
   it('returns empty result for unsupported language', () => {
     const result = analyzeByLanguage('some code', 'unknown' as unknown as Parameters<typeof analyzeByLanguage>[1]);
     expect(result.functions).toHaveLength(0);
