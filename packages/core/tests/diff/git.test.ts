@@ -47,7 +47,8 @@ describe('analyzeChangeset', () => {
 
   it('skips unsupported file types', async () => {
     mockGit.checkIsRepo.mockResolvedValue(true);
-    mockGit.diff.mockResolvedValue('README.md\ndata.csv\n');
+    // .csv and .bin are truly unsupported file types (not in language map)
+    mockGit.diff.mockResolvedValue('data.csv\nbinary.bin\n');
     const result = await analyzeChangeset('/repo', 'main');
     expect(result.filesAnalyzed).toBe(2);
     expect(result.regressions).toHaveLength(0);

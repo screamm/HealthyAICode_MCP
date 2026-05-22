@@ -1,8 +1,10 @@
 import type { Smell } from '../types';
 
 const SATD_KEYWORDS = ['TODO', 'FIXME', 'HACK', 'XXX', 'BUG', 'KLUDGE'];
+// Matches SATD keywords in comments for: Java/C/JS/TS (//), Python/Shell/Ruby (# ),
+// JSDoc/block comments (*/), Lua/Haskell/SQL (--), and Clojure/Lisp (;)
 const SATD_LINE_PATTERN = new RegExp(
-  `(?:(?:^|\\s)\\*|//|#)\\s*(${SATD_KEYWORDS.join('|')})\\b(.{0,80})`,
+  `(?:(?:^|\\s)\\*|//|#|--|;)\\s*(${SATD_KEYWORDS.join('|')})\\b(.{0,80})`,
   'i',
 );
 

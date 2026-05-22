@@ -88,13 +88,13 @@ describe('detectLanguage', () => {
     expect(detectLanguage('index.php')).toBe('php');
   });
 
-  // Unsupported
-  it('returns unsupported for files with no extension', () => {
-    expect(detectLanguage('Makefile')).toBe('unsupported');
+  // New Sprint 25 languages
+  it('detects Makefile (no extension) as makefile', () => {
+    expect(detectLanguage('Makefile')).toBe('makefile');
   });
 
-  it('returns unsupported for .md files', () => {
-    expect(detectLanguage('README.md')).toBe('unsupported');
+  it('detects .md as markdown', () => {
+    expect(detectLanguage('README.md')).toBe('markdown');
   });
 
   // Path handling

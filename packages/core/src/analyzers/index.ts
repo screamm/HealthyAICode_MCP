@@ -8,12 +8,28 @@ import { analyzeRust } from './rust';
 import { analyzePhp } from './php';
 import { analyzeRuby } from './ruby';
 import { analyzeSwift } from './swift';
+// Tier B — Kotlin native
+import { analyzeKotlin } from './kotlin';
+// Tier B — new language analyzers
+import { analyzeBash } from './bash';
+import { analyzeLua } from './lua';
+import { analyzeElixir } from './elixir';
+import { analyzeHaskell } from './haskell';
+import { analyzeR } from './r';
+import { analyzeClojure } from './clojure';
+// Tier C — structural analyzers
+import { analyzeYaml } from './yaml';
+import { analyzeJson } from './json-lang';
+import { analyzeDockerfile } from './dockerfile';
+import { analyzeHcl } from './hcl';
+import { analyzeMakefile } from './makefile';
+import { analyzeStructuralTierC } from './structural-tier-c';
 
 /** Analyzes TypeScript and JavaScript source files. */
 export { analyzeTypeScript } from './typescript';
 /** Analyzes Python source files. */
 export { analyzePython } from './python';
-/** Analyzes Java and Kotlin source files. */
+/** Analyzes Java source files. */
 export { analyzeJava } from './java';
 /** Analyzes C# source files. */
 export { analyzeCSharp } from './csharp';
@@ -27,6 +43,32 @@ export { analyzePhp } from './php';
 export { analyzeRuby } from './ruby';
 /** Analyzes Swift source files. */
 export { analyzeSwift } from './swift';
+/** Analyzes Kotlin source files (native Tier B). */
+export { analyzeKotlin } from './kotlin';
+/** Analyzes Bash/Shell source files. */
+export { analyzeBash } from './bash';
+/** Analyzes Lua source files. */
+export { analyzeLua } from './lua';
+/** Analyzes Elixir source files. */
+export { analyzeElixir } from './elixir';
+/** Analyzes Haskell source files. */
+export { analyzeHaskell } from './haskell';
+/** Analyzes R source files. */
+export { analyzeR } from './r';
+/** Analyzes Clojure source files. */
+export { analyzeClojure } from './clojure';
+/** Analyzes YAML files (Tier C structural). */
+export { analyzeYaml } from './yaml';
+/** Analyzes JSON files (Tier C structural). */
+export { analyzeJson } from './json-lang';
+/** Analyzes Dockerfile files (Tier C structural + layer complexity). */
+export { analyzeDockerfile } from './dockerfile';
+/** Analyzes Terraform HCL files (Tier C structural). */
+export { analyzeHcl } from './hcl';
+/** Analyzes Makefiles (Tier C structural). */
+export { analyzeMakefile } from './makefile';
+/** Generic Tier C structural analyzer for config/data languages. */
+export { analyzeStructuralTierC } from './structural-tier-c';
 
 interface AnalyzerOutput {
   functions: FunctionResult[];
@@ -43,8 +85,9 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
     case 'python':
       return analyzePython(code, filePath);
     case 'java':
-    case 'kotlin':
       return analyzeJava(code, filePath);
+    case 'kotlin':
+      return analyzeKotlin(code, filePath);
     case 'csharp':
       return analyzeCSharp(code, filePath);
     case 'go':
@@ -57,6 +100,36 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeRuby(code, filePath);
     case 'swift':
       return analyzeSwift(code, filePath);
+    // Tier B languages
+    case 'bash':
+      return analyzeBash(code, filePath);
+    case 'lua':
+      return analyzeLua(code, filePath);
+    case 'elixir':
+      return analyzeElixir(code, filePath);
+    case 'haskell':
+      return analyzeHaskell(code, filePath);
+    case 'r':
+      return analyzeR(code, filePath);
+    case 'clojure':
+      return analyzeClojure(code, filePath);
+    // Tier C languages
+    case 'yaml':
+      return analyzeYaml(code, filePath);
+    case 'json':
+      return analyzeJson(code, filePath);
+    case 'dockerfile':
+      return analyzeDockerfile(code, filePath);
+    case 'hcl':
+      return analyzeHcl(code, filePath);
+    case 'makefile':
+      return analyzeMakefile(code, filePath);
+    case 'sql':
+    case 'html':
+    case 'css':
+    case 'markdown':
+    case 'toml':
+      return analyzeStructuralTierC(code, filePath);
     default:
       return unsupportedOutput(code);
   }
@@ -83,3 +156,8 @@ function stubMetrics(totalLines: number): MetricBreakdown {
     duplicationScore: 0,
   };
 }
+
+// Architecture debt analysis modules — exported individually from src/index.ts to avoid conflicts
+// These are kept here for internal use but not re-exported to avoid duplicate export errors
+
+export * from './project-file-reader';

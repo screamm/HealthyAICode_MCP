@@ -59,12 +59,11 @@ public class Foo {
     expect(result.score).toBeLessThanOrEqual(10);
   });
 
-  it('analyzes Kotlin (routed through Java analyzer)', () => {
+  it('analyzes Kotlin with native Tier B analyzer (Sprint 25)', () => {
+    // Sprint 25: Kotlin uses native analyzer that recognizes `fun` keyword
     const code = `
-public class Foo {
-    public int add(int a, int b) {
-        return a + b;
-    }
+fun add(a: Int, b: Int): Int {
+    return a + b
 }
 `;
     const result = analyzeCode(code, 'kotlin', 'Foo.kt');

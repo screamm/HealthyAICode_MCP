@@ -51,9 +51,9 @@ describe('analyzeByLanguage router', () => {
     expect(result.functions[0].name).toBe('add');
   });
 
-  it('routes kotlin to Java analyzer', () => {
-    // Kotlin shares the Java grammar for basic structures at this stage
-    const result = analyzeByLanguage(JAVA_SIMPLE, 'kotlin');
+  it('routes kotlin to native Kotlin analyzer', () => {
+    // Sprint 25: Kotlin now uses native Tier B analyzer with `fun` keyword detection
+    const result = analyzeByLanguage('fun add(a: Int, b: Int): Int { return a + b }', 'kotlin');
     expect(result.functions).toHaveLength(1);
   });
 
