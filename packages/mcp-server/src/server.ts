@@ -9,6 +9,7 @@ import { registerKnowledgeMap } from './tools/knowledge-map';
 import { registerMethodCoupling } from './tools/method-coupling';
 import { registerConfigTools } from './tools/config';
 import { registerAutoRefactor } from './tools/auto-refactor';
+import { registerAIReadiness } from './tools/ai-readiness';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -27,6 +28,7 @@ export async function createServer(): Promise<McpServer> {
   registerMethodCoupling(server);
   registerConfigTools(server);
   registerAutoRefactor(server);
+  registerAIReadiness(server);
 
   return server;
 }

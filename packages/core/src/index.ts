@@ -27,6 +27,15 @@ export { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
 export { loadCalibration, getThresholds, getWeights, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
+/** AI-Readiness Score (Sprint 24): composite metric for how well a codebase suits AI-assisted development. */
+export { analyzeNamingClarity } from './ai-readiness/naming-clarity';
+export type { NamingClarityResult } from './ai-readiness/naming-clarity';
+export { analyzeTypeCoverage } from './ai-readiness/type-coverage';
+export type { TypeCoverageResult } from './ai-readiness/type-coverage';
+export { analyzeContextWindowFit } from './ai-readiness/context-window-fit';
+export type { ContextWindowFitInput, ContextWindowFitResult } from './ai-readiness/context-window-fit';
+export { analyzeAIReadiness } from './ai-readiness/ai-readiness-analyzer';
+export type { AIReadinessResult, AIReadinessFile, AIBlocker } from './ai-readiness/ai-readiness-analyzer';
 
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
