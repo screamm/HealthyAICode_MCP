@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "healthy-ai-code-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that analyses code health in real time, guiding AI assistants and developers to write clean, maintainable code. Provides objective 1-10 health scores, deep smell detection, pre-commit gates, branch-level change analysis, bus-factor mapping, and ROI-backed refactoring business cases.",
   "author": {
     "name": "David Rydgren",
@@ -22,7 +22,18 @@
     "ai",
     "static-analysis",
     "code-review",
-    "technical-debt"
+    "technical-debt",
+    "typescript",
+    "javascript",
+    "python",
+    "java",
+    "kotlin",
+    "csharp",
+    "rust",
+    "go",
+    "php",
+    "ruby",
+    "swift"
   ],
   "categories": [
     "code-quality",
@@ -68,6 +79,19 @@
     {
       "name": "code_health_knowledge_map",
       "description": "Analyses code ownership and contribution patterns to identify knowledge silos and bus-factor risk across the codebase. Use when planning staffing changes, onboarding new engineers, or assessing handover readiness."
+    },
+    {
+      "name": "code_health_method_coupling",
+      "description": "Detect methods that always change together (temporal coupling) using git history",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "directory": { "type": "string", "description": "Repository root directory" },
+          "minSupport": { "type": "number", "description": "Minimum co-change count (default: 3)" },
+          "lookbackDays": { "type": "number", "description": "Days of history to analyze (default: 90)" }
+        },
+        "required": ["directory"]
+      }
     }
   ]
 }

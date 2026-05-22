@@ -1,6 +1,6 @@
 # Healthy AI Code MCP
 
-> **27 biomarkers • CodeScene state-of-the-art parity**
+> **28 biomarkers across 11 languages • CodeScene state-of-the-art parity + method-level X-Ray**
 
 A local MCP server that gives AI assistants objective code health feedback, enabling a self-correcting refactoring loop. The AI refactors until the health score reaches the target level — no human judgment required in the loop.
 
@@ -101,10 +101,10 @@ The `skills/` directory contains nine prompt templates that teach AI assistants 
 | `code_health_score` | `filePath` | Quick health score for screening |
 | `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Gate files before commit |
 | `analyze_change_set` | `repoPath`, `baseBranch` | Check full diff before PR |
-| `code_health_auto_refactor` | `filePath` | Returns primary refactoring target with code context and instructions |
+| `code_health_auto_refactor` | `filePath` | Returns primary refactoring target with code context and instructions. For BumpyRoad targets, includes `chunkRanges` with exact line spans to extract |
 | `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring investment |
 | `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, and temporal coupling |
-| `code_health_method_coupling` | `repoPath`, `filePath` | X-Ray-light: method pairs that change together in git history |
+| `code_health_method_coupling` | `filePath` | Method-level temporal coupling — pairs of methods in the same file that historically change together (X-Ray-light) |
 | `get_config` | *(none)* | Read current server configuration |
 | `set_config` | key, value | Persist a configuration value |
 | `explain_code_health` | *(none)* | What is code health? |
@@ -118,10 +118,11 @@ The `skills/` directory contains nine prompt templates that teach AI assistants 
 | `aiReadyThreshold` | number 1–10 | Minimum score for `loopComplete: true`. Default: `9.5` |
 | `defaultBranch` | string | Base branch used by `analyze_change_set`. Default: `main` |
 | `projectName` | string | Project name shown in reports |
+| `useCalibratedThresholds` | boolean | Opt-in empirically validated thresholds (Java only). Default: `false`. See `docs/calibration/`. |
 
 ## Biomarkers (28)
 
-Healthy AI Code detects 28 code health biomarkers across sprint generations, matching and exceeding CodeScene's 26-biomarker coverage.
+Healthy AI Code detects 28 code health biomarkers across six sprint generations, matching and exceeding CodeScene's 26-biomarker coverage.
 
 ### Core smells (Sprints 1–4)
 | Biomarker | Description |
@@ -139,7 +140,7 @@ Healthy AI Code detects 28 code health biomarkers across sprint generations, mat
 |-----------|-------------|
 | `CognitiveComplexity` | SonarSource S3776 cognitive complexity metric |
 | `TypeSafetyEscape` | Use of `any`, `@ts-ignore`, or unsafe casts |
-| `MagicNumber` | Unexplained numeric or string literals — all 6 languages |
+| `MagicNumber` | Unexplained numeric or string literals — all 11 languages |
 | `LowDocCoverage` | Insufficient documentation on public APIs |
 
 ### Duplication & structure (Sprint 6)
@@ -154,6 +155,7 @@ Healthy AI Code detects 28 code health biomarkers across sprint generations, mat
 |-----------|-------------|
 | `Hotspot` | High commit frequency × high complexity (change-risk index) |
 | `BrainMethod` | Compound smell combining multiple severe method-level issues |
+| `BumpyRoad` | A single function with multiple sequential sibling control-flow chunks — chunk-based detection (per-function), candidate for chunk-extraction refactoring |
 | `TestProximity` | Insufficient test coverage near changed code |
 
 ### Conditionals & coupling (Sprint 8)
@@ -162,7 +164,7 @@ Healthy AI Code detects 28 code health biomarkers across sprint generations, mat
 | `ComplexConditional` | Nested ternaries and long boolean chains |
 | `MessageChain` | Law of Demeter violations (train-wreck calls) |
 | `DataClumps` | Recurring groups of parameters/fields that belong together |
-| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) — all 6 languages |
+| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) — all 11 languages |
 
 ### OO design metrics (Sprint 9)
 | Biomarker | Description |
@@ -182,7 +184,9 @@ Healthy AI Code detects 28 code health biomarkers across sprint generations, mat
 
 ## Supported Languages
 
-TypeScript, JavaScript, Python, Java, Kotlin, C#
+TypeScript, JavaScript, Python, Java, Kotlin, C#, Rust, Go, PHP, Ruby, Swift (11 languages)
+
+See `docs/language-coverage-matrix.md` for a per-language biomarker coverage matrix.
 
 ## Health Score Scale
 
@@ -202,6 +206,19 @@ deduction = weight × √count   (per smell type)
 ```
 
 Multiple smells of the same type compound progressively — two `ComplexMethod` smells hurt more than one, but the penalty grows sub-linearly (square root), reflecting that a few extra smells are worse than none, but the file isn't four times as bad as having one. The floor is always 1.0.
+
+## Empirical Calibration (Opt-in)
+
+The default thresholds are industry-standard values calibrated in Sprint 11. Sprint 18 added an opt-in
+empirically validated overlay for Java, derived from the Defects4J defect dataset.
+
+Enable with:
+
+```
+set_config useCalibratedThresholds true
+```
+
+See `docs/calibration/README.md` for methodology and ROC/AUC validation.
 
 ## Self-Correcting Loop
 
