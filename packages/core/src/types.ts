@@ -251,61 +251,6 @@ export interface ArchitectureDebtResult {
   };
 }
 
-// -- Sprint 27: Behavioural Analytics types ------------------------------------
-
-/** A file identified as a hotspot: high complexity combined with high churn rate. */
-export interface HotspotResult {
-  filePath: string;
-  score: number;            // [0, 1] -- normalized hotspot score
-  churn: number;            // total additions + deletions in the period
-  commitCount: number;      // number of commits touching the file
-  complexity: number;       // sum cyclomatic complexity at HEAD
-  classification: 'critical' | 'warning' | 'healthy';
-}
-
-/** A pair of files that frequently change together within a rolling time window. */
-export interface FileCouplingPair {
-  fileA: string;
-  fileB: string;
-  coChangeCount: number;
-  combinedTouches: number;
-  couplingStrength: number;          // [0..1]
-  temporalStability: 'tightening' | 'stable' | 'loosening';
-  severity: 'low' | 'medium' | 'high';
-  windowDays: number;
-}
-
-/** Result of file-level change coupling analysis over a rolling window. */
-export interface FileCouplingResult {
-  repoPath: string;
-  windowDays: number;
-  threshold: number;
-  commitsAnalyzed: number;
-  pairs: FileCouplingPair[];
-}
-
-/** A single weighted dimension in the Architectural Decay Index. */
-export interface DecayDimension {
-  score: number;    // 0-10
-  weight: number;   // coefficient in ADI formula
-  label: string;    // human-readable name
-  evidence: string; // explanatory text
-}
-
-/** Architectural Decay Index result for a module or file. */
-export interface ArchitecturalDecayResult {
-  module: string;   // directory or file path
-  adi: number;      // Architectural Decay Index, 0-10
-  classification: 'healthy' | 'warning' | 'high_risk' | 'critical';
-  dimensions: {
-    complexityTrend: DecayDimension;
-    churnRate: DecayDimension;
-    couplingDensity: DecayDimension;
-    docCoverage: DecayDimension;
-    testProximity: DecayDimension;
-  };
-}
-
 // -- Sprint 23: Organisational metrics ----------------------------------------
 
 /** Shannon entropy-based bus factor for a single file. */
