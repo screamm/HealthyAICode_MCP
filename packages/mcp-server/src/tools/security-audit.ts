@@ -6,9 +6,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { auditSecurity } from '@healthy-ai-code/core/dist/security/index.js';
-import { estimateScanCost } from '@healthy-ai-code/core/dist/security/cost-estimation.js';
-import type { ScanDepth } from '@healthy-ai-code/core/dist/security/types.js';
+import { auditSecurity, estimateScanCost, formatAsSarif } from '@healthy-ai-code/core';
+import type { ScanDepth, SecurityAuditFileResult } from '@healthy-ai-code/core';
 
 type McpToolRegistrar = (
   name: string,
@@ -159,14 +158,12 @@ async function handleSecurityAudit(args: Record<string, unknown>) {
     // Run security audit.
     const results = await auditSecurity(files, depth);
 
-    const totalFindings = results.reduce((sum, r) => sum + r.findings.length, 0);
-    const filesWithFindings = results.filter(r => r.findings.length > 0);
-    const maxRiskScore = results.reduce((max, r) => Math.max(max, r.riskScore), 0);
+    const totalFindings = results.reduce((sum: number, r: SecurityAuditFileResult) => sum + r.findings.length, 0);
+    const filesWithFindings = results.filter((r: SecurityAuditFileResult) => r.findings.length > 0);
+    const maxRiskScore = results.reduce((max: number, r: SecurityAuditFileResult) => Math.max(max, r.riskScore), 0);
 
     if (outputFormat === 'sarif') {
-      // Return merged SARIF report across all files.
-      const allFindings = results.flatMap(r => r.findings);
-      const { formatAsSarif } = await import('@healthy-ai-code/core/dist/security/sarif-formatter.js');
+      const allFindings = results.flatMap((r: SecurityAuditFileResult) => r.findings);
       const sarif = formatAsSarif(allFindings);
       return successResponse({ sarif, scanned_files: files.length, findings_total: totalFindings });
     }
@@ -180,9 +177,9 @@ async function handleSecurityAudit(args: Record<string, unknown>) {
       files_with_findings: filesWithFindings.length,
       max_risk_score: maxRiskScore,
       files: results
-        .filter(r => r.findings.length > 0)
-        .sort((a, b) => b.riskScore - a.riskScore)
-        .map(r => ({
+        .filter((r: SecurityAuditFileResult) => r.findings.length > 0)
+        .sort((a: SecurityAuditFileResult, b: SecurityAuditFileResult) => b.riskScore - a.riskScore)
+        .map((r: SecurityAuditFileResult) => ({
           file: r.filePath,
           risk_score: r.riskScore,
           findings: r.findings.map(f => ({

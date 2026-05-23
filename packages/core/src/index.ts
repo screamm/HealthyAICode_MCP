@@ -55,6 +55,42 @@ export { getChangeFrequency } from './analyzers/change-frequency';
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
 export { loadCalibration, getThresholds, getWeights, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
+/** Static security analysis: secret detection, injection risks, SARIF output (Sprint 28). */
+export {
+  auditSecurity,
+  detectSecrets,
+  detectInjectionRisks,
+  aggregateFindings,
+  formatAsSarif,
+  estimateScanCost,
+  assessFinding,
+  buildAssessmentPrompt,
+  parseAssessmentResponse,
+  shannonEntropy,
+  SECRET_KEYWORDS,
+  HIGH_ENTROPY_THRESHOLD,
+  MIN_SECRET_LENGTH,
+  detectDisagreement,
+} from './security/index';
+export type {
+  SecurityFindingType,
+  StaticFinding,
+  LlmAssessment,
+  AggregatedFinding,
+  SecurityAuditResult,
+  SarifReport,
+  SarifRun,
+  SarifResult,
+  SarifLocation,
+  Severity,
+  Exploitability,
+  ScanDepth,
+  SecurityAuditFileResult,
+  AuditFileInput,
+  InjectionFinding,
+  CostEstimate,
+} from './security/index';
+
 /** AI code detection, AI-specific smell detection, and model benchmarking (Sprint 29). */
 export {
   detectAiHeuristics,
