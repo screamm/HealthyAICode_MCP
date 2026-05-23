@@ -163,6 +163,65 @@
         },
         "required": ["repoPath", "filePaths"]
       }
+    },
+    {
+      "name": "code_health_calibration_status",
+      "description": "Visar kalibreringsstatus för alla stödda språk — vilka språk som har empirisk kalibrering, version, datasetinformation och om data är en platshållare eller empiriskt validerad.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calibrationDir": { "type": "string", "description": "Sökväg till kalibreringskatalogen. Default: <cwd>/packages/core/calibration/" }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "code_health_security_audit",
+      "description": "Runs a static security analysis against a directory. Detects SQL injection, XSS, command injection, path traversal, hardcoded secrets and API keys. Returns findings with SARIF-compatible JSON output and a risk score per file. In dry_run mode returns only cost estimates without running analysis.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "directory": { "type": "string", "description": "Absolute path to the directory to scan" },
+          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Limit scan to a specific language (optional)" },
+          "depth": { "type": "string", "enum": ["quick", "standard", "deep"], "description": "Scan depth: quick | standard | deep (affects mock model label in static-only mode) (default: standard)" },
+          "outputFormat": { "type": "string", "enum": ["summary", "sarif"], "description": "Output format: summary (human-readable) or sarif (SARIF 2.1.0 JSON) (default: summary)" },
+          "dry_run": { "type": "boolean", "description": "If true: collect files and estimate cost only, no analysis performed (default: false)" },
+          "maxFiles": { "type": "number", "description": "Maximum number of files to scan, between 1 and 500 (default: 200)" }
+        },
+        "required": ["directory"]
+      }
+    },
+    {
+      "name": "code_health_ai_audit",
+      "description": "Runs enhanced health check on a file suspected to be AI-generated. Returns AI confidence score, standard smells and AI-specific biomarkers (AbstractionLeakage, HardcodedAssumption, MissingEdgeCase, StyleInconsistency).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": { "type": "string", "description": "Absolute path to the file to analyze" },
+          "repoPath": { "type": "string", "description": "Absolute path to git repo root (enables git-based AI detection)" },
+          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Programming language" },
+          "style_convention": { "type": "string", "enum": ["camelCase", "snake_case", "PascalCase"], "description": "Project's naming convention for StyleInconsistency detection" },
+          "includeNonAI": { "type": "boolean", "description": "If false (default), only return results if AI confidence > 0.3" }
+        },
+        "required": ["filePath", "language"]
+      }
+    },
+    {
+      "name": "code_health_model_benchmark",
+      "description": "Compares AI-generated code against a human baseline. Calculates delta in health metrics, tracks introduced smells and stores results in benchmark history. Supports per-model statistics aggregation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model_name": { "type": "string", "description": "AI model name, e.g. \"claude-sonnet-4-6\"" },
+          "generated_code": { "type": "string", "description": "The AI-generated code to evaluate" },
+          "reference_code": { "type": "string", "description": "Human-written reference code (baseline)" },
+          "file_path": { "type": "string", "description": "Reference path for history file metadata" },
+          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Programming language" },
+          "get_stats": { "type": "boolean", "description": "If true: return aggregated statistics for the model instead of a single benchmark (default: false)" },
+          "history_path": { "type": "string", "description": "Custom path to history file (default: benchmarks/ai-model-quality-history.json)" }
+        },
+        "required": ["model_name", "generated_code", "reference_code", "file_path", "language"]
+      }
     }
   ]
 }
