@@ -18,6 +18,10 @@ export type Language =
   | 'haskell'
   | 'r'
   | 'clojure'
+  | 'dart'
+  | 'c'
+  | 'cpp'
+  | 'scala'
   // Tier C — structural complexity only (Sprint 25)
   | 'yaml'
   | 'json'
@@ -62,7 +66,21 @@ export type SmellType =
   | 'MethodTemporalCoupling'
   | 'DocumentationDebt'
   | 'IntentClarity'
-  | 'ArchitectureDebt';
+  | 'ArchitectureDebt'
+  // Security types (Sprint 28):
+  | 'SqlInjectionRisk'
+  | 'XssRisk'
+  | 'CommandInjectionRisk'
+  | 'HardcodedCredential'
+  | 'HardcodedApiKey'
+  | 'UnsafeDeserialization'
+  | 'PathTraversalRisk'
+  | 'DependencyVulnerability'
+  // AI-specific types (Sprint 29):
+  | 'AbstractionLeakage'
+  | 'HardcodedAssumption'
+  | 'MissingEdgeCase'
+  | 'StyleInconsistency';
 
 /** A single detected code finding with location, severity, and remediation guidance. */
 export interface Smell {

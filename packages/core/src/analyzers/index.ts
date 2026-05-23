@@ -17,6 +17,11 @@ import { analyzeElixir } from './elixir';
 import { analyzeHaskell } from './haskell';
 import { analyzeR } from './r';
 import { analyzeClojure } from './clojure';
+// Tier B — Sprint 25 gap languages
+import { analyzeDart } from './dart';
+import { analyzeCLang } from './c-lang';
+import { analyzeCpp } from './cpp';
+import { analyzeScala } from './scala';
 // Tier C — structural analyzers
 import { analyzeYaml } from './yaml';
 import { analyzeJson } from './json-lang';
@@ -57,6 +62,14 @@ export { analyzeHaskell } from './haskell';
 export { analyzeR } from './r';
 /** Analyzes Clojure source files. */
 export { analyzeClojure } from './clojure';
+/** Analyzes Dart source files (Tier B). */
+export { analyzeDart } from './dart';
+/** Analyzes C source files (Tier B). */
+export { analyzeCLang } from './c-lang';
+/** Analyzes C++ source files (Tier B). */
+export { analyzeCpp } from './cpp';
+/** Analyzes Scala source files (Tier B). */
+export { analyzeScala } from './scala';
 /** Analyzes YAML files (Tier C structural). */
 export { analyzeYaml } from './yaml';
 /** Analyzes JSON files (Tier C structural). */
@@ -113,6 +126,15 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeR(code, filePath);
     case 'clojure':
       return analyzeClojure(code, filePath);
+    // Tier B — Sprint 25 gap languages
+    case 'dart':
+      return analyzeDart(code, filePath);
+    case 'c':
+      return analyzeCLang(code, filePath);
+    case 'cpp':
+      return analyzeCpp(code, filePath);
+    case 'scala':
+      return analyzeScala(code, filePath);
     // Tier C languages
     case 'yaml':
       return analyzeYaml(code, filePath);

@@ -21,6 +21,14 @@ const EXTENSION_MAP: Record<string, Language> = {
   '.rake': 'ruby',
   '.gemspec': 'ruby',
   '.swift': 'swift',
+  // Tier B — new languages (Sprint 25 gap fix)
+  '.dart': 'dart',
+  '.c': 'c',
+  '.h': 'c',
+  '.cpp': 'cpp',
+  '.cc': 'cpp',
+  '.cxx': 'cpp',
+  '.scala': 'scala',
   // Tier B languages
   '.sh': 'bash',
   '.bash': 'bash',
