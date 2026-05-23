@@ -73,7 +73,7 @@ describe('analyzeFileCoupling', () => {
     const result = await analyzeFileCoupling(repo.rootPath, { windowDays: 1, threshold: 0.3 });
     expect(result).toBeDefined();
     expect(Array.isArray(result.pairs)).toBe(true);
-  }, 10_000);
+  }, 60_000);
 
   it('couplingStrength is in [0, 1] for all pairs', async () => {
     const result = await analyzeFileCoupling(repo.rootPath, {

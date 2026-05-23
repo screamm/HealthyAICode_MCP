@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
-  McpServer: vi.fn().mockImplementation(() => ({
-    tool: vi.fn(),
-    connect: vi.fn().mockResolvedValue(undefined),
-  })),
+  McpServer: vi.fn(function (this: any) {
+    this.tool = vi.fn();
+    this.connect = vi.fn().mockResolvedValue(undefined);
+  }),
 }));
 
 vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
@@ -37,10 +37,10 @@ describe('createServer', () => {
 
   it('registrerar alla verktyg inklusive code_health_method_coupling', async () => {
     const toolNames: string[] = [];
-    vi.mocked(McpServer).mockImplementationOnce(() => ({
-      tool: (name: string) => { toolNames.push(name); },
-      connect: vi.fn(),
-    }) as any);
+    vi.mocked(McpServer).mockImplementationOnce(function (this: any) {
+      this.tool = (name: string) => { toolNames.push(name); };
+      this.connect = vi.fn();
+    } as any);
 
     await createServer();
 

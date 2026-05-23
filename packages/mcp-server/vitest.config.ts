@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     pool: 'forks',
+    // First dynamic import of @healthy-ai-code/core loads tree-sitter native
+    // addons which can take several seconds on Windows.
+    testTimeout: 30_000,
   },
   resolve: {
     alias: {

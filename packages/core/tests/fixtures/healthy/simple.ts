@@ -28,11 +28,9 @@ export function isPositive(n: number): boolean {
   return n > 0;
 }
 
-/** Clamps value to the inclusive range [min, max]. */
-export function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
+/** Returns the maximum of two numbers. */
+export function max(a: number, b: number): number {
+  return a > b ? a : b;
 }
 
 /** Converts a string to upper case. */

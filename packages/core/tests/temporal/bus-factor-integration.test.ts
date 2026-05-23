@@ -5,8 +5,8 @@ import { analyzeBusFactor } from '../../src/temporal/bus-factor';
 import { analyzeSprintCongestion } from '../../src/temporal/sprint-congestion';
 import { analyzeKnowledgeLossIndex } from '../../src/temporal/knowledge-loss-index';
 
-// Building 13 commits on Windows can take a while
-const FIXTURE_TIMEOUT = 120_000;
+// Building 13 commits on Windows can take a while; allow extra buffer
+const FIXTURE_TIMEOUT = 240_000;
 
 let repo: BusFactorFixtureRepo;
 
