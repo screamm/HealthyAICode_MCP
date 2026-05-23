@@ -88,6 +88,16 @@ export async function buildMethodCouplingFixtureRepo(): Promise<FixtureRepo> {
   return {
     rootPath,
     filePath,
-    cleanup: async () => { await fsp.rm(rootPath, { recursive: true, force: true }); },
+    cleanup: async () => {
+      // Retry cleanup to handle Windows EBUSY file locks from lingering git processes
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await fsp.rm(rootPath, { recursive: true, force: true });
+          return;
+        } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    },
   };
 }

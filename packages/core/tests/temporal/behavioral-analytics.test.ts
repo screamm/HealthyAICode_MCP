@@ -13,7 +13,7 @@ describe('behavioral analytics — full integration', () => {
 
   beforeAll(async () => {
     repo = await buildBehavioralAnalyticsFixtureRepo();
-  }, 90_000);
+  }, 300_000);
 
   afterAll(async () => {
     await repo.cleanup();

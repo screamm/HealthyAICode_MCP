@@ -7,7 +7,7 @@ import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-d
 
 const parser = new Parser();
 // php_only handles files beginning with <?php (no HTML interleaving)
-parser.setLanguage(PhpPkg.php_only as unknown as object);
+parser.setLanguage(PhpPkg.php_only as unknown as Parameters<(typeof parser)['setLanguage']>[0]);
 
 const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement', 'else_if_clause', 'for_statement', 'foreach_statement',

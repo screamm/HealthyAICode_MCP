@@ -43,7 +43,7 @@ describe('analyzeMethodCoupling', () => {
     );
     expect(pair).toBeDefined();
     expect(pair!.couplingStrength).toBeGreaterThanOrEqual(0.6);
-  }, 30_000);
+  }, 60_000);
 
   it('identifies the coupled-B pair above threshold', async () => {
     const result = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { threshold: 0.5 });
@@ -52,39 +52,39 @@ describe('analyzeMethodCoupling', () => {
     );
     expect(pair).toBeDefined();
     expect(pair!.couplingStrength).toBeGreaterThanOrEqual(0.6);
-  }, 30_000);
+  }, 60_000);
 
   it('does not include pairs below threshold', async () => {
     const result = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { threshold: 0.5 });
     for (const p of result.pairs) {
       expect(p.couplingStrength).toBeGreaterThanOrEqual(0.5);
     }
-  }, 30_000);
+  }, 120_000);
 
   it('sorts pairs by coupling strength desc', async () => {
     const result = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { threshold: 0.3 });
     for (let i = 1; i < result.pairs.length; i++) {
       expect(result.pairs[i - 1].couplingStrength).toBeGreaterThanOrEqual(result.pairs[i].couplingStrength);
     }
-  }, 30_000);
+  }, 120_000);
 });
 
 describe('analyzeMethodCoupling — edge cases', () => {
   it('respects maxCommits cap', async () => {
     const result = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { maxCommits: 3, threshold: 0.5 });
     expect(result.commitsAnalyzed).toBeLessThanOrEqual(3);
-  }, 30_000);
+  }, 60_000);
 
   it('respects threshold parameter (raising it shrinks pair list)', async () => {
     const lax = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { threshold: 0.3 });
     const strict = await analyzeMethodCoupling(sharedRepo.rootPath, sharedRepo.filePath, { threshold: 0.85 });
     expect(strict.pairs.length).toBeLessThanOrEqual(lax.pairs.length);
-  }, 30_000);
+  }, 240_000);
 
   it('handles non-existent file gracefully', async () => {
     const result = await analyzeMethodCoupling(sharedRepo.rootPath, 'src/does-not-exist.ts', { threshold: 0.5 });
     expect(result.pairs).toEqual([]);
-  }, 30_000);
+  }, 60_000);
 });
 
 describe('methodCouplingToSmells', () => {

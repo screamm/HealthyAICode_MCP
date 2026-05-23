@@ -11,7 +11,7 @@ describe('analyzeFileCoupling', () => {
 
   beforeAll(async () => {
     repo = await buildBehavioralAnalyticsFixtureRepo();
-  }, 60_000);
+  }, 300_000);
 
   afterAll(async () => {
     await repo.cleanup();

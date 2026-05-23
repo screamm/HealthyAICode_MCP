@@ -30,6 +30,22 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   // Sprint 23: organisational metrics; advisory weights
   DocumentationDebt: 0.5,
   IntentClarity: 0.4,
+  // Sprint 22: architecture debt; advisory weight
+  ArchitectureDebt: 0.6,
+  // Sprint 28: security smells; advisory weights
+  SqlInjectionRisk: 1.5,
+  XssRisk: 1.5,
+  CommandInjectionRisk: 1.5,
+  HardcodedCredential: 2.0,
+  HardcodedApiKey: 2.0,
+  UnsafeDeserialization: 1.2,
+  PathTraversalRisk: 1.2,
+  DependencyVulnerability: 1.0,
+  // Sprint 29: AI-specific smells; advisory weights
+  AbstractionLeakage: 0.6,
+  HardcodedAssumption: 0.5,
+  MissingEdgeCase: 0.5,
+  StyleInconsistency: 0.3,
 };
 
 /** Minimum score at which a file is considered safe for AI-assisted modification. */

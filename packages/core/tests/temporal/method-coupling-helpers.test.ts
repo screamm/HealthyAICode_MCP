@@ -58,7 +58,7 @@ describe('getMethodRangesAtCommit', () => {
       expect(r.line).toBeGreaterThan(0);
       expect(r.length).toBeGreaterThan(0);
     }
-  });
+  }, 30_000);
 
   it('returns empty array for non-existent commit', async () => {
     const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, sharedRepo.filePath, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef');

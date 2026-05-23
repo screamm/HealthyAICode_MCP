@@ -6,7 +6,7 @@ import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-help
 import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
 
 const parser = new Parser();
-parser.setLanguage(Go as unknown as object);
+parser.setLanguage(Go as unknown as Parameters<(typeof parser)['setLanguage']>[0]);
 
 const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement', 'for_statement', 'expression_case', 'type_case',
