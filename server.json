@@ -42,7 +42,10 @@
   "deployment": {
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@healthy-ai-code/mcp-server"]
+    "args": [
+      "-y",
+      "@healthy-ai-code/mcp-server"
+    ]
   },
   "engines": {
     "node": ">=18.0.0"
@@ -86,11 +89,22 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "directory": { "type": "string", "description": "Repository root directory" },
-          "minSupport": { "type": "number", "description": "Minimum co-change count (default: 3)" },
-          "lookbackDays": { "type": "number", "description": "Days of history to analyze (default: 90)" }
+          "directory": {
+            "type": "string",
+            "description": "Repository root directory"
+          },
+          "minSupport": {
+            "type": "number",
+            "description": "Minimum co-change count (default: 3)"
+          },
+          "lookbackDays": {
+            "type": "number",
+            "description": "Days of history to analyze (default: 90)"
+          }
         },
-        "required": ["directory"]
+        "required": [
+          "directory"
+        ]
       }
     },
     {
@@ -99,12 +113,36 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "directory": { "type": "string", "description": "Absolute path to the project root directory" },
-          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "all"], "description": "Language to analyse (default: all)" },
-          "depth": { "type": "string", "enum": ["file", "module"], "description": "Analysis granularity (default: file)" },
-          "maxFiles": { "type": "number", "description": "Maximum number of files to analyse (default: 1000)" }
+          "directory": {
+            "type": "string",
+            "description": "Absolute path to the project root directory"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "typescript",
+              "javascript",
+              "python",
+              "all"
+            ],
+            "description": "Language to analyse (default: all)"
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "file",
+              "module"
+            ],
+            "description": "Analysis granularity (default: file)"
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Maximum number of files to analyse (default: 1000)"
+          }
         },
-        "required": ["directory"]
+        "required": [
+          "directory"
+        ]
       }
     },
     {
@@ -113,13 +151,30 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "projectPath": { "type": "string", "description": "Absolute path to the project git root directory" },
-          "filePattern": { "type": "string", "description": "Glob pattern for files to analyse (default: **/*.{ts,js,py})" },
-          "maxFiles": { "type": "number", "description": "Maximum number of files to analyse (default: 100)" },
-          "includeSprintCongestion": { "type": "boolean", "description": "Include 14-day sprint congestion analysis (default: true)" },
-          "includeKnowledgeLossIndex": { "type": "boolean", "description": "Include inactive-contributor ratio via git blame (default: true)" }
+          "projectPath": {
+            "type": "string",
+            "description": "Absolute path to the project git root directory"
+          },
+          "filePattern": {
+            "type": "string",
+            "description": "Glob pattern for files to analyse (default: **/*.{ts,js,py})"
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Maximum number of files to analyse (default: 100)"
+          },
+          "includeSprintCongestion": {
+            "type": "boolean",
+            "description": "Include 14-day sprint congestion analysis (default: true)"
+          },
+          "includeKnowledgeLossIndex": {
+            "type": "boolean",
+            "description": "Include inactive-contributor ratio via git blame (default: true)"
+          }
         },
-        "required": ["projectPath"]
+        "required": [
+          "projectPath"
+        ]
       }
     },
     {
@@ -128,11 +183,22 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "directory": { "type": "string", "description": "Absolute path to the directory to analyse" },
-          "language": { "type": "string", "description": "Primary language to filter files on (default: typescript)" },
-          "maxFiles": { "type": "number", "description": "Maximum number of files to analyse (default: 200)" }
+          "directory": {
+            "type": "string",
+            "description": "Absolute path to the directory to analyse"
+          },
+          "language": {
+            "type": "string",
+            "description": "Primary language to filter files on (default: typescript)"
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Maximum number of files to analyse (default: 200)"
+          }
         },
-        "required": ["directory"]
+        "required": [
+          "directory"
+        ]
       }
     },
     {
@@ -141,13 +207,30 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "repoPath": { "type": "string", "description": "Absolute path to the git repository root" },
-          "lookbackDays": { "type": "number", "description": "History period in days (default: 90)" },
-          "topN": { "type": "number", "description": "Number of hotspots to return (default: 10)" },
-          "packageRoot": { "type": "string", "description": "Limit analysis to a sub-path for monorepo support (e.g. 'packages/core')" },
-          "minChurnCommits": { "type": "number", "description": "Minimum commits to include a file (default: 3)" }
+          "repoPath": {
+            "type": "string",
+            "description": "Absolute path to the git repository root"
+          },
+          "lookbackDays": {
+            "type": "number",
+            "description": "History period in days (default: 90)"
+          },
+          "topN": {
+            "type": "number",
+            "description": "Number of hotspots to return (default: 10)"
+          },
+          "packageRoot": {
+            "type": "string",
+            "description": "Limit analysis to a sub-path for monorepo support (e.g. 'packages/core')"
+          },
+          "minChurnCommits": {
+            "type": "number",
+            "description": "Minimum commits to include a file (default: 3)"
+          }
         },
-        "required": ["repoPath"]
+        "required": [
+          "repoPath"
+        ]
       }
     },
     {
@@ -156,12 +239,30 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "repoPath": { "type": "string", "description": "Absolute path to the git repository root" },
-          "filePaths": { "type": "array", "items": { "type": "string" }, "description": "List of file paths to analyse (relative to repoPath)" },
-          "lookbackDays": { "type": "number", "description": "History period in days (default: 90)" },
-          "samplePoints": { "type": "number", "description": "Number of sampling points for complexity trend (default: 5)" }
+          "repoPath": {
+            "type": "string",
+            "description": "Absolute path to the git repository root"
+          },
+          "filePaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of file paths to analyse (relative to repoPath)"
+          },
+          "lookbackDays": {
+            "type": "number",
+            "description": "History period in days (default: 90)"
+          },
+          "samplePoints": {
+            "type": "number",
+            "description": "Number of sampling points for complexity trend (default: 5)"
+          }
         },
-        "required": ["repoPath", "filePaths"]
+        "required": [
+          "repoPath",
+          "filePaths"
+        ]
       }
     },
     {
@@ -170,7 +271,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "calibrationDir": { "type": "string", "description": "Sökväg till kalibreringskatalogen. Default: <cwd>/packages/core/calibration/" }
+          "calibrationDir": {
+            "type": "string",
+            "description": "Sökväg till kalibreringskatalogen. Default: <cwd>/packages/core/calibration/"
+          }
         },
         "required": []
       }
@@ -181,14 +285,49 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "directory": { "type": "string", "description": "Absolute path to the directory to scan" },
-          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Limit scan to a specific language (optional)" },
-          "depth": { "type": "string", "enum": ["quick", "standard", "deep"], "description": "Scan depth: quick | standard | deep (affects mock model label in static-only mode) (default: standard)" },
-          "outputFormat": { "type": "string", "enum": ["summary", "sarif"], "description": "Output format: summary (human-readable) or sarif (SARIF 2.1.0 JSON) (default: summary)" },
-          "dry_run": { "type": "boolean", "description": "If true: collect files and estimate cost only, no analysis performed (default: false)" },
-          "maxFiles": { "type": "number", "description": "Maximum number of files to scan, between 1 and 500 (default: 200)" }
+          "directory": {
+            "type": "string",
+            "description": "Absolute path to the directory to scan"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "typescript",
+              "javascript",
+              "python",
+              "java"
+            ],
+            "description": "Limit scan to a specific language (optional)"
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "quick",
+              "standard",
+              "deep"
+            ],
+            "description": "Scan depth: quick | standard | deep (affects mock model label in static-only mode) (default: standard)"
+          },
+          "outputFormat": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "sarif"
+            ],
+            "description": "Output format: summary (human-readable) or sarif (SARIF 2.1.0 JSON) (default: summary)"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true: collect files and estimate cost only, no analysis performed (default: false)"
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Maximum number of files to scan, between 1 and 500 (default: 200)"
+          }
         },
-        "required": ["directory"]
+        "required": [
+          "directory"
+        ]
       }
     },
     {
@@ -197,13 +336,42 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "filePath": { "type": "string", "description": "Absolute path to the file to analyze" },
-          "repoPath": { "type": "string", "description": "Absolute path to git repo root (enables git-based AI detection)" },
-          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Programming language" },
-          "style_convention": { "type": "string", "enum": ["camelCase", "snake_case", "PascalCase"], "description": "Project's naming convention for StyleInconsistency detection" },
-          "includeNonAI": { "type": "boolean", "description": "If false (default), only return results if AI confidence > 0.3" }
+          "filePath": {
+            "type": "string",
+            "description": "Absolute path to the file to analyze"
+          },
+          "repoPath": {
+            "type": "string",
+            "description": "Absolute path to git repo root (enables git-based AI detection)"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "typescript",
+              "javascript",
+              "python",
+              "java"
+            ],
+            "description": "Programming language"
+          },
+          "style_convention": {
+            "type": "string",
+            "enum": [
+              "camelCase",
+              "snake_case",
+              "PascalCase"
+            ],
+            "description": "Project's naming convention for StyleInconsistency detection"
+          },
+          "includeNonAI": {
+            "type": "boolean",
+            "description": "If false (default), only return results if AI confidence > 0.3"
+          }
         },
-        "required": ["filePath", "language"]
+        "required": [
+          "filePath",
+          "language"
+        ]
       }
     },
     {
@@ -212,15 +380,81 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "model_name": { "type": "string", "description": "AI model name, e.g. \"claude-sonnet-4-6\"" },
-          "generated_code": { "type": "string", "description": "The AI-generated code to evaluate" },
-          "reference_code": { "type": "string", "description": "Human-written reference code (baseline)" },
-          "file_path": { "type": "string", "description": "Reference path for history file metadata" },
-          "language": { "type": "string", "enum": ["typescript", "javascript", "python", "java"], "description": "Programming language" },
-          "get_stats": { "type": "boolean", "description": "If true: return aggregated statistics for the model instead of a single benchmark (default: false)" },
-          "history_path": { "type": "string", "description": "Custom path to history file (default: benchmarks/ai-model-quality-history.json)" }
+          "model_name": {
+            "type": "string",
+            "description": "AI model name, e.g. \"claude-sonnet-4-6\""
+          },
+          "generated_code": {
+            "type": "string",
+            "description": "The AI-generated code to evaluate"
+          },
+          "reference_code": {
+            "type": "string",
+            "description": "Human-written reference code (baseline)"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "Reference path for history file metadata"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "typescript",
+              "javascript",
+              "python",
+              "java"
+            ],
+            "description": "Programming language"
+          },
+          "get_stats": {
+            "type": "boolean",
+            "description": "If true: return aggregated statistics for the model instead of a single benchmark (default: false)"
+          },
+          "history_path": {
+            "type": "string",
+            "description": "Custom path to history file (default: benchmarks/ai-model-quality-history.json)"
+          }
         },
-        "required": ["model_name", "generated_code", "reference_code", "file_path", "language"]
+        "required": [
+          "model_name",
+          "generated_code",
+          "reference_code",
+          "file_path",
+          "language"
+        ]
+      }
+    },
+    {
+      "name": "code_health_architecture_report",
+      "description": "Generates a self-contained interactive HTML file with a force-directed dependency graph. Visualises architectural debt: FAN-IN/OUT, cyclic dependencies, and Cost-of-Change severity per file. Works fully offline — no external server required. Open the output file in any browser.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string",
+            "description": "Absolute path to the project root directory to analyse"
+          },
+          "output": {
+            "type": "string",
+            "description": "Output path for the HTML file (default: <directory>/architecture-report.html)"
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Maximum number of files to analyse (default: 300, max: 10000)"
+          },
+          "minCostOfChange": {
+            "type": "string",
+            "enum": [
+              "all",
+              "medium",
+              "high"
+            ],
+            "description": "Filter out nodes below this severity threshold (default: all)"
+          }
+        },
+        "required": [
+          "directory"
+        ]
       }
     }
   ]
