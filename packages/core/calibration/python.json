@@ -1,0 +1,36 @@
+{
+  "language": "python",
+  "version": "1.0.0",
+  "generatedAt": "2026-05-22T00:00:00Z",
+  "datasetVersion": "SZZ-heuristic-placeholder (run multi-lang-corpus.mjs to generate real values)",
+  "thresholds": {
+    "complexMethodThreshold": 8,
+    "criticalComplexityThreshold": 18,
+    "deepNestingThreshold": 4,
+    "highNestingThreshold": 5,
+    "criticalNestingThreshold": 6,
+    "largeMethodLines": 40,
+    "longParameterList": 5,
+    "cognitiveComplexityThreshold": 12,
+    "criticalCognitiveThreshold": 22,
+    "bumpyRoadChunkThreshold": 4,
+    "chainThreshold": 4,
+    "booleanChainThreshold": 3,
+    "atfdThreshold": 5,
+    "wmcThreshold": 20,
+    "largeFileLines": 400
+  },
+  "weights": {
+    "ComplexMethod": 1.5,
+    "DeepNesting": 1.2,
+    "CognitiveComplexity": 0.8,
+    "LargeMethod": 0.6,
+    "LargeFile": 0.4,
+    "LongParameterList": 0.5
+  },
+  "metrics": {
+    "f1Score": null,
+    "baselineF1": null,
+    "note": "Placeholder values based on Python PEP 8 and community best practices. Run scripts/calibration/multi-lang-corpus.mjs for empirical values."
+  }
+}

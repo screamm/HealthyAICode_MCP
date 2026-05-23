@@ -1,0 +1,37 @@
+{
+  "language": "typescript",
+  "version": "1.0.0",
+  "generatedAt": "2026-05-22T00:00:00Z",
+  "datasetVersion": "SZZ-heuristic-placeholder (run multi-lang-corpus.mjs to generate real values)",
+  "thresholds": {
+    "complexMethodThreshold": 10,
+    "criticalComplexityThreshold": 20,
+    "deepNestingThreshold": 3,
+    "highNestingThreshold": 4,
+    "criticalNestingThreshold": 5,
+    "largeMethodLines": 35,
+    "longParameterList": 4,
+    "cognitiveComplexityThreshold": 15,
+    "criticalCognitiveThreshold": 25,
+    "bumpyRoadChunkThreshold": 4,
+    "chainThreshold": 4,
+    "booleanChainThreshold": 3,
+    "atfdThreshold": 5,
+    "wmcThreshold": 20,
+    "largeFileLines": 300
+  },
+  "weights": {
+    "ComplexMethod": 1.5,
+    "DeepNesting": 1.3,
+    "CognitiveComplexity": 0.9,
+    "LargeMethod": 0.7,
+    "LargeFile": 0.5,
+    "LongParameterList": 0.5,
+    "TypeSafetyEscape": 2.0
+  },
+  "metrics": {
+    "f1Score": null,
+    "baselineF1": null,
+    "note": "Placeholder values based on TypeScript community best practices (Airbnb/Google style guides). Run scripts/calibration/multi-lang-corpus.mjs for empirical values."
+  }
+}

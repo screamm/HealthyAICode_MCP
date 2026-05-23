@@ -14,6 +14,10 @@ import { registerArchitectureDebt } from './tools/architecture-debt';
 import { registerHotspots } from './tools/hotspots';
 import { registerTrendAnalysis } from './tools/trend-analysis';
 import { registerAIReadiness } from './tools/ai-readiness';
+import { registerCalibrationStatus } from './tools/calibration-status';
+import { registerAiAudit } from './tools/ai-audit';
+import { registerModelBenchmark } from './tools/model-benchmark';
+import { registerSecurityAudit } from './tools/security-audit';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -37,6 +41,10 @@ export async function createServer(): Promise<McpServer> {
   registerHotspots(server);
   registerTrendAnalysis(server);
   registerAIReadiness(server);
+  registerCalibrationStatus(server);
+  registerAiAudit(server);
+  registerModelBenchmark(server);
+  registerSecurityAudit(server);
 
   return server;
 }
