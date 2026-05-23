@@ -425,6 +425,31 @@
       }
     },
     {
+      "name": "code_health_auto_refactor",
+      "description": "Identifies the worst code smell in a file and returns precise, AI-actionable refactoring instructions. The AI assistant applies the changes using its own file editing capabilities, then calls code_health_review to verify improvement. Works with any AI model.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": { "type": "string", "description": "Absolute path to the source file" },
+          "language": { "type": "string", "description": "Programming language (auto-detected if omitted)" },
+          "targetSmell": { "type": "string", "description": "Specific smell type to target (optional — defaults to worst smell)" }
+        },
+        "required": ["filePath"]
+      }
+    },
+    {
+      "name": "code_health_validate_against_dataset",
+      "description": "Validates our health scoring against known bug records. Measures Pearson/Spearman correlation and AUROC between health scores and bug presence. Supports synthetic benchmark, Defects4J JSON format, and git-history bug proxy for any local directory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetPath": { "type": "string", "description": "Path to Defects4J-format JSON file" },
+          "useSyntheticBenchmark": { "type": "boolean", "description": "Run built-in synthetic benchmark (default: false)" },
+          "directory": { "type": "string", "description": "Analyse a directory using git history as bug proxy" }
+        }
+      }
+    },
+    {
       "name": "code_health_architecture_report",
       "description": "Generates a self-contained interactive HTML file with a force-directed dependency graph. Visualises architectural debt: FAN-IN/OUT, cyclic dependencies, and Cost-of-Change severity per file. Works fully offline — no external server required. Open the output file in any browser.",
       "inputSchema": {
