@@ -141,6 +141,24 @@ export type { ContextWindowFitInput, ContextWindowFitResult } from './ai-readine
 export { analyzeAIReadiness } from './ai-readiness/ai-readiness-analyzer';
 export type { AIReadinessResult, AIReadinessFile, AIBlocker } from './ai-readiness/ai-readiness-analyzer';
 
+/** Sprint 32: Auto-refactor analysis — returns structured refactoring instructions for the worst smell. */
+export { analyzeForAutoRefactor } from './refactor/auto-refactor-analyzer';
+export type { AutoRefactorResult, RefactoringStrategy } from './refactor/index';
+/** Detects the source language from a file path extension (Sprint 32: exposed for MCP tool use). */
+export { detectLanguage } from './language-detect';
+
+/** Sprint 32: Validation pipeline — Pearson/Spearman/AUROC correlation against bug datasets. */
+export {
+  runValidation,
+  buildRecordsFromDirectory,
+  createSyntheticBenchmark,
+  loadDefects4JFromJson,
+  pearsonCorrelation,
+  spearmanCorrelation,
+  computeAUROC,
+} from './validation/index';
+export type { BugRecord, ValidationReport, Defects4JEntry } from './validation/index';
+
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
   const code = await fs.readFile(filePath, 'utf-8');

@@ -1,10 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { analyzeForAutoRefactor } from '@healthy-ai-code/core';
 import { analyzeFile } from '@healthy-ai-code/core';
-import { readFileSync } from 'fs';
-import { buildReadyResponse, buildRefactorResponse, extractCodeContext, getTopTarget } from './auto-refactor-builders';
-
-const AI_READY_THRESHOLD = 9.5;
+import { detectLanguage } from '@healthy-ai-code/core';
+import * as fs from 'fs/promises';
+import type { SmellType, Language } from '@healthy-ai-code/core';
 
 type McpToolRegistrar = (
   name: string,
@@ -16,25 +16,81 @@ type McpToolRegistrar = (
 export function registerAutoRefactor(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_auto_refactor',
-    'Analyserar en fil och returnerar filinnehållet med specificerade refaktoreringsinstruktioner. Designad för att AI-assistenten ska kunna genomföra konkreta kodändringar baserat på det exakta problemet med hög prioritet.',
-    { filePath: z.string().describe('Absolut eller relativ sökväg till filen att refaktorera') },
-    async ({ filePath }) => handleAutoRefactor(filePath as string)
+    'Analyzes a source file and returns exact refactoring instructions for the highest-severity smell. ' +
+      'Designed so that the AI assistant can perform concrete code changes based on the precise problem. ' +
+      'Returns the target function, current code block, step-by-step instructions, an example skeleton, ' +
+      'and a predicted health score improvement.',
+    {
+      filePath: z.string().describe('Absolute or relative path to the file to refactor'),
+      language: z
+        .string()
+        .optional()
+        .describe('Source language override (auto-detected from extension if omitted)'),
+      targetSmell: z
+        .string()
+        .optional()
+        .describe('Optional SmellType to filter on (e.g. ComplexMethod, DeepNesting, BumpyRoad)'),
+    },
+    async ({ filePath, language, targetSmell }) =>
+      handleAutoRefactor(
+        filePath as string,
+        language as string | undefined,
+        targetSmell as string | undefined
+      )
   );
 }
 
-async function handleAutoRefactor(filePath: string) {
+async function handleAutoRefactor(
+  filePath: string,
+  languageOverride?: string,
+  targetSmellArg?: string
+) {
   try {
-    const [result, fileContent] = await Promise.all([
-      analyzeFile(filePath),
-      Promise.resolve(readFileSync(filePath, 'utf-8')),
-    ]);
-    if (result.score >= AI_READY_THRESHOLD) {
-      return buildReadyResponse({ filePath, score: result.score, category: result.category });
+    const code = await fs.readFile(filePath, 'utf-8');
+
+    const language: Language = languageOverride
+      ? (languageOverride as Language)
+      : detectLanguage(filePath);
+
+    const targetSmell = targetSmellArg as SmellType | undefined;
+
+    const refactorResult = analyzeForAutoRefactor(code, language, filePath, targetSmell);
+
+    if (!refactorResult) {
+      // File is healthy — no refactoring needed.
+      const healthResult = await analyzeFile(filePath);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                message: 'No refactoring needed — file is healthy',
+                filePath,
+                score: healthResult.score,
+                category: healthResult.category,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
     }
-    const target = getTopTarget(result.smells);
-    return buildRefactorResponse(filePath, result, target, { fileContent, codeContext: extractCodeContext(fileContent, target?.line ?? 1) });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(refactorResult, null, 2),
+        },
+      ],
+    };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return { content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }], isError: true };
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }],
+      isError: true,
+    };
   }
 }
