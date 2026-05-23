@@ -18,6 +18,7 @@ import { registerCalibrationStatus } from './tools/calibration-status';
 import { registerAiAudit } from './tools/ai-audit';
 import { registerModelBenchmark } from './tools/model-benchmark';
 import { registerSecurityAudit } from './tools/security-audit';
+import { registerArchitectureReport } from './tools/architecture-report';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -45,6 +46,7 @@ export async function createServer(): Promise<McpServer> {
   registerAiAudit(server);
   registerModelBenchmark(server);
   registerSecurityAudit(server);
+  registerArchitectureReport(server);
 
   return server;
 }
