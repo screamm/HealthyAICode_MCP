@@ -61,7 +61,8 @@ export type SmellType =
   | 'PrimitiveObsession'
   | 'MethodTemporalCoupling'
   | 'DocumentationDebt'
-  | 'IntentClarity';
+  | 'IntentClarity'
+  | 'ArchitectureDebt';
 
 /** A single detected code finding with location, severity, and remediation guidance. */
 export interface Smell {
