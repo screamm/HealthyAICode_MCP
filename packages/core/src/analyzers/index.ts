@@ -22,6 +22,15 @@ import { analyzeDart } from './dart';
 import { analyzeCLang } from './c-lang';
 import { analyzeCpp } from './cpp';
 import { analyzeScala } from './scala';
+// Tier B — Sprint 30 niche languages
+import { analyzeCobol } from './cobol';
+import { analyzeApex } from './apex';
+import { analyzeFSharp } from './fsharp';
+import { analyzeVbNet } from './vbnet';
+import { analyzePerl } from './perl';
+import { analyzeGroovy } from './groovy';
+import { analyzeObjC } from './objc';
+import { analyzePowerShell } from './powershell';
 // Tier C — structural analyzers
 import { analyzeYaml } from './yaml';
 import { analyzeJson } from './json-lang';
@@ -70,6 +79,22 @@ export { analyzeCLang } from './c-lang';
 export { analyzeCpp } from './cpp';
 /** Analyzes Scala source files (Tier B). */
 export { analyzeScala } from './scala';
+/** Analyzes COBOL source files (Tier B). */
+export { analyzeCobol } from './cobol';
+/** Analyzes Apex (Salesforce) source files (Tier B). */
+export { analyzeApex } from './apex';
+/** Analyzes F# source files (Tier B). */
+export { analyzeFSharp } from './fsharp';
+/** Analyzes VB.NET source files (Tier B). */
+export { analyzeVbNet } from './vbnet';
+/** Analyzes Perl source files (Tier B). */
+export { analyzePerl } from './perl';
+/** Analyzes Groovy source files (Tier B). */
+export { analyzeGroovy } from './groovy';
+/** Analyzes Objective-C source files (Tier B). */
+export { analyzeObjC } from './objc';
+/** Analyzes PowerShell source files (Tier B). */
+export { analyzePowerShell } from './powershell';
 /** Analyzes YAML files (Tier C structural). */
 export { analyzeYaml } from './yaml';
 /** Analyzes JSON files (Tier C structural). */
@@ -135,6 +160,23 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeCpp(code, filePath);
     case 'scala':
       return analyzeScala(code, filePath);
+    // Tier B — Sprint 30 niche languages
+    case 'cobol':
+      return analyzeCobol(code, filePath);
+    case 'apex':
+      return analyzeApex(code, filePath);
+    case 'fsharp':
+      return analyzeFSharp(code, filePath);
+    case 'vbnet':
+      return analyzeVbNet(code, filePath);
+    case 'perl':
+      return analyzePerl(code, filePath);
+    case 'groovy':
+      return analyzeGroovy(code, filePath);
+    case 'objc':
+      return analyzeObjC(code, filePath);
+    case 'powershell':
+      return analyzePowerShell(code, filePath);
     // Tier C languages
     case 'yaml':
       return analyzeYaml(code, filePath);

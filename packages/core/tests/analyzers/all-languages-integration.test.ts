@@ -20,6 +20,15 @@ const SNIPPETS: Record<string, string> = {
   c: 'int add(int a, int b) { return a + b; }',
   cpp: 'int add(int a, int b) { return a + b; }',
   scala: 'def add(a: Int, b: Int): Int = a + b',
+  // Sprint 30 — niche languages
+  cobol: 'ADD-SECTION SECTION.\n    IF WS-A > 0 PERFORM COMPUTE-SUM.\nCOMPUTE-SUM SECTION.\n    ADD WS-A TO WS-B.',
+  apex: 'public class MathUtil {\n    public static Integer add(Integer a, Integer b) {\n        return a + b;\n    }\n}',
+  fsharp: 'let add x y = x + y',
+  vbnet: 'Public Function Add(a As Integer, b As Integer) As Integer\n    Return a + b\nEnd Function',
+  perl: 'sub add {\n    my ($a, $b) = @_;\n    return $a + $b;\n}',
+  groovy: 'def add(a, b) {\n    return a + b\n}',
+  objc: '- (NSInteger)addA:(NSInteger)a toB:(NSInteger)b {\n    return a + b;\n}',
+  powershell: 'function Add-Numbers {\n    param($a, $b)\n    return $a + $b\n}',
 };
 
 describe('analyzeByLanguage — all languages return valid metrics', () => {

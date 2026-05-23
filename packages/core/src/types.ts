@@ -22,6 +22,15 @@ export type Language =
   | 'c'
   | 'cpp'
   | 'scala'
+  // Tier B — niche languages (Sprint 30)
+  | 'cobol'
+  | 'apex'
+  | 'fsharp'
+  | 'vbnet'
+  | 'perl'
+  | 'groovy'
+  | 'objc'
+  | 'powershell'
   // Tier C — structural complexity only (Sprint 25)
   | 'yaml'
   | 'json'
