@@ -55,6 +55,46 @@ export { getChangeFrequency } from './analyzers/change-frequency';
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
 export { loadCalibration, getThresholds, getWeights, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
+/** AI code detection, AI-specific smell detection, and model benchmarking (Sprint 29). */
+export {
+  detectAiHeuristics,
+  commentStyleScore,
+  namingPatternScore,
+  boilerplateScore,
+  structureScore,
+  analyzeGitSignal,
+  detectAbstractionLeakage,
+  detectHardcodedAssumptions,
+  detectMissingEdgeCases,
+  detectStyleInconsistency,
+  compareToBaseline,
+  aggregateModelStats,
+  loadHistory,
+  appendEntry,
+  getModelStats,
+  DEFAULT_HISTORY_PATH,
+  mean,
+  stddev,
+  topN,
+  isOutlier,
+  computeBaseline,
+  flagOutliers,
+  GITHUB_ACTIONS_WORKFLOW_TEMPLATE,
+} from './ai-audit/index';
+export type {
+  AiSpecificSmellType,
+  AiDetectionResult,
+  AiSignal,
+  GitSignal,
+  AiSpecificSmell,
+  AiAuditResult,
+  BenchmarkEntry,
+  BenchmarkHistory,
+  ModelStats,
+  AiHeuristicResult,
+  Baseline,
+} from './ai-audit/index';
+
 /** AI-Readiness Score (Sprint 24): composite metric for how well a codebase suits AI-assisted development. */
 export { analyzeNamingClarity } from './ai-readiness/naming-clarity';
 export type { NamingClarityResult } from './ai-readiness/naming-clarity';
