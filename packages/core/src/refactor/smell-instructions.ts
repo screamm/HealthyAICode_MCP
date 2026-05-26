@@ -10,7 +10,9 @@ export type RefactoringStrategy =
   | 'inline_variable'
   | 'add_docstrings'
   | 'extract_constants'
-  | 'introduce_intermediary';
+  | 'introduce_intermediary'
+  | 'extract_class'
+  | 'move_method';
 
 export interface RefactoringTemplate {
   strategy: RefactoringStrategy;
@@ -59,6 +61,19 @@ export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: s
 
     case 'MessageChain':
       return buildMessageChainTemplate(smell, fn, code);
+
+    case 'GodClass':
+      return buildGodClassTemplate(smell, fn, code);
+
+    case 'FeatureEnvy':
+      return buildMoveMethodTemplate(smell, fn, code);
+
+    // Reuse existing templates for structurally equivalent smells.
+    case 'DataClumps':
+      return buildParameterObjectTemplate(smell, fn, code);
+
+    case 'DocumentationDebt':
+      return buildAddDocstringsTemplate(smell, fn, code);
 
     default:
       return buildGenericTemplate(smell, fn, code);
@@ -285,6 +300,73 @@ function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: 
     ],
     skeletonHint: `// --- Configuration constants ---\nconst MAX_ITEMS = 100;\nconst DEFAULT_TIMEOUT_MS = 5000;\n\nfunction ${fnName}(...) {\n  if (count > MAX_ITEMS) { ... }\n  setTimeout(callback, DEFAULT_TIMEOUT_MS);\n}`,
     expectedScoreImprovement: 0.8,
+  };
+}
+
+function buildGodClassTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'extract_class',
+    instructions: () => [
+      `0. PLAN: In 1 sentence, name each new class you will extract and describe the single responsibility it will own.`,
+      `1. Identify ALL distinct responsibilities inside '${fnName}' — group methods and fields by the data they operate on.`,
+      `2. Extract each responsibility group into a new, well-named class (e.g., '${fnName}Validator', '${fnName}Repository').`,
+      `3. Each new class should own its data: move the relevant fields in alongside the methods.`,
+      `4. Make '${fnName}' delegate to the new classes instead of implementing the logic inline.`,
+      `5. Ensure each new class exposes a minimal, cohesive public interface — no more than one responsibility.`,
+      `VERIFY: Re-read all affected classes — confirm (1) behaviour unchanged, (2) no circular dependencies introduced, (3) all call sites still valid.`,
+    ],
+    skeletonHint: [
+      `// Before: ${fnName} has 400+ lines — validates, persists, formats, notifies`,
+      ``,
+      `// After:`,
+      `class ${fnName}Validator { validate(data) { ... } }`,
+      `class ${fnName}Repository { save(data) { ... } }`,
+      `class ${fnName} {`,
+      `  constructor(`,
+      `    private readonly validator: ${fnName}Validator,`,
+      `    private readonly repository: ${fnName}Repository,`,
+      `  ) {}`,
+      `  process(data) {`,
+      `    this.validator.validate(data);`,
+      `    return this.repository.save(data);`,
+      `  }`,
+      `}`,
+    ].join('\n'),
+    expectedScoreImprovement: 3.0,
+  };
+}
+
+function buildMoveMethodTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'move_method',
+    instructions: () => [
+      `0. PLAN: In 1 sentence, name which class '${fnName}' envies (accesses most) and where the method should move.`,
+      `1. Identify the class whose data '${fnName}' accesses most — that is where it truly belongs.`,
+      `2. Move '${fnName}' to the target class; make it a method of that class (remove the foreign parameter).`,
+      `3. In the original location, replace the method body with a delegation call to the new location.`,
+      `4. If only part of '${fnName}' shows Feature Envy, extract that part first (Extract Method), then move it.`,
+      `5. Remove the delegation stub in the original class if nothing outside calls it there.`,
+      `VERIFY: Re-read both classes — confirm (1) behaviour unchanged, (2) no new coupling introduced, (3) all call sites still valid.`,
+    ],
+    skeletonHint: [
+      `// Before: method in ClassA accessing ClassB's data — Feature Envy`,
+      `class ClassA {`,
+      `  compute(b: ClassB) { return b.x + b.y + b.z; }`,
+      `}`,
+      ``,
+      `// After: method moved to ClassB where the data lives`,
+      `class ClassB {`,
+      `  compute() { return this.x + this.y + this.z; }`,
+      `}`,
+      `class ClassA {`,
+      `  compute(b: ClassB) { return b.compute(); } // thin delegate, remove if unused`,
+      `}`,
+    ].join('\n'),
+    expectedScoreImprovement: 1.5,
   };
 }
 

@@ -46,13 +46,23 @@ export interface AutoRefactorResult {
 const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 /**
- * Smell types that are derived metrics and are never selected as the primary auto-refactor target.
- * They improve automatically when their root-cause smells (ComplexMethod, LargeMethod, …) are fixed,
- * so targeting them directly wastes an iteration without moving the score needle.
- * Rationale: Maintainability Index = 171 − 5.2·ln(HV) − 0.23·CC − 10.2·ln(SLOC);
- * reducing CC or SLOC is what actually fixes LowMaintainability.
+ * Smell types that are derived or temporal metrics and are never selected as the primary
+ * auto-refactor target. Targeting them directly wastes an iteration without moving the score:
+ *
+ * - LowMaintainability: derived from CC + SLOC; fix ComplexMethod/LargeMethod instead.
+ *   Rationale: MI = 171 − 5.2·ln(HV) − 0.23·CC − 10.2·ln(SLOC).
+ *
+ * - Temporal smells (CodeChurn, DeveloperCongestion, KnowledgeLoss, MethodTemporalCoupling):
+ *   reflect git history, not source code content. Code-level refactoring cannot fix them —
+ *   they require process/team changes and will resolve naturally over time.
  */
-const DERIVED_SMELL_TYPES = new Set<SmellType>(['LowMaintainability']);
+const DERIVED_SMELL_TYPES = new Set<SmellType>([
+  'LowMaintainability',
+  'CodeChurn',
+  'DeveloperCongestion',
+  'KnowledgeLoss',
+  'MethodTemporalCoupling',
+]);
 
 /**
  * Analyzes a code string and returns structured refactoring instructions for the worst smell found.
