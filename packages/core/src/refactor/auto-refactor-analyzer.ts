@@ -15,6 +15,11 @@ export interface AutoRefactorResult {
   predictedScoreDelta: string;
   /** Top remaining smell types after this fix (helpful for planning multi-pass). */
   remainingSmellTypes: string[];
+  /**
+   * Other smells on the same function as the target smell.
+   * Fix these in the same pass to reduce total iteration count.
+   */
+  colocatedSmells: string[];
   /** Metadata and code context. */
   filePath: string;
   targetFunction: string;
@@ -85,6 +90,26 @@ export function analyzeForAutoRefactor(
   // De-duplicate while preserving order.
   const uniqueRemaining = [...new Set(remainingSmellTypes)];
 
+  // Compute co-located smells: other smells on the same function, sorted by weight.
+  // Fixing them in the same pass reduces total iterations needed.
+  const colocatedSmells = candidate.functionName
+    ? [...new Set(
+        result.smells
+          .filter(s => s !== candidate && s.functionName === candidate.functionName)
+          .sort((a, b) => (SMELL_WEIGHTS[b.type as SmellType] ?? 0) - (SMELL_WEIGHTS[a.type as SmellType] ?? 0))
+          .slice(0, 3)
+          .map(s => s.type)
+      )]
+    : [];
+
+  // Append a bonus step when there are co-located smells fixable in this same pass.
+  if (colocatedSmells.length > 0) {
+    instructions.push(
+      `BONUS — same function, one pass: also fix ${colocatedSmells.join(', ')} in '${fn.name}'. ` +
+      `Batching co-located smells cuts total iterations needed.`
+    );
+  }
+
   return {
     // Reasoning-first: instructions and context before the code block.
     followUpInstruction:
@@ -99,6 +124,7 @@ export function analyzeForAutoRefactor(
     predictedHealthScore,
     predictedScoreDelta,
     remainingSmellTypes: uniqueRemaining,
+    colocatedSmells,
     // Code context last — read after understanding what to do.
     filePath,
     targetFunction: fn.name,

@@ -8,14 +8,26 @@ const parser = new Parser();
 parser.setLanguage((TypeScript as any).typescript);
 const parse = (src: string) => parser.parse(src).rootNode;
 
+// Multi-line helpers — 4 lines each, above the TRIVIAL_FUNCTION_LINE_THRESHOLD (3)
+const fn = (name: string) => `export function ${name}() {\n  const x = 1;\n  return x;\n}`;
+const docFn = (name: string) =>
+  `/** Docs for ${name}. */\nexport function ${name}() {\n  const x = 1;\n  return x;\n}`;
+
 describe('detectLowDocCoverage', () => {
-  it('exempts files with fewer than 2 exports', () => {
-    const src = 'export function f() {}';
+  it('exempts files with fewer than 3 non-trivial exports', () => {
+    // Only 2 non-trivial undocumented functions — below MIN_EXPORTS_FOR_CHECK threshold.
+    const src = [fn('a'), fn('b')].join('\n');
     expect(detectLowDocCoverage(parse(src), src, typescriptProfile)).toHaveLength(0);
   });
 
-  it('flags medium when 0% documented (2 exports, 0 JSDoc)', () => {
-    const src = 'export function a() {}\nexport function b() {}';
+  it('always exempts trivial (≤3 line) functions from the check', () => {
+    // Single-line exports are never flagged regardless of count or JSDoc coverage.
+    const src = 'export function a() {}\nexport function b() {}\nexport function c() {}';
+    expect(detectLowDocCoverage(parse(src), src, typescriptProfile)).toHaveLength(0);
+  });
+
+  it('flags medium when 0% documented (3 non-trivial exports, no JSDoc)', () => {
+    const src = [fn('a'), fn('b'), fn('c')].join('\n');
     const smells = detectLowDocCoverage(parse(src), src, typescriptProfile);
     expect(smells.length).toBe(1);
     expect(smells[0].severity).toBe('medium');
@@ -23,37 +35,26 @@ describe('detectLowDocCoverage', () => {
   });
 
   it('flags low when 50–79% documented', () => {
-    const src = `/** Docs for a. */\nexport function a() {}\nexport function b() {}\nexport function c() {}`;
-    // 1/3 = 33% → medium... but let me verify with 2/3 = 66%
-    const src2 = `/** Docs a. */\nexport function a() {}\n/** Docs b. */\nexport function b() {}\nexport function c() {}`;
-    const smells = detectLowDocCoverage(parse(src2), src2, typescriptProfile);
+    // 2/3 = 66 % → low severity (between 50 and 80 %)
+    const src = [docFn('a'), docFn('b'), fn('c')].join('\n');
+    const smells = detectLowDocCoverage(parse(src), src, typescriptProfile);
     expect(smells.length).toBe(1);
     expect(smells[0].severity).toBe('low');
   });
 
   it('returns no smell when ≥80% documented', () => {
-    const src = `
-/** Docs a. */
-export function a() {}
-/** Docs b. */
-export function b() {}
-/** Docs c. */
-export function c() {}
-/** Docs d. */
-export function d() {}
-export function e() {}
-`.trim();
-    // 4/5 = 80% → no smell
+    // 4/5 = 80 % → no smell
+    const src = [docFn('a'), docFn('b'), docFn('c'), docFn('d'), fn('e')].join('\n');
     expect(detectLowDocCoverage(parse(src), src, typescriptProfile)).toHaveLength(0);
   });
 
   it('returns no smell when 100% documented', () => {
-    const src = `/** Docs a. */\nexport function a() {}\n/** Docs b. */\nexport function b() {}`;
+    const src = [docFn('a'), docFn('b'), docFn('c')].join('\n');
     expect(detectLowDocCoverage(parse(src), src, typescriptProfile)).toHaveLength(0);
   });
 
   it('reports smell at line 1', () => {
-    const src = 'export function a() {}\nexport function b() {}';
+    const src = [fn('a'), fn('b'), fn('c')].join('\n');
     const smells = detectLowDocCoverage(parse(src), src, typescriptProfile);
     expect(smells[0].line).toBe(1);
   });

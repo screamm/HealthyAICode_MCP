@@ -2,9 +2,25 @@ import Parser from 'tree-sitter';
 import type { Smell } from '../types';
 import type { LanguageProfile } from './language-profile';
 
-const MIN_EXPORTS_FOR_CHECK = 2;
+// Raised from 2: single/dual-export files rarely benefit from enforced JSDoc.
+const MIN_EXPORTS_FOR_CHECK = 3;
 const HIGH_COVERAGE_THRESHOLD = 0.8;
 const MEDIUM_COVERAGE_THRESHOLD = 0.5;
+
+/**
+ * Functions shorter than this threshold are considered trivial and never flagged.
+ * Getters, setters, delegating wrappers, and one-liners never need JSDoc.
+ * Rationale: ESLint deprecated `valid-jsdoc` partly because trivial-function false
+ * positives placed unnecessary cognitive burden on developers (ESLint issue #9308).
+ */
+const TRIVIAL_FUNCTION_LINE_THRESHOLD = 3;
+
+/**
+ * Symbol names that are always exempt from documentation requirements.
+ * `constructor` is self-documenting by convention; its parameters are typically
+ * described in the class-level JSDoc instead.
+ */
+const EXEMPT_NAMES = new Set(['constructor', 'ngOnInit', 'ngOnDestroy', 'setup', 'teardown']);
 
 interface ExportInfo {
   name: string;
@@ -26,8 +42,8 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, pr
     type: 'LowDocCoverage',
     severity,
     line: 1,
-    description: `Endast ${documented}/${exports.length} exporterade symboler har JSDoc (${Math.round(ratio * 100)} %)`,
-    suggestion: 'Lägg till /** … */ ovanför exporterade funktioner och typer',
+    description: `${documented}/${exports.length} exported symbols have JSDoc (${Math.round(ratio * 100)}%)`,
+    suggestion: 'Add /** … */ above exported functions and types to reach 80% coverage',
   }];
 }
 
@@ -37,6 +53,14 @@ function collectExports(root: Parser.SyntaxNode, source: string, profile: Langua
   function visit(node: Parser.SyntaxNode): void {
     if (profile.exportableNodeTypes.has(node.type)) {
       const name = getExportedName(node) ?? '<anonymous>';
+
+      // Skip exempt names (constructor, lifecycle hooks, etc.).
+      if (EXEMPT_NAMES.has(name)) return;
+
+      // Skip trivially short functions — they never need JSDoc.
+      const lineCount = node.endPosition.row - node.startPosition.row + 1;
+      if (lineCount <= TRIVIAL_FUNCTION_LINE_THRESHOLD) return;
+
       const line = node.startPosition.row + 1;
       const hasJsDoc = isLineStyle
         ? lineAboveMatchesLineComment(lines, line, profile.docCommentPattern)

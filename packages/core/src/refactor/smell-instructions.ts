@@ -63,18 +63,21 @@ export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: s
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
-function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: string): RefactoringTemplate {
   const fnName = fn.name;
-  const totalLines = fn.length;
-  const thirds = Math.floor(totalLines / 3);
   const startLine = fn.line;
+  const seams = findNaturalSeams(code, fn);
+  // Use detected natural seams; fall back to thirds when no seams are found.
+  const thirds = Math.floor(fn.length / 3);
+  const firstSeam = seams.length > 0 ? seams[0] : startLine + thirds;
+  const secondSeam = seams.length > 1 ? seams[1] : startLine + thirds * 2;
 
   return {
     strategy: 'extract_method',
     instructions: () => [
       `1. Identify logically cohesive sections within '${fnName}' (each section should do one thing).`,
-      `2. Extract lines ${startLine}–${startLine + thirds} into a helper function named after what that section does (e.g., 'validate${capitalize(fnName)}Input').`,
-      `3. Extract the next cohesive section into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
+      `2. Extract lines ${startLine}–${firstSeam - 1} into a helper function named after what that section does (e.g., 'validate${capitalize(fnName)}Input').`,
+      `3. Extract lines ${firstSeam}–${secondSeam - 1} into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
       `4. Replace each extracted block with a call to the new helper function.`,
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
     ],
@@ -149,15 +152,18 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
   };
 }
 
-function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string): RefactoringTemplate {
   const fnName = fn.name;
+  const seams = findNaturalSeams(code, fn);
+  // Prefer the first detected blank/comment seam; fall back to the structural midpoint.
   const midpoint = fn.line + Math.floor(fn.length / 2);
+  const seamLine = seams.length > 0 ? seams[0] : midpoint;
 
   return {
     strategy: 'split_at_seam',
     instructions: () => [
-      `1. Find the natural seam in '${fnName}' where one concern ends and another begins (around line ${midpoint}).`,
-      `2. Extract the second half into a new function named after what it does (not where it comes from).`,
+      `1. Find the natural seam in '${fnName}' where one concern ends and another begins (at line ${seamLine}).`,
+      `2. Extract the second half (lines ${seamLine}–${fn.line + fn.length - 1}) into a new function named after what it does (not where it comes from).`,
       `3. Pass the necessary data as parameters to the new function — do not use shared mutable state.`,
       `4. The original '${fnName}' should be reduced to roughly half its current size.`,
       `5. Both resulting functions should have a single, clear responsibility.`,
@@ -257,4 +263,34 @@ function buildGenericTemplate(smell: Smell, fn: FunctionResult, _code: string): 
 function capitalize(name: string): string {
   if (!name) return '';
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/**
+ * Returns absolute line numbers of natural seams inside a function body.
+ * A seam is a blank line or a standalone comment line — places where one
+ * logical section ends and another begins. Ignores the first and last two
+ * lines of the function to avoid false-positives on opening/closing braces.
+ *
+ * Research basis: EM-Assist (2024) found that concrete line ranges boost
+ * extract-method LLM accuracy from ~23 % to significantly higher rates.
+ */
+function findNaturalSeams(code: string, fn: FunctionResult): number[] {
+  const lines = code.split('\n');
+  const fnLines = lines.slice(fn.line - 1, fn.line + fn.length - 1);
+  const seams: number[] = [];
+  // Skip first 2 and last 2 lines (opening/closing braces / def header)
+  for (let i = 2; i < fnLines.length - 2; i++) {
+    const trimmed = fnLines[i].trim();
+    if (
+      trimmed === '' ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('#') ||
+      trimmed.startsWith('*') ||
+      trimmed.startsWith('--')
+    ) {
+      // Absolute line number
+      seams.push(fn.line + i);
+    }
+  }
+  return seams;
 }
