@@ -12,7 +12,9 @@ export type RefactoringStrategy =
   | 'extract_constants'
   | 'introduce_intermediary'
   | 'extract_class'
-  | 'move_method';
+  | 'move_method'
+  | 'resolve_debt'
+  | 'strengthen_types';
 
 export interface RefactoringTemplate {
   strategy: RefactoringStrategy;
@@ -68,6 +70,12 @@ export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: s
     case 'FeatureEnvy':
       return buildMoveMethodTemplate(smell, fn, code);
 
+    case 'SATD':
+      return buildSATDTemplate(smell, fn, code);
+
+    case 'TypeSafetyEscape':
+      return buildTypeSafetyTemplate(smell, fn, code);
+
     // Reuse existing templates for structurally equivalent smells.
     case 'DataClumps':
       return buildParameterObjectTemplate(smell, fn, code);
@@ -100,7 +108,7 @@ function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: stri
       `3. Extract lines ${firstSeam}–${secondSeam - 1} into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
       `4. Replace each extracted block with a call to the new helper function.`,
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) each extracted helper receives all required variables as explicit parameters (no implicit closure captures — these cause 76 % of LLM refactoring hallucinations per arXiv 2401.15298).`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -398,6 +406,76 @@ function buildMessageChainTemplate(smell: Smell, fn: FunctionResult, _code: stri
       `}`,
     ].join('\n'),
     expectedScoreImprovement: 0.8,
+  };
+}
+
+function buildSATDTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'resolve_debt',
+    instructions: (s) => [
+      `0. PLAN: In 1 sentence, describe what the TODO/FIXME in '${fnName}' is admitting and the concrete action needed to resolve it.`,
+      `1. Read the SATD comment carefully: "${s.description}". Understand the original developer's intent before touching any code.`,
+      `2. Determine whether the debt is a missing feature, a known bug, a workaround, or a quality shortcut — the resolution differs for each.`,
+      `3. For missing features / known bugs: implement the fix properly now rather than leaving the comment. Remove the TODO/FIXME once resolved.`,
+      `4. For workarounds / quality shortcuts: refactor to the correct approach. If the correct approach is out of scope, document WHY it is deferred and when it should be revisited (not just "// TODO: fix this").`,
+      `5. If the debt comment references external context (ticket, PR, issue), note that context in the replacement comment so future readers can trace the decision.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) the TODO/FIXME is gone or replaced with a time-bounded explanation, (2) behaviour is unchanged or intentionally improved, (3) no new debt comments were added.`,
+    ],
+    skeletonHint: [
+      `// Before:`,
+      `function ${fnName}() {`,
+      `  // TODO: handle edge case where input is null`,
+      `  const result = process(input);`,
+      `  return result;`,
+      `}`,
+      ``,
+      `// After:`,
+      `function ${fnName}() {`,
+      `  if (input == null) throw new Error('${fnName}: input must not be null');`,
+      `  const result = process(input);`,
+      `  return result;`,
+      `}`,
+    ].join('\n'),
+    // SATD repayment is hard: only 10.1 % exact-match success (arXiv 2501.09888).
+    // Improvement is moderate because resolving a single TODO rarely moves the score much.
+    expectedScoreImprovement: 0.8,
+  };
+}
+
+function buildTypeSafetyTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'strengthen_types',
+    instructions: () => [
+      `0. PLAN: In 1 sentence, name each type escape in '${fnName}' ('as any', non-null assertion '!', unsafe cast) and the correct type-safe replacement for each.`,
+      `1. Identify every type escape in '${fnName}': 'as any', 'as unknown', '!' (non-null assertion), and raw object casts.`,
+      `2. For each 'as any' / 'as unknown': replace with a proper type annotation or a type-guard function that narrows the type safely.`,
+      `3. For each '!' non-null assertion: replace with an explicit null-check guard or an assertion function (e.g., 'assertDefined(value)').`,
+      `4. For values coming from external sources (JSON.parse, API responses): introduce a validation function with a proper return type instead of a cast.`,
+      `5. Do NOT use 'as T' to silence type errors — if the type is genuinely unknown, model it as 'unknown' and narrow with a type predicate.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) TypeScript compiles without 'as any' suppressions, (2) all narrowing paths are covered, (3) runtime behaviour unchanged.`,
+    ],
+    skeletonHint: [
+      `// Before:`,
+      `function ${fnName}(raw: unknown) {`,
+      `  const data = raw as any;`,
+      `  return data.value!;`,
+      `}`,
+      ``,
+      `// After:`,
+      `function is${capitalize(fnName)}Data(v: unknown): v is { value: string } {`,
+      `  return typeof v === 'object' && v !== null && 'value' in v;`,
+      `}`,
+      ``,
+      `function ${fnName}(raw: unknown) {`,
+      `  if (!is${capitalize(fnName)}Data(raw)) throw new Error('Unexpected shape');`,
+      `  return raw.value;`,
+      `}`,
+    ].join('\n'),
+    expectedScoreImprovement: 1.0,
   };
 }
 

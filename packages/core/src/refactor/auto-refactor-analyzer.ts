@@ -41,6 +41,15 @@ export interface AutoRefactorResult {
    * Research basis: CigaR (2024) achieves 73% token reduction via targeted context narrowing.
    */
   focusLines?: string;
+  /**
+   * Estimated fix difficulty based on empirical research.
+   * 'easy'   — >80 % LLM success rate (MagicNumber, MessageChain, LowDocCoverage, …)
+   * 'medium' — 50–80 % (ComplexMethod, DeepNesting, LargeMethod, …)
+   * 'hard'   — <50 % (GodClass, FeatureEnvy, BrainMethod, SATD)
+   * If the current smell is 'hard' and stagnating, prefer switching to an easier co-located smell.
+   * Research: EM-Assist (arXiv 2401.15298) 53.4 % recall; SATD repayment only 10 % EM (arXiv 2501.09888).
+   */
+  successLikelihood: 'easy' | 'medium' | 'hard';
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -115,6 +124,17 @@ export function analyzeForAutoRefactor(
       })()
     : undefined;
 
+  // Estimate fix difficulty based on empirical research (EM-Assist 2024, arXiv 2501.09888).
+  const EASY_SMELLS = new Set<SmellType>([
+    'MagicNumber', 'LowDocCoverage', 'MessageChain', 'LongParameterList',
+    'ComplexConditional', 'DocumentationDebt', 'DataClumps', 'PrimitiveObsession',
+  ]);
+  const HARD_SMELLS = new Set<SmellType>(['GodClass', 'FeatureEnvy', 'SATD', 'BrainMethod']);
+  const successLikelihood: 'easy' | 'medium' | 'hard' =
+    HARD_SMELLS.has(candidate.type as SmellType) ? 'hard'
+    : EASY_SMELLS.has(candidate.type as SmellType) ? 'easy'
+    : 'medium';
+
   const template = getRefactoringTemplate(candidate, fn, code);
   const instructions = template.instructions(candidate, code, fn);
 
@@ -182,7 +202,8 @@ export function analyzeForAutoRefactor(
       'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      'Typically 2–4 iterations total. Stop immediately if stagnating: true — accept the current score or switch to a different file.',
+      'Typically 2–4 iterations total. Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
+      'Target: ≥ 9.5 (research shows AI-induced defect risk increases 60 % below this threshold).',
     smell: candidate,
     refactoringStrategy: template.strategy,
     refactoringInstructions: instructions,
@@ -192,6 +213,7 @@ export function analyzeForAutoRefactor(
     stagnating,
     remainingSmellTypes: uniqueRemaining,
     colocatedSmells,
+    successLikelihood,
     // Code context last — read after understanding what to do.
     filePath,
     targetFunction: fn.name,
