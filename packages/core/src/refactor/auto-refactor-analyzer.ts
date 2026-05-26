@@ -19,6 +19,15 @@ export interface AutoRefactorResult {
    */
   stagnating: boolean;
   /**
+   * How widely the refactoring must reach to fully resolve the smell.
+   * 'function' — edit only within the target function (most smells).
+   * 'class'    — changes span multiple methods / the whole class (GodClass, FeatureEnvy).
+   * 'file'     — changes affect many or all exports in the file (LowDocCoverage, DocumentationDebt).
+   * Use this to scope your edits precisely — do not touch code outside this boundary.
+   * Research: 27.6 % of LLM refactoring errors occur when scope is ambiguous (arXiv 2510.26480).
+   */
+  changeScope: 'function' | 'class' | 'file';
+  /**
    * True when currentHealthScore ≥ 9.0 — code is entering the stabilisation phase.
    * Switch to minimal-diff mode: fix one smell per pass, avoid structural changes.
    * Research: arXiv 2602.21833 found LLMs over-refactor past the 9.0 mark, trading
@@ -194,6 +203,16 @@ export function analyzeForAutoRefactor(
   // Hard-stop budget: 5 iterations is the empirical ceiling for diminishing returns.
   const iterationBudget = 5;
 
+  // Change scope: tells the LLM how broadly to edit.
+  // File-scoped smells require touching all exports; class-scoped smells span multiple methods;
+  // most smells are contained to a single function.
+  const FILE_SCOPE_SMELLS = new Set<SmellType>(['LowDocCoverage', 'DocumentationDebt']);
+  const CLASS_SCOPE_SMELLS = new Set<SmellType>(['GodClass', 'FeatureEnvy', 'DataClumps']);
+  const changeScope: 'function' | 'class' | 'file' =
+    FILE_SCOPE_SMELLS.has(candidate.type as SmellType) ? 'file'
+    : CLASS_SCOPE_SMELLS.has(candidate.type as SmellType) ? 'class'
+    : 'function';
+
   // Compute the top remaining smell types (excluding the one we're fixing) for planning.
   const remainingSmellTypes = result.smells
     .filter(s => s !== candidate)
@@ -219,28 +238,32 @@ export function analyzeForAutoRefactor(
   // Score-adaptive follow-up instruction.
   // ≥ 9.0 (nearTarget) → stabilisation phase → minimal-diff mode to prevent over-refactoring.
   // < 9.0              → restructuring phase → standard instructions apply.
-  // SCoT skeleton-first: adapt exampleSkeleton before writing code (+36% smell reduction, ACM 3690635).
+  // Citations are kept in JSDoc above, not in the output, to reduce inference-time token waste.
+  const scopeNote = `Edit only within changeScope: ${changeScope}. `;
+  const focusNote = focusLines ? 'focusLines is the primary context — consult currentCode only if more context is needed. ' : '';
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
-      'Step 0: adapt the exampleSkeleton to the actual function and write it out as your plan before touching any code ' +
-      '(Structured CoT: +36 % smell reduction vs plain CoT, ACM 3690635). ' +
+      'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       'Apply only the single refactoring in refactoringInstructions using model claude-opus-4-7. ' +
-      'Structural changes only — no renaming. ' +
-      `${focusLines ? 'focusLines shows the key area — start there, consult currentCode only if needed. ' : ''}` +
+      'Never rename — causes oscillation that undoes quality gains. ' +
+      'Preserve all existing code comments. ' +
+      scopeNote +
+      focusNote +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      `Hard stop after ${iterationBudget} total iterations — research shows over-refactoring risk and diminishing returns beyond 5 (arXiv 2602.21833). ` +
+      `Hard stop after ${iterationBudget} total iterations. ` +
       'Stop immediately if stagnating: true — accept current score.'
-    : 'Step 0: adapt the exampleSkeleton to the actual function and write it out as your plan before touching any code ' +
-      '(Structured CoT: +36 % smell reduction vs plain CoT, ACM 3690635). ' +
+    : 'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       'Apply the refactoringInstructions using model claude-opus-4-7. ' +
-      'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
-      `${focusLines ? 'focusLines shows the smell area — start there, consult currentCode only if context is needed. ' : ''}` +
+      'Never rename variables or functions — causes oscillation. ' +
+      'Preserve all existing code comments. ' +
+      scopeNote +
+      focusNote +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      `Hard stop after ${iterationBudget} total iterations. Typically 2–4. ` +
+      `Hard stop after ${iterationBudget} iterations. Typically 2–4. ` +
       'Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
-      'Target: ≥ 9.5 (research shows AI-induced defect risk increases 60 % below this threshold).';
+      'Target: ≥ 9.5.';
 
   return {
     // Reasoning-first: instructions and context before the code block.
@@ -254,6 +277,7 @@ export function analyzeForAutoRefactor(
     stagnating,
     nearTarget,
     iterationBudget,
+    changeScope,
     remainingSmellTypes: uniqueRemaining,
     colocatedSmells,
     successLikelihood,

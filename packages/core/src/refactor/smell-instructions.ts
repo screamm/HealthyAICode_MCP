@@ -108,7 +108,7 @@ function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: stri
       `3. Extract lines ${firstSeam}–${secondSeam - 1} into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
       `4. Replace each extracted block with a call to the new helper function.`,
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) each extracted helper receives all required variables as explicit parameters (no implicit closure captures — these cause 76 % of LLM refactoring hallucinations per arXiv 2401.15298).`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) each extracted helper receives all required variables as explicit parameters (no implicit closure captures — these cause 76 % of LLM refactoring hallucinations per arXiv 2401.15298), (5) all existing comments preserved. If compilation or tests fail, revert to currentCode and attempt a narrower extraction.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -140,7 +140,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
       `3. Each extracted helper should be independently testable.`,
       `4. The refactored '${fnName}' should contain only high-level orchestration calls — no inline logic.`,
       `5. Verify cyclomatic complexity drops below 10 after extraction.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and extract fewer responsibilities.`,
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const data = prepareData(args);\n  validate(data);\n  const result = computeResult(data);\n  return formatOutput(result);\n}`,
     expectedScoreImprovement: 3.0,
@@ -158,7 +158,7 @@ function buildEarlyReturnTemplate(smell: Smell, fn: FunctionResult, _code: strin
       `3. Remove one level of nesting by replacing the else-branch with a guard clause.`,
       `4. Repeat for each nested conditional until nesting depth is ≤ 2.`,
       `5. Each guard clause should express a precondition — use descriptive names in the condition.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and reduce the number of guard clauses inverted.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -190,7 +190,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
     strategy: 'extract_chunks',
     instructions: (s) => {
       const chunkRanges = s.chunkRanges ?? [];
-      const verify = `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) execution order preserved, (3) all call sites still valid.`;
+      const verify = `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) execution order preserved, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and extract fewer chunks.`;
       if (chunkRanges.length === 0) {
         return [
           `0. PLAN: In 1 sentence, name each step function you will introduce and describe what it handles.`,
@@ -210,7 +210,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
         `${chunkRanges.length + 2}. Replace each chunk with a call to its helper — preserve execution order and side effects.`,
         `${chunkRanges.length + 3}. The refactored '${fnName}' should contain only the sequential calls with no inline logic.`,
         verify,
-      ];
+        ];
     },
     skeletonHint: ranges.length > 0
       ? `function ${fnName}(...args) {\n${ranges.map((_, i) => `  handle${capitalize(fnName)}Step${i + 1}(args);`).join('\n')}\n}`
@@ -234,7 +234,7 @@ function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string
       `3. Pass the necessary data as parameters to the new function — do not use shared mutable state.`,
       `4. The original '${fnName}' should be reduced to roughly half its current size.`,
       `5. Both resulting functions should have a single, clear responsibility.`,
-      `VERIFY: Re-read both functions after applying — confirm (1) behaviour unchanged, (2) no shared mutable state, (3) all call sites still valid.`,
+      `VERIFY: Re-read both functions after applying — confirm (1) behaviour unchanged, (2) no shared mutable state, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and move the split point.`,
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const intermediate = computeFirstHalf(args);\n  return computeSecondHalf(intermediate);\n}`,
     expectedScoreImprovement: 1.5,
@@ -252,7 +252,7 @@ function buildParameterObjectTemplate(smell: Smell, fn: FunctionResult, _code: s
       `3. Replace the individual parameters with a single options object parameter.`,
       `4. Update all call sites to pass an object literal instead of positional arguments.`,
       `5. Destructure the options object at the top of '${fnName}' for readability.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) all call sites updated, (2) no positional arguments remain, (3) behaviour unchanged.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) all call sites updated, (2) no positional arguments remain, (3) behaviour unchanged, (4) existing comments preserved. If compilation fails, revert to currentCode and update call sites one at a time.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -287,7 +287,7 @@ function buildSimplifyConditionalTemplate(smell: Smell, fn: FunctionResult, _cod
       `3. Replace the complex expression with the named variables joined by && or ||.`,
       `4. If the entire conditional block belongs together, extract it into a named predicate function.`,
       `5. The resulting condition should read like a sentence describing the business rule.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) boolean logic is equivalent (test edge cases mentally), (2) no conditions removed or reordered, (3) all call sites still valid.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) boolean logic is equivalent (test edge cases mentally), (2) no conditions removed or reordered, (3) all call sites still valid, (4) existing comments preserved. If logic differs, revert to currentCode and extract one variable at a time.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -393,7 +393,7 @@ function buildGodClassTemplate(smell: Smell, fn: FunctionResult, _code: string):
       `3. Each new class should own its data: move the relevant fields in alongside the methods.`,
       `4. Make '${fnName}' delegate to the new classes instead of implementing the logic inline.`,
       `5. Ensure each new class exposes a minimal, cohesive public interface — no more than one responsibility.`,
-      `VERIFY: Re-read all affected classes — confirm (1) behaviour unchanged, (2) no circular dependencies introduced, (3) all call sites still valid.`,
+      `VERIFY: Re-read all affected classes — confirm (1) behaviour unchanged, (2) no circular dependencies introduced, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and extract one fewer class.`,
     ],
     skeletonHint: [
       `// Before: ${fnName} has 400+ lines — validates, persists, formats, notifies`,
@@ -428,7 +428,7 @@ function buildMoveMethodTemplate(smell: Smell, fn: FunctionResult, _code: string
       `3. In the original location, replace the method body with a delegation call to the new location.`,
       `4. If only part of '${fnName}' shows Feature Envy, extract that part first (Extract Method), then move it.`,
       `5. Remove the delegation stub in the original class if nothing outside calls it there.`,
-      `VERIFY: Re-read both classes — confirm (1) behaviour unchanged, (2) no new coupling introduced, (3) all call sites still valid.`,
+      `VERIFY: Re-read both classes — confirm (1) behaviour unchanged, (2) no new coupling introduced, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and add the delegation stub back.`,
     ],
     skeletonHint: [
       `// Before: method in ClassA accessing ClassB's data — Feature Envy`,
@@ -491,7 +491,7 @@ function buildSATDTemplate(smell: Smell, fn: FunctionResult, _code: string): Ref
       `3. For missing features / known bugs: implement the fix properly now rather than leaving the comment. Remove the TODO/FIXME once resolved.`,
       `4. For workarounds / quality shortcuts: refactor to the correct approach. If the correct approach is out of scope, document WHY it is deferred and when it should be revisited (not just "// TODO: fix this").`,
       `5. If the debt comment references external context (ticket, PR, issue), note that context in the replacement comment so future readers can trace the decision.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) the TODO/FIXME is gone or replaced with a time-bounded explanation, (2) behaviour is unchanged or intentionally improved, (3) no new debt comments were added.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) the TODO/FIXME is gone or replaced with a time-bounded explanation, (2) behaviour is unchanged or intentionally improved, (3) no new debt comments were added, (4) existing non-debt comments preserved. If tests fail, revert to currentCode and address a narrower aspect of the debt.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -526,7 +526,7 @@ function buildTypeSafetyTemplate(smell: Smell, fn: FunctionResult, _code: string
       `3. For each '!' non-null assertion: replace with an explicit null-check guard or an assertion function (e.g., 'assertDefined(value)').`,
       `4. For values coming from external sources (JSON.parse, API responses): introduce a validation function with a proper return type instead of a cast.`,
       `5. Do NOT use 'as T' to silence type errors — if the type is genuinely unknown, model it as 'unknown' and narrow with a type predicate.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) TypeScript compiles without 'as any' suppressions, (2) all narrowing paths are covered, (3) runtime behaviour unchanged.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) TypeScript compiles without 'as any' suppressions, (2) all narrowing paths are covered, (3) runtime behaviour unchanged, (4) existing comments preserved. If compilation fails, revert to currentCode and add the type guard incrementally.`,
     ],
     skeletonHint: [
       `// Before:`,
