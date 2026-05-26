@@ -13,6 +13,11 @@ export interface AutoRefactorResult {
   exampleSkeleton: string;
   predictedHealthScore: number;
   predictedScoreDelta: string;
+  /**
+   * True when predicted improvement is < 0.3 pts even after batching co-located smells.
+   * When stagnating, consider accepting the current score or switching to a different file.
+   */
+  stagnating: boolean;
   /** Top remaining smell types after this fix (helpful for planning multi-pass). */
   remainingSmellTypes: string[];
   /**
@@ -30,6 +35,15 @@ export interface AutoRefactorResult {
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+/**
+ * Smell types that are derived metrics and are never selected as the primary auto-refactor target.
+ * They improve automatically when their root-cause smells (ComplexMethod, LargeMethod, …) are fixed,
+ * so targeting them directly wastes an iteration without moving the score needle.
+ * Rationale: Maintainability Index = 171 − 5.2·ln(HV) − 0.23·CC − 10.2·ln(SLOC);
+ * reducing CC or SLOC is what actually fixes LowMaintainability.
+ */
+const DERIVED_SMELL_TYPES = new Set<SmellType>(['LowMaintainability']);
 
 /**
  * Analyzes a code string and returns structured refactoring instructions for the worst smell found.
@@ -71,10 +85,40 @@ export function analyzeForAutoRefactor(
   const template = getRefactoringTemplate(candidate, fn, code);
   const instructions = template.instructions(candidate, code, fn);
 
-  const rawPredicted = result.score + template.expectedScoreImprovement;
+  // Prepend explicit refactoring-type header.
+  // Research (EM-Assist 2024): explicit type specification raises LLM success rate from 15.6 % to 86.7 %.
+  const strategyLabel = template.strategy.replace(/_/g, ' ').toUpperCase();
+  instructions.unshift(
+    `[REFACTORING: ${strategyLabel} — ${candidate.type} in '${fn.name}' — ${candidate.description.slice(0, 100)}]`
+  );
+
+  // Compute co-located smells: other smells on the same function, sorted by weight.
+  // Fixing them in the same pass reduces total iterations needed.
+  const colocatedSmells = candidate.functionName
+    ? [...new Set(
+        result.smells
+          .filter(s => s !== candidate && s.functionName === candidate.functionName)
+          .sort((a, b) => (SMELL_WEIGHTS[b.type as SmellType] ?? 0) - (SMELL_WEIGHTS[a.type as SmellType] ?? 0))
+          .slice(0, 3)
+          .map(s => s.type)
+      )]
+    : [];
+
+  // Boost predicted score for co-located smells being fixed in the same pass.
+  // Each co-located smell with a single occurrence contributes weight × √1 = weight to the score
+  // deduction. Recovering that with 85 % confidence (not all may be fully eliminated).
+  const colocatedScoreBoost = colocatedSmells.reduce(
+    (sum, type) => sum + (SMELL_WEIGHTS[type as SmellType] ?? 0) * 0.85,
+    0
+  );
+
+  const rawPredicted = result.score + template.expectedScoreImprovement + colocatedScoreBoost;
   const predictedHealthScore = Math.min(10.0, parseFloat(rawPredicted.toFixed(1)));
   const delta = predictedHealthScore - result.score;
   const predictedScoreDelta = `+${delta.toFixed(1)}`;
+
+  // Stagnation: when predicted gain is tiny, the loop should consider stopping.
+  const stagnating = delta < 0.3;
 
   // Compute the top remaining smell types (excluding the one we're fixing) for planning.
   const remainingSmellTypes = result.smells
@@ -90,18 +134,6 @@ export function analyzeForAutoRefactor(
   // De-duplicate while preserving order.
   const uniqueRemaining = [...new Set(remainingSmellTypes)];
 
-  // Compute co-located smells: other smells on the same function, sorted by weight.
-  // Fixing them in the same pass reduces total iterations needed.
-  const colocatedSmells = candidate.functionName
-    ? [...new Set(
-        result.smells
-          .filter(s => s !== candidate && s.functionName === candidate.functionName)
-          .sort((a, b) => (SMELL_WEIGHTS[b.type as SmellType] ?? 0) - (SMELL_WEIGHTS[a.type as SmellType] ?? 0))
-          .slice(0, 3)
-          .map(s => s.type)
-      )]
-    : [];
-
   // Append a bonus step when there are co-located smells fixable in this same pass.
   if (colocatedSmells.length > 0) {
     instructions.push(
@@ -113,16 +145,17 @@ export function analyzeForAutoRefactor(
   return {
     // Reasoning-first: instructions and context before the code block.
     followUpInstruction:
-      'Apply the refactoringInstructions using model claude-opus-4-7 (claude-opus-4-7-20250219). ' +
-      'Then run code_health_review to verify. ' +
-      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      'Minimum 3 iterations — most files need 3–5 passes.',
+      'Apply the refactoringInstructions using model claude-opus-4-7. ' +
+      'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
+      'Then run code_health_review. ' +
+      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5).',
     smell: candidate,
     refactoringStrategy: template.strategy,
     refactoringInstructions: instructions,
     exampleSkeleton: template.skeletonHint,
     predictedHealthScore,
     predictedScoreDelta,
+    stagnating,
     remainingSmellTypes: uniqueRemaining,
     colocatedSmells,
     // Code context last — read after understanding what to do.
@@ -140,17 +173,23 @@ export function analyzeForAutoRefactor(
 /**
  * Returns the highest-priority smell: severity first (critical > high > medium > low),
  * then by score weight (higher weight = more score impact = fix first).
+ * Derived metrics (LowMaintainability) are deprioritised — they resolve automatically
+ * once their root-cause smells are addressed.
  */
 function pickWorst(smells: Smell[]): Smell | null {
   if (smells.length === 0) return null;
-  return [...smells].sort((a, b) => {
-    const severityDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
-    if (severityDiff !== 0) return severityDiff;
-    // Break ties by scoring weight so ComplexMethod (1.5) beats LowDocCoverage (0.3).
-    const wa = SMELL_WEIGHTS[a.type as SmellType] ?? 0;
-    const wb = SMELL_WEIGHTS[b.type as SmellType] ?? 0;
-    return wb - wa;
-  })[0];
+  const sort = (arr: Smell[]) =>
+    [...arr].sort((a, b) => {
+      const severityDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
+      if (severityDiff !== 0) return severityDiff;
+      // Break ties by scoring weight so ComplexMethod (1.5) beats LowDocCoverage (0.3).
+      const wa = SMELL_WEIGHTS[a.type as SmellType] ?? 0;
+      const wb = SMELL_WEIGHTS[b.type as SmellType] ?? 0;
+      return wb - wa;
+    });
+  // Prefer actionable smells over derived metrics; fall back if only derived smells exist.
+  const actionable = smells.filter(s => !DERIVED_SMELL_TYPES.has(s.type as SmellType));
+  return sort(actionable.length > 0 ? actionable : smells)[0];
 }
 
 /** Returns the first smell matching the requested type, or the worst smell if none match. */
