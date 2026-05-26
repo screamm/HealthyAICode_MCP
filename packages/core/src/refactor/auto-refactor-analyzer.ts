@@ -31,7 +31,16 @@ export interface AutoRefactorResult {
   currentHealthScore: number;
   startLine: number;
   endLine: number;
+  /** Number of lines in the target function — helps gauge refactoring scope. */
+  functionLineCount: number;
   currentCode: string;
+  /**
+   * Lines immediately surrounding the smell location (± 8 lines, capped at function bounds).
+   * Only present when the function exceeds 40 lines — use as a fast-focus starting point;
+   * currentCode has the full picture.
+   * Research basis: CigaR (2024) achieves 73% token reduction via targeted context narrowing.
+   */
+  focusLines?: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -81,6 +90,20 @@ export function analyzeForAutoRefactor(
   const startLine = fn.line;
   const endLine = Math.min(fn.line + fn.length - 1, lines.length);
   const currentCode = lines.slice(startLine - 1, endLine).join('\n');
+  const functionLineCount = endLine - startLine + 1;
+
+  // For large functions, compute a focused excerpt around the smell's line.
+  // Research (CigaR 2024): targeted context narrowing reduces token cost by up to 73 %.
+  const FOCUS_WINDOW = 8;
+  const LARGE_FN_THRESHOLD = 40;
+  const focusLines = functionLineCount > LARGE_FN_THRESHOLD
+    ? (() => {
+        const smellIdx = candidate.line - 1; // 0-based
+        const focusStart = Math.max(startLine - 1, smellIdx - FOCUS_WINDOW);
+        const focusEnd   = Math.min(endLine   - 1, smellIdx + FOCUS_WINDOW);
+        return lines.slice(focusStart, focusEnd + 1).join('\n');
+      })()
+    : undefined;
 
   const template = getRefactoringTemplate(candidate, fn, code);
   const instructions = template.instructions(candidate, code, fn);
@@ -148,7 +171,8 @@ export function analyzeForAutoRefactor(
       'Apply the refactoringInstructions using model claude-opus-4-7. ' +
       'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
       'Then run code_health_review. ' +
-      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5).',
+      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
+      'Typically 2–4 iterations total. Stop immediately if stagnating: true — accept the current score or switch to a different file.',
     smell: candidate,
     refactoringStrategy: template.strategy,
     refactoringInstructions: instructions,
@@ -164,7 +188,9 @@ export function analyzeForAutoRefactor(
     currentHealthScore: result.score,
     startLine,
     endLine,
+    functionLineCount,
     currentCode,
+    focusLines,
   };
 }
 

@@ -85,6 +85,7 @@ function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: stri
       `3. Extract lines ${firstSeam}–${secondSeam - 1} into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
       `4. Replace each extracted block with a call to the new helper function.`,
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -116,6 +117,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
       `3. Each extracted helper should be independently testable.`,
       `4. The refactored '${fnName}' should contain only high-level orchestration calls — no inline logic.`,
       `5. Verify cyclomatic complexity drops below 10 after extraction.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const data = prepareData(args);\n  validate(data);\n  const result = computeResult(data);\n  return formatOutput(result);\n}`,
     expectedScoreImprovement: 3.0,
@@ -133,6 +135,7 @@ function buildEarlyReturnTemplate(smell: Smell, fn: FunctionResult, _code: strin
       `3. Remove one level of nesting by replacing the else-branch with a guard clause.`,
       `4. Repeat for each nested conditional until nesting depth is ≤ 2.`,
       `5. Each guard clause should express a precondition — use descriptive names in the condition.`,
+      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -164,6 +167,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
     strategy: 'extract_chunks',
     instructions: (s) => {
       const chunkRanges = s.chunkRanges ?? [];
+      const verify = `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) execution order preserved, (3) all call sites still valid.`;
       if (chunkRanges.length === 0) {
         return [
           `0. PLAN: In 1 sentence, name each step function you will introduce and describe what it handles.`,
@@ -171,6 +175,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
           `2. Extract each chunk into a named helper function that describes what it does.`,
           `3. Replace each chunk with a call to the corresponding helper.`,
           `4. The refactored '${fnName}' should read as a narrative of named steps.`,
+          verify,
         ];
       }
       return [
@@ -181,6 +186,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
         ),
         `${chunkRanges.length + 2}. Replace each chunk with a call to its helper — preserve execution order and side effects.`,
         `${chunkRanges.length + 3}. The refactored '${fnName}' should contain only the sequential calls with no inline logic.`,
+        verify,
       ];
     },
     skeletonHint: ranges.length > 0
@@ -205,6 +211,7 @@ function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string
       `3. Pass the necessary data as parameters to the new function — do not use shared mutable state.`,
       `4. The original '${fnName}' should be reduced to roughly half its current size.`,
       `5. Both resulting functions should have a single, clear responsibility.`,
+      `VERIFY: Re-read both functions after applying — confirm (1) behaviour unchanged, (2) no shared mutable state, (3) all call sites still valid.`,
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const intermediate = computeFirstHalf(args);\n  return computeSecondHalf(intermediate);\n}`,
     expectedScoreImprovement: 1.5,
