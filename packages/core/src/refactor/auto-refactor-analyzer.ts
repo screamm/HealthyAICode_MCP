@@ -274,9 +274,18 @@ export function analyzeForAutoRefactor(
     : focusLines
     ? 'focusLines is the primary context — consult currentCode only if more context is needed. '
     : '';
-  // Hard smells benefit from extended thinking: +42.86% on complex reasoning tasks (2025 research).
+  // Adaptive thinking effort for Claude Opus 4.x — budget_tokens is deprecated since March 2026.
+  // nearTarget → "low" (surgical 1-line change, no deep planning needed).
+  // hard        → "high" (complex structural refactoring, max reasoning budget).
+  // else        → "medium" (default was silently lowered in March 2026; be explicit).
+  const effortParam = nearTarget ? '"low"'
+    : successLikelihood === 'hard' ? '"high"'
+    : '"medium"';
+  const modelNote = `claude-opus-4-7 with thinking effort: ${effortParam}`;
+
+  // Hard smells have <50% LLM success rate — flag so the operator plans carefully.
   const hardSmellNote = successLikelihood === 'hard'
-    ? 'HARD SMELL: Enable extended thinking in claude-opus-4-7 (budget_tokens: 5000) for deeper analysis before coding — significantly improves success rate on complex refactorings. '
+    ? 'HARD SMELL (<50% success rate): use exampleSkeleton as a step-by-step plan before touching any code. '
     : '';
   // Diff output: when outputMode is 'diff', request only changed lines (focusLines excerpt).
   const diffNote = outputMode === 'diff'
@@ -289,7 +298,7 @@ export function analyzeForAutoRefactor(
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
-      'Apply only the single refactoring in refactoringInstructions using model claude-opus-4-7. ' +
+      `Apply only the single refactoring in refactoringInstructions using model ${modelNote}. ` +
       hardSmellNote +
       diffNote +
       'Never rename — causes oscillation that undoes quality gains. ' +
@@ -301,7 +310,7 @@ export function analyzeForAutoRefactor(
       `Hard stop after ${iterationBudget} total iterations. ` +
       'Stop immediately if stagnating: true — accept current score.'
     : 'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
-      'Apply the refactoringInstructions using model claude-opus-4-7. ' +
+      `Apply the refactoringInstructions using model ${modelNote}. ` +
       hardSmellNote +
       'Never rename variables or functions — causes oscillation. ' +
       'Preserve all existing code comments. ' +
