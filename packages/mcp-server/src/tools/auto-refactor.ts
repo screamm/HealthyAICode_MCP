@@ -16,17 +16,12 @@ type McpToolRegistrar = (
 export function registerAutoRefactor(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_auto_refactor',
-    'Analyzes a source file and returns exact refactoring instructions for the highest-severity smell. ' +
-      'Designed so that the AI assistant can perform concrete code changes based on the precise problem. ' +
-      'Returns the target function, current code block, step-by-step instructions, an example skeleton, ' +
-      'and a predicted health score improvement. ' +
-      'After receiving this response, apply the refactoring by spawning a subagent using model ' +
-      'claude-opus-4-7 (claude-opus-4-7-20250219) with the exact instructions and code context provided. ' +
-      'This model achieves the highest fix rates on structured refactoring tasks. ' +
-      'Then re-run code_health_review to verify improvement. ' +
-      'IMPORTANT: Run this loop at least 3 times — each pass resolves one smell and files typically need ' +
-      '3–5 passes to reach AI-ready status. Continue looping until code_health_review returns ' +
-      'loopComplete: true (score ≥ 9.5). Do not stop after a single refactoring.',
+    'Returns structured refactoring instructions for the highest-priority smell in a source file. ' +
+      'Output fields (reasoning-first order): followUpInstruction, smell, refactoringStrategy, ' +
+      'refactoringInstructions (numbered steps), exampleSkeleton, predictedScoreDelta, ' +
+      'remainingSmellTypes (next smells to fix), then currentCode block. ' +
+      'Apply using model claude-opus-4-7. Verify with code_health_review. ' +
+      'Repeat until loopComplete: true (score ≥ 9.5) — minimum 3 iterations, typically 3–5.',
     {
       filePath: z.string().describe('Absolute or relative path to the file to refactor'),
       language: z

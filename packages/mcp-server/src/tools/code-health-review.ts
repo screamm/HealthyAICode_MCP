@@ -14,7 +14,10 @@ type McpToolRegistrar = (
 export function registerCodeHealthReview(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_review',
-    'Djupgranskning av kodhälsa med detaljerade problem och refaktoreringsanvisningar. Kör detta i en loop tills loopComplete är true.',
+    'Returns health score (1–10), smell list, and loopComplete flag for a source file. ' +
+      'Run after every refactoring to measure progress. ' +
+      'When loopComplete is true (score ≥ 9.5) the file is AI-ready — stop looping. ' +
+      'Otherwise call code_health_auto_refactor for the next smell to fix.',
     {
       filePath: z.string().describe('Absolut eller relativ sökväg till filen'),
       repoPath: z.string().optional().describe('Rot-sökväg till git-repot. Om angivet inkluderas MethodTemporalCoupling-analys baserad på git-historik.'),

@@ -1,21 +1,27 @@
 import { analyzeCode } from '../index';
 import type { Smell, SmellType, Language, FunctionResult } from '../types';
 import { getRefactoringTemplate, type RefactoringStrategy } from './smell-instructions';
+import { SMELL_WEIGHTS } from '../scoring/weights';
 
 export interface AutoRefactorResult {
-  filePath: string;
-  targetFunction: string;
+  /** What to do next — read this first before looking at the code. */
+  followUpInstruction: string;
+  /** The smell being targeted in this pass. */
   smell: Smell;
-  currentHealthScore: number;
-  startLine: number;
-  endLine: number;
-  currentCode: string;
   refactoringStrategy: RefactoringStrategy;
   refactoringInstructions: string[];
   exampleSkeleton: string;
   predictedHealthScore: number;
   predictedScoreDelta: string;
-  followUpInstruction: string;
+  /** Top remaining smell types after this fix (helpful for planning multi-pass). */
+  remainingSmellTypes: string[];
+  /** Metadata and code context. */
+  filePath: string;
+  targetFunction: string;
+  currentHealthScore: number;
+  startLine: number;
+  endLine: number;
+  currentCode: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -39,7 +45,7 @@ export function analyzeForAutoRefactor(
 
   if (result.smells.length === 0) return null;
 
-  // Pick the target smell — either the requested type or the highest-severity one.
+  // Pick the target smell — either the requested type or the highest-severity + highest-weight one.
   const candidate = targetSmell
     ? pickByType(result.smells, targetSmell)
     : pickWorst(result.smells);
@@ -65,36 +71,60 @@ export function analyzeForAutoRefactor(
   const delta = predictedHealthScore - result.score;
   const predictedScoreDelta = `+${delta.toFixed(1)}`;
 
+  // Compute the top remaining smell types (excluding the one we're fixing) for planning.
+  const remainingSmellTypes = result.smells
+    .filter(s => s !== candidate)
+    .sort((a, b) => {
+      const wa = SMELL_WEIGHTS[a.type as SmellType] ?? 0;
+      const wb = SMELL_WEIGHTS[b.type as SmellType] ?? 0;
+      return wb - wa;
+    })
+    .slice(0, 5)
+    .map(s => s.type);
+
+  // De-duplicate while preserving order.
+  const uniqueRemaining = [...new Set(remainingSmellTypes)];
+
   return {
-    filePath,
-    targetFunction: fn.name,
+    // Reasoning-first: instructions and context before the code block.
+    followUpInstruction:
+      'Apply the refactoringInstructions using model claude-opus-4-7 (claude-opus-4-7-20250219). ' +
+      'Then run code_health_review to verify. ' +
+      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
+      'Minimum 3 iterations — most files need 3–5 passes.',
     smell: candidate,
-    currentHealthScore: result.score,
-    startLine,
-    endLine,
-    currentCode,
     refactoringStrategy: template.strategy,
     refactoringInstructions: instructions,
     exampleSkeleton: template.skeletonHint,
     predictedHealthScore,
     predictedScoreDelta,
-    followUpInstruction:
-      'Apply these refactoring instructions using model claude-opus-4-7 (claude-opus-4-7-20250219) for the highest fix rate on structured refactoring tasks. ' +
-      'Then run code_health_review on the file to verify the improvement. ' +
-      'IMPORTANT: Run at least 3 iterations of this refactoring loop — each pass resolves one smell and files typically need 3–5 passes to reach AI-ready status. ' +
-      'Continue until code_health_review returns loopComplete: true (score ≥ 9.5). ' +
-      'Do not stop after a single refactoring — call code_health_auto_refactor again to get the next smell.',
+    remainingSmellTypes: uniqueRemaining,
+    // Code context last — read after understanding what to do.
+    filePath,
+    targetFunction: fn.name,
+    currentHealthScore: result.score,
+    startLine,
+    endLine,
+    currentCode,
   };
 }
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
-/** Returns the highest-severity smell (critical > high > medium > low). */
+/**
+ * Returns the highest-priority smell: severity first (critical > high > medium > low),
+ * then by score weight (higher weight = more score impact = fix first).
+ */
 function pickWorst(smells: Smell[]): Smell | null {
   if (smells.length === 0) return null;
-  return [...smells].sort(
-    (a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4)
-  )[0];
+  return [...smells].sort((a, b) => {
+    const severityDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
+    if (severityDiff !== 0) return severityDiff;
+    // Break ties by scoring weight so ComplexMethod (1.5) beats LowDocCoverage (0.3).
+    const wa = SMELL_WEIGHTS[a.type as SmellType] ?? 0;
+    const wb = SMELL_WEIGHTS[b.type as SmellType] ?? 0;
+    return wb - wa;
+  })[0];
 }
 
 /** Returns the first smell matching the requested type, or the worst smell if none match. */
