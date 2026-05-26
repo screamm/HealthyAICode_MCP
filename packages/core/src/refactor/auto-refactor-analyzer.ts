@@ -44,12 +44,20 @@ export interface AutoRefactorResult {
    */
   skipCurrentCode: boolean;
   /**
-   * Hard-stop iteration budget for the refactoring loop.
-   * Always 5 — research shows >95 % of achievable gains occur within 5 iterations.
-   * Sources: arXiv 2602.21833 (5-iteration large-scale experiment),
-   *          arXiv 2505.02931 (10-patch ceiling for repair tasks, 5 sufficient for style).
+   * Adaptive hard-stop budget: easy → 3, medium → 4, hard → 5.
+   * Research (arXiv 2604.10508): most gains concentrate in the first 2 rounds;
+   * benefits diminish sharply after 2–3 iterations (FeedbackEval arXiv 2504.06939).
+   * Reducing the budget for easy smells avoids wasted iterations and tool calls.
    */
   iterationBudget: number;
+  /**
+   * 'diff' — output only the refactored lines from focusLines (when skipCurrentCode: true).
+   * Write only the changed lines, not the full function — preserves untouched lines
+   * and saves output tokens. Apply using search-replace on the focusLines excerpt.
+   * 'full' — output the complete refactored block (structural changes, class extraction, etc.).
+   * Research: PAFT (arXiv 2604.03113) shows minimal-edit patches reduce regression risk.
+   */
+  outputMode: 'diff' | 'full';
   /** Top remaining smell types after this fix (helpful for planning multi-pass). */
   remainingSmellTypes: string[];
   /**
@@ -213,8 +221,16 @@ export function analyzeForAutoRefactor(
   // Reading currentCode adds 50–200 wasted tokens per call (arXiv 2601.16746).
   const skipCurrentCode = nearTarget && focusLines !== undefined;
 
-  // Hard-stop budget: 5 iterations is the empirical ceiling for diminishing returns.
-  const iterationBudget = 5;
+  // Adaptive budget: most gains in first 2 rounds (arXiv 2604.10508, FeedbackEval 2504.06939).
+  // Easy smells rarely need >2 passes; hard smells may need the full budget.
+  const iterationBudget = successLikelihood === 'easy' ? 3
+    : successLikelihood === 'hard' ? 5
+    : 4; // medium
+
+  // Diff output: when skipCurrentCode is true, focusLines is the full context.
+  // Ask LLM to output only the changed lines — prevents full rewrites that risk regressions.
+  // Research: PAFT (arXiv 2604.03113) — minimal-edit patches reduce unnecessary rewrites.
+  const outputMode: 'diff' | 'full' = skipCurrentCode ? 'diff' : 'full';
 
   // Change scope: tells the LLM how broadly to edit.
   // File-scoped smells require touching all exports; class-scoped smells span multiple methods;
@@ -262,11 +278,20 @@ export function analyzeForAutoRefactor(
   const hardSmellNote = successLikelihood === 'hard'
     ? 'HARD SMELL: Enable extended thinking in claude-opus-4-7 (budget_tokens: 5000) for deeper analysis before coding — significantly improves success rate on complex refactorings. '
     : '';
+  // Diff output: when outputMode is 'diff', request only changed lines (focusLines excerpt).
+  const diffNote = outputMode === 'diff'
+    ? 'OUTPUT: write only the refactored version of focusLines (not the full function) — apply as search-replace on the focus excerpt to preserve untouched lines and save output tokens. '
+    : '';
+  // Typical iteration count by difficulty (arXiv 2604.10508).
+  const typicalNote = successLikelihood === 'easy' ? 'Typically 1–2. '
+    : successLikelihood === 'hard' ? 'Typically 3–5. '
+    : 'Typically 2–3. ';
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       'Apply only the single refactoring in refactoringInstructions using model claude-opus-4-7. ' +
       hardSmellNote +
+      diffNote +
       'Never rename — causes oscillation that undoes quality gains. ' +
       'Preserve all existing code comments. ' +
       scopeNote +
@@ -284,7 +309,8 @@ export function analyzeForAutoRefactor(
       focusNote +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      `Hard stop after ${iterationBudget} iterations. Typically 2–4. ` +
+      `Hard stop after ${iterationBudget} iterations. ` +
+      typicalNote +
       'Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
       'Target: ≥ 9.5.';
 
@@ -300,6 +326,7 @@ export function analyzeForAutoRefactor(
     stagnating,
     nearTarget,
     skipCurrentCode,
+    outputMode,
     iterationBudget,
     changeScope,
     remainingSmellTypes: uniqueRemaining,

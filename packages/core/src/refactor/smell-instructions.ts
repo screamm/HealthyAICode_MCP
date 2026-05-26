@@ -144,7 +144,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
       `5. Verify cyclomatic complexity drops below 10 after extraction.`,
       `VERIFY: Mentally trace 2 representative inputs through the refactored '${fnName}' and confirm identical outputs. Then confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and extract fewer responsibilities.`,
     ],
-    skeletonHint: `function ${fnName}(...args) {\n  const data = prepareData(args);\n  validate(data);\n  const result = computeResult(data);\n  return formatOutput(result);\n}`,
+    skeletonHint: `<after>\nfunction ${fnName}(...args) {\n  const data = prepareData(args);\n  validate(data);\n  const result = computeResult(data);\n  return formatOutput(result);\n}\n</after>`,
     expectedScoreImprovement: 3.0,
   };
 }
@@ -217,8 +217,8 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
         ];
     },
     skeletonHint: ranges.length > 0
-      ? `function ${fnName}(...args) {\n${ranges.map((_, i) => `  handle${capitalize(fnName)}Step${i + 1}(args);`).join('\n')}\n}`
-      : `function ${fnName}(...args) {\n  handleStep1(args);\n  handleStep2(args);\n  handleStep3(args);\n}`,
+      ? `<after>\nfunction ${fnName}(...args) {\n${ranges.map((_, i) => `  handle${capitalize(fnName)}Step${i + 1}(args);`).join('\n')}\n}\n</after>`
+      : `<after>\nfunction ${fnName}(...args) {\n  handleStep1(args);\n  handleStep2(args);\n  handleStep3(args);\n}\n</after>`,
     expectedScoreImprovement: 2.0,
   };
 }
@@ -240,7 +240,7 @@ function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string
       `5. Both resulting functions should have a single, clear responsibility.`,
       `VERIFY: Re-read both functions after applying — confirm (1) behaviour unchanged, (2) no shared mutable state, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and move the split point.`,
     ],
-    skeletonHint: `function ${fnName}(...args) {\n  const intermediate = computeFirstHalf(args);\n  return computeSecondHalf(intermediate);\n}`,
+    skeletonHint: `<after>\nfunction ${fnName}(...args) {\n  const intermediate = computeFirstHalf(args);\n  return computeSecondHalf(intermediate);\n}\n</after>`,
     expectedScoreImprovement: 1.5,
   };
 }
