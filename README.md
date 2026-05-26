@@ -1,27 +1,97 @@
 # Healthy AI Code MCP
 
-> **27 tools • 28 biomarkers • 46 languages (17 full AST + 19 regex + 10 structural) • fully local, no account required**
+> **27 tools · 28 biomarkers · 46 languages · fully local, no account required**
 
-A local MCP server that gives AI assistants objective code health feedback, enabling a self-correcting refactoring loop. The AI refactors until the health score reaches the target level — no human judgment required in the loop.
+A local MCP server that gives AI assistants objective, score-based code health feedback — enabling a self-correcting refactoring loop where the AI keeps iterating until the health score reaches the target.
 
-## Benchmark
+---
 
-Measured on purpose-built unhealthy fixtures (2026-05-25):
+## Verified Benchmarks
 
-| Metric | Mechanical only | With Claude Opus (single pass) |
-|--------|----------------|-------------------------------|
-| Files tested | 17 | 5 |
-| Fix rate (reach ≥ 9.5) | **11.8%** | **20%** |
-| Avg score improvement | +0.27 pts | **+2.04 pts** |
-| Cost | $0 | Included in Pro/Max |
+All numbers come from reproducible runs on purpose-built fixtures. Raw data: [`docs/benchmarks/`](docs/benchmarks/).
 
-**Mechanical benchmark:** `runRefactoringLoop()` applies AST-guided rewrites (extract method, early return, parameter object) with no Claude calls. 11.8% of unhealthy files reach AI-ready status through automation alone. Transformers currently cover TypeScript, JavaScript, and PHP — other languages receive detection but not automated transformation.
+### Mechanical loop — no LLM required
 
-**Claude Opus benchmark:** `code_health_auto_refactor` returns structured instructions (target function, numbered steps, example skeleton). Claude Opus spawns as a subagent and applies them in a single pass — using the user's existing Pro/Max session, no separate API billing. 20% fix rate on first attempt; avg score improvement +2.04 pts. Notable result: `complex.ex` (Elixir, score 5.1) reached 9.6 in one pass (+4.5 pts). Files near the floor (score 3.6) need multiple loop iterations to cross the 9.5 threshold.
+`runRefactoringLoop()` applies AST-guided rewrites (extract method, early return, parameter object) with zero Claude calls.
 
-**Honest context:** CodeScene's "90–100% AI fix rate" includes an LLM iterating over multiple passes with full repo context. Our 20% is a single-pass, single-smell benchmark on isolated fixtures — the multi-iteration loop (`runRefactoringLoop` + Claude) is expected to be substantially higher.
+| Metric | Result |
+|--------|--------|
+| Corpus | 17 unhealthy fixture files, 12 languages |
+| Fix rate (score < 9.0 → ≥ 9.5) | **11.8%** (2 / 17) |
+| Average score improvement | **+0.27 pts** |
+| Median iterations to fix | 3 |
+| Cost | **$0** |
 
-Full methodology: [`docs/benchmarks/refactoring-loop-benchmark.md`](docs/benchmarks/refactoring-loop-benchmark.md) · [`docs/benchmarks/claude-refactoring-benchmark.md`](docs/benchmarks/claude-refactoring-benchmark.md)
+Language coverage is the constraint: TypeScript, JavaScript, and PHP have working transformers; Go, Python, Ruby, Rust, Elixir, and Swift receive smell detection but no automated rewrites yet.
+
+### Claude Opus — single pass
+
+`code_health_auto_refactor` returns structured instructions (function name, numbered steps, example skeleton). Claude Opus applies them in one pass, using your existing Pro/Max session — no separate billing.
+
+| Metric | Result |
+|--------|--------|
+| Corpus | 5 files with actionable smells |
+| Fix rate (→ ≥ 9.5, single pass) | **20%** (1 / 5) |
+| Average score improvement | **+2.04 pts** |
+| Best single-pass result | `complex.ex` (Elixir) 5.1 → **9.6** (+4.5 pts) |
+| Cost | **Included in Claude Pro/Max** |
+
+Near-misses in a single pass: `Complex.cs` (C#) 5.5 → 8.7 (+3.2 pts). These cross the threshold on the second iteration.
+
+### Claude Opus — multi-iteration loop
+
+Running `code_health_auto_refactor → apply → code_health_review` until `loopComplete: true`:
+
+| File | Language | Start | End | Iterations |
+|------|----------|-------|-----|------------|
+| `bumpy-road-fixture.ts` | TypeScript | 8.9 | **10.0** | 2 |
+| `Complex.java` | Java | 5.5 | **10.0** | 6 |
+
+Files near the scoring floor (< 5.0) need more passes and benefit from targeting the highest-weight smell first (enforced since Sprint 34).
+
+### Test suite
+
+| Package | Test files | Tests | Status |
+|---------|-----------|-------|--------|
+| `@healthy-ai-code/core` | 80 | 895 | ✅ all passing |
+| `@healthy-ai-code/mcp-server` | 20 | 118 | ✅ all passing |
+| **Total** | **100** | **1 013** | ✅ |
+
+Run: `pnpm test`
+
+---
+
+## Self-Correcting Loop
+
+```
+code_health_review (or code_health_score for quick screen)
+        │
+        ▼
+score ≥ 9.5? ──Yes──→ loopComplete: true — stop
+        │
+        No
+        ▼
+code_health_auto_refactor
+  returns: smell type, target function, numbered steps, example skeleton,
+           predicted score delta, remaining smell queue
+        │
+        ▼
+Claude Opus 4.7 subagent applies the targeted refactoring
+  (model: claude-opus-4-7 — highest fix rate on structured instructions)
+        │
+        ▼
+code_health_review (verify improvement)
+        │
+        ▼
+loopComplete: true? ──Yes──→ done
+        │
+        No  (minimum 3 iterations; most files need 3–5)
+        └──────────────────→ code_health_auto_refactor (next smell)
+```
+
+The tool response is structured for reasoning-first consumption: `followUpInstruction` and `refactoringInstructions` appear before the code block so the agent reads context before applying changes.
+
+---
 
 ## Installation
 
@@ -31,9 +101,9 @@ Full methodology: [`docs/benchmarks/refactoring-loop-benchmark.md`](docs/benchma
 claude mcp add healthy-ai-code -s user -- npx @healthy-ai-code/mcp-server
 ```
 
-Verify with `claude mcp get healthy-ai-code`.
+Verify: `claude mcp get healthy-ai-code`
 
-For local development, point at the built entry directly:
+For local development:
 
 ```bash
 claude mcp add healthy-ai-code -s user -- node /absolute/path/to/packages/mcp-server/dist/index.js
@@ -41,11 +111,9 @@ claude mcp add healthy-ai-code -s user -- node /absolute/path/to/packages/mcp-se
 
 ### VS Code
 
-The repository ships a `.vscode/mcp.json` that activates the server automatically when you open the project. No extra steps needed — just open the folder in VS Code with the Claude extension installed.
+The repository ships `.vscode/mcp.json` — opening the folder with the Claude extension installed is sufficient.
 
 ### Cursor, Claude Desktop, and other MCP clients
-
-Add to your client's MCP configuration file:
 
 ```json
 {
@@ -66,352 +134,292 @@ docker build -t healthy-ai-code-mcp .
 docker run --rm -i healthy-ai-code-mcp
 ```
 
-Point your MCP client at the container by replacing `command` / `args` with:
-
 ```json
-{
-  "command": "docker",
-  "args": ["run", "--rm", "-i", "healthy-ai-code-mcp"]
-}
+{ "command": "docker", "args": ["run", "--rm", "-i", "healthy-ai-code-mcp"] }
 ```
 
-### Homebrew (macOS)
-
-```bash
-brew tap YOUR_USERNAME/healthy-ai-code-mcp
-brew install healthy-ai-code-mcp
-```
-
-See `Formula/README.md` for tap setup and SHA256 update instructions for new releases.
-
-### Windows (PowerShell)
-
-```powershell
-irm https://raw.githubusercontent.com/YOUR_USERNAME/healthy-ai-code-mcp/master/install.ps1 | iex
-```
-
-The script checks for Node ≥ 18, installs the server globally via npm, and prints config snippets for Claude Code, Claude Desktop, VS Code, and Cursor.
+---
 
 ## Agent Setup
 
-Copy `AGENTS.md` to the root of each repository where you want AI-guided health enforcement. This file instructs agents to run health checks before and after every change and blocks commits on files scoring below 7.0.
+Copy `AGENTS.md` to the root of any repository where you want health enforcement. It instructs agents to run health checks before and after every change and blocks commits on files scoring below 7.0.
 
-## Skills
+---
 
-The `skills/` directory contains nine prompt templates that teach AI assistants specific code health workflows. Drop the relevant skill into your system prompt or reference it via your AI client's prompt library:
+## Tools (27)
 
-| Skill | Purpose |
-|-------|---------|
-| `installing-and-configuring` | First-time setup and configuration |
-| `explaining-code-health` | Audience-specific explanations (dev / tech lead / PM) |
-| `safeguarding-ai-generated-code` | Mandatory 3-gate review protocol for AI output |
-| `guided-refactoring` | Score-driven refactoring loop |
-| `making-the-business-case` | ROI calculation and stakeholder presentation |
-| `code-health-review-workflow` | Single-file and PR review workflows |
-| `knowledge-risk-assessment` | Bus factor and temporal coupling analysis |
-| `prioritizing-technical-debt` | Health × frequency priority matrix for backlog |
-| `pre-commit-protection` | Manual, Git hook, and CI/CD protection levels |
+### Review loop
 
-## Tools
-
-### Core review loop
-
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_score` | `filePath` | Quick health score for screening |
-| `code_health_review` | `filePath` | Detailed review with smell breakdown and refactoring guidance |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_score` | `filePath` | Quick score for screening |
+| `code_health_review` | `filePath`, `repoPath?` | Detailed review with smell breakdown and next-action |
 | `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Gate files before commit |
-| `analyze_change_set` | `repoPath`, `baseBranch` | Check full branch diff before PR |
+| `analyze_change_set` | `repoPath`, `baseBranch` | Check full branch diff before PR merge |
 
 ### Refactoring
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_auto_refactor` | `filePath` | Returns primary refactoring target with code context and step-by-step instructions |
-| `code_health_auto_refactor_apply` | `filePath` | Applies a mechanical refactoring and **writes the file back to disk** — returns before/after score and diff |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_auto_refactor` | `filePath`, `targetSmell?` | Returns structured refactoring instructions for worst smell |
+| `code_health_auto_refactor_apply` | `filePath` | Applies mechanical rewrite and writes file back — returns before/after score |
 | `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring investment |
 
 ### Temporal and organisational
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_hotspots` | `repoPath` | Top-N files ranked by complexity × churn over a configurable lookback window |
-| `code_health_trend_analysis` | `repoPath`, `filePaths[]` | Complexity slope per file over time (rising / stable / declining) |
-| `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, and file-level temporal coupling |
-| `code_health_bus_factor` | `projectPath` | Bus factor (Shannon entropy), sprint congestion, and knowledge-loss index |
-| `code_health_method_coupling` | `filePath` | Method pairs that co-change in git history (≥4 co-changes, ≥10 commit history) — included in score when repoPath is provided |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_hotspots` | `repoPath` | Top-N files by complexity × churn |
+| `code_health_trend_analysis` | `repoPath`, `filePaths[]` | Complexity slope per file over time |
+| `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, temporal coupling |
+| `code_health_bus_factor` | `projectPath` | Bus factor (Shannon entropy), sprint congestion, knowledge-loss index |
+| `code_health_method_coupling` | `filePath` | Method pairs that co-change in git history |
 
 ### Architecture
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_architecture_debt` | `directory` | FAN-IN/OUT, instability, propagation cost, and dependency cycles |
-| `code_health_architecture_report` | `directory` | Generates a self-contained interactive HTML dependency graph (force-directed, offline) |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_architecture_debt` | `directory` | FAN-IN/OUT, instability, propagation cost, dependency cycles |
+| `code_health_architecture_report` | `directory` | Self-contained interactive HTML dependency graph (offline) |
 
 ### AI-specific
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_ai_readiness` | `directory` | Composite AI-Readiness Score — naming clarity, type coverage, context-window fit, doc signal, modularity |
-| `code_health_ai_audit` | `filePath` | Detects AI-specific smells: AbstractionLeakage, HardcodedAssumption, MissingEdgeCase, StyleInconsistency |
-| `code_health_model_benchmark` | `model_name`, `generated_code`, `reference_code` | Compares AI-generated code against a human baseline; tracks per-model quality history |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_ai_readiness` | `directory` | Composite AI-Readiness Score — naming, types, context fit, docs, modularity |
+| `code_health_ai_audit` | `filePath` | AbstractionLeakage, HardcodedAssumption, MissingEdgeCase, StyleInconsistency |
+| `code_health_model_benchmark` | `model_name`, `generated_code`, `reference_code` | Tracks per-model quality history |
 
 ### Security
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_security_audit` | `directory` | Static analysis for SQL injection, XSS, command injection, path traversal, hardcoded secrets — SARIF or summary output |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_security_audit` | `directory` | SQL injection, XSS, command injection, path traversal, hardcoded secrets — SARIF or summary |
 
 ### Debt management
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_debt_goal_set` | `filePath`, `goalType` | Create or update a debt goal for a file (`planned_refactoring` / `supervise` / `accepted` / `no_problem`) |
-| `code_health_debt_goals_list` | `filePath?` | List tracked debt goals, optionally filtered by file or status |
-| `code_health_debt_goal_remove` | `filePath` | Remove a debt goal |
-| `code_health_debt_goals_report` | `projectDir?` | Generate a report of all goals with current health scores |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_debt_goal_set` | `filePath`, `goalType` | Create or update a debt goal (`planned_refactoring` / `supervise` / `accepted` / `no_problem`) |
+| `code_health_debt_goals_list` | `filePath?` | List tracked goals, optionally filtered by file |
+| `code_health_debt_goal_remove` | `filePath` | Remove a goal |
+| `code_health_debt_goals_report` | `projectDir?` | Report all goals with current health scores |
 
 ### Calibration and validation
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `code_health_calibration_status` | *(none)* | Show which empirical calibration overlays are active |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `code_health_calibration_status` | — | Show active empirical calibration overlays |
 | `validate_dataset` | `datasetPath` | Validate a benchmark dataset against health scores |
 
 ### Configuration and education
 
-| Tool | Input | Purpose |
-|------|-------|---------|
-| `get_config` | *(none)* | Read current server configuration |
-| `set_config` | key, value | Persist a configuration value |
-| `explain_code_health` | *(none)* | What is code health? |
-| `explain_code_health_productivity` | *(none)* | Health → productivity link |
+| Tool | Input | What it does |
+|------|-------|-------------|
+| `get_config` | — | Read current server configuration |
+| `set_config` | `key`, `value` | Persist a configuration value |
+| `explain_code_health` | — | What is code health? |
+| `explain_code_health_productivity` | — | Health → productivity link |
 
-### Configuration keys
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `healthyThreshold` | number 1–10 | Minimum score for the healthy (green) category. Default: `9.0` |
-| `aiReadyThreshold` | number 1–10 | Minimum score for `loopComplete: true`. Default: `9.5` |
-| `defaultBranch` | string | Base branch used by `analyze_change_set`. Default: `main` |
-| `projectName` | string | Project name shown in reports |
-| `useCalibratedThresholds` | boolean | Opt-in empirically validated thresholds (Java only). Default: `false`. See `docs/calibration/`. |
+---
 
 ## Biomarkers (28)
 
-Healthy AI Code detects 28 code health biomarkers.
+### Method-level
 
-### Core smells
-| Biomarker | Description |
-|-----------|-------------|
-| `ComplexMethod` | Cyclomatic complexity above threshold |
-| `LongMethod` | Functions exceeding line-length limits |
-| `LargeClass` | Classes with too many responsibilities |
-| `LongParameterList` | Functions with excessive parameter counts |
-| `DeepNesting` | Deeply nested control structures |
-| `PrimitiveObsession` | Overuse of primitive types as parameters |
-| `SpeculativeGenerality` | Unused abstractions and over-engineering |
+| Biomarker | Weight | Description |
+|-----------|--------|-------------|
+| `ComplexMethod` | 1.5 | Cyclomatic complexity above threshold |
+| `BrainMethod` | 1.2 | Compound smell — multiple severe method-level issues |
+| `DeepNesting` | 1.2 | Nesting depth > 3 |
+| `BumpyRoad` | 0.8 | Sequential sibling control-flow chunks — extract-chunk candidate |
+| `CognitiveComplexity` | 0.8 | SonarSource S3776 cognitive complexity |
+| `LargeMethod` | 0.6 | Function exceeds line-length limit |
+| `ComplexConditional` | 0.5 | Nested ternaries and long boolean chains |
+| `LongParameterList` | 0.4 | Excessive parameter count |
+| `MagicNumber` | 0.4 | Unexplained numeric or string literals |
+| `LowDocCoverage` | 0.3 | Insufficient documentation on public APIs |
 
-### Cognitive & type safety
-| Biomarker | Description |
-|-----------|-------------|
-| `CognitiveComplexity` | SonarSource S3776 cognitive complexity metric |
-| `TypeSafetyEscape` | Use of `any`, `@ts-ignore`, or unsafe casts |
-| `MagicNumber` | Unexplained numeric or string literals — all tiers |
-| `LowDocCoverage` | Insufficient documentation on public APIs |
+### Class / module level
 
-### Duplication & structure
-| Biomarker | Description |
-|-----------|-------------|
-| `Duplication` | Token-fingerprint Jaccard similarity detection |
-| `LanguageMix` | Mixed natural languages reducing AI readability |
-| `DeadExports` | Exported symbols never referenced outside their module |
+| Biomarker | Weight | Description |
+|-----------|--------|-------------|
+| `GodClass` | 1.5 | ATFD + WMC + LCOM4 composite detector |
+| `KnowledgeLoss` | 1.0 | Bus factor / DOA — code known only by departed contributors |
+| `FeatureEnvy` | 0.7 | Method more interested in other classes' data |
+| `TypeSafetyEscape` | 0.7 | `any`, `@ts-ignore`, unsafe casts |
+| `SATD` | 0.6 | Self-Admitted Technical Debt (`TODO` / `FIXME` / `HACK`) |
+| `LargeFile` | 0.3 | File exceeds size limit |
+| `MethodTemporalCoupling` | 0.3 | Method pairs that co-change in git history |
 
-### Hotspot & compound smells
-| Biomarker | Description |
-|-----------|-------------|
-| `Hotspot` | High commit frequency × high complexity (change-risk index) |
-| `BrainMethod` | Compound smell combining multiple severe method-level issues |
-| `BumpyRoad` | A single function with multiple sequential sibling control-flow chunks — chunk-based detection (per-function), candidate for chunk-extraction refactoring |
-| `TestProximity` | Insufficient test coverage near changed code |
+### Organisational / temporal
 
-### Conditionals & coupling
-| Biomarker | Description |
-|-----------|-------------|
-| `ComplexConditional` | Nested ternaries and long boolean chains |
-| `MessageChain` | Law of Demeter violations (train-wreck calls) |
-| `DataClumps` | Recurring groups of parameters/fields that belong together |
-| `SATD` | Self-Admitted Technical Debt (`TODO`, `FIXME`, `HACK` comments) — all tiers |
+| Biomarker | Weight | Description |
+|-----------|--------|-------------|
+| `DeveloperCongestion` | 0.7 | Too many developers touching the same module |
+| `CodeChurn` | 0.6 | Nagappan & Ball churn — frequently rewritten code |
+| `DataClumps` | 0.5 | Recurring groups of parameters / fields |
+| `MessageChain` | 0.5 | Law of Demeter violations (train-wreck calls) |
+| `TestProximity` | 0.5 | Insufficient test coverage near changed code |
+| `PrimitiveObsession` | 0.5 | Overuse of primitives as parameters |
+| `LowMaintainability` | 0.4 | Halstead volume + CC + LOC composite index |
 
-### OO design metrics
-| Biomarker | Description |
-|-----------|-------------|
-| `GodClass` | ATFD + WMC + LCOM4 composite god-class detector |
-| `FeatureEnvy` | Methods more interested in other classes' data than their own |
-| `LowMaintainability` | Halstead volume + cyclomatic complexity + LOC composite index |
+### Security
 
-### Temporal & organisational
-| Biomarker | Description |
-|-----------|-------------|
-| `CodeChurn` | Nagappan & Ball churn metric — frequently rewritten code |
-| `TemporalCoupling` | Files that change together more than their dependencies suggest |
-| `DeveloperCongestion` | Too many developers touching the same module |
-| `KnowledgeLoss` | Bus factor / DOA — code known only by departed contributors |
-| `MethodTemporalCoupling` | Method pairs that co-change in git history — requires `repoPath` in code_health_review |
+| Biomarker | Weight | Description |
+|-----------|--------|-------------|
+| `HardcodedCredential` | 2.0 | Plaintext passwords, tokens, connection strings |
+| `HardcodedApiKey` | 2.0 | API keys and secrets in source |
+| `SqlInjectionRisk` | 1.5 | Unsanitised SQL string interpolation |
+| `XssRisk` | 1.5 | Unsanitised HTML rendering |
+| `CommandInjectionRisk` | 1.5 | Shell command with user-controlled input |
 
-## Supported Languages
+---
 
-| Tier | Languages | Analysis |
-|------|-----------|----------|
-| **A — Full AST** | TypeScript, JavaScript, Python, Java, C#, Kotlin, Scala, Swift, Ruby, Rust, Go, PHP, Vue.js, Elixir, Haskell, Julia, OCaml | Cyclomatic complexity, cognitive complexity, function analysis, all 28 biomarkers (language-profile biomarkers vary by language) |
-| **B — Regex** | Bash, Lua, R, Clojure, Dart, C, C++, COBOL, Apex, F#, VB.NET, Perl, Groovy, Objective-C, PowerShell, Erlang, Zig, Nim, Crystal | Function extraction, cyclomatic complexity, SATD, Magic Numbers |
-| **C — Structural** | YAML, JSON, Dockerfile, HCL/Terraform, Makefile, SQL, HTML, CSS, Markdown, TOML | LOC, LargeFile, SATD |
+## Supported Languages (46)
 
-See `docs/language-coverage-matrix.md` for a per-language biomarker coverage matrix.
+### Tier A — Full AST (tree-sitter) · 17 languages
 
-## Health Score Scale
+TypeScript, JavaScript, Python, Java, C#, Kotlin, Scala, Swift, Ruby, Rust, Go, PHP, Vue.js, Elixir, Haskell, Julia, OCaml
+
+All 28 biomarkers available. Language-profile biomarkers (GodClass, FeatureEnvy, DataClumps) vary by language. Elixir is function-oriented (def/defp, no class analog). Swift is lazy-loaded and falls back to empty metrics if `tree-sitter-swift` is absent.
+
+### Tier B — Regex · 19 languages
+
+Bash, Lua, R, Clojure, Dart, C, C++, COBOL, Apex, F#, VB.NET, Perl, Groovy, Objective-C, PowerShell, Erlang, Zig, Nim, Crystal
+
+Function extraction, cyclomatic complexity, SATD, MagicNumber. Method temporal coupling is also available for Tier B via regex-extracted function ranges.
+
+### Tier C — Structural · 10 formats
+
+YAML, JSON, Dockerfile, HCL/Terraform, Makefile, SQL, HTML, CSS, Markdown, TOML
+
+LOC, LargeFile, SATD only.
+
+---
+
+## Health Score
+
+### Scale
 
 | Score | Category | Meaning |
 |-------|----------|---------|
-| 9.5–10.0 | Green | AI-ready — loop complete |
+| 9.5–10.0 | Green | AI-ready (`loopComplete: true`) |
 | 9.0–9.4 | Green | Healthy |
 | 6.0–8.9 | Yellow | Technical debt present |
 | 1.0–5.9 | Red | Severe technical debt |
 
-## Scoring Formula
-
-Each detected smell deducts points from a base score of 10.0 using a progressive formula:
+### Formula
 
 ```
-deduction = weight × √count   (per smell type)
+score = 10 − Σ (weight × √count)   per smell type
+floor = 1.0
 ```
 
-Multiple smells of the same type compound progressively — two `ComplexMethod` smells hurt more than one, but the penalty grows sub-linearly (square root), reflecting that a few extra smells are worse than none, but the file isn't four times as bad as having one. The floor is always 1.0.
+The square-root term makes penalties sub-linear: three `ComplexMethod` smells deduct `1.5 × √3 ≈ 2.6` points, not `1.5 × 3 = 4.5`. Smells are prioritised by weight when choosing the next refactoring target, so each iteration maximises score gain.
 
-## Empirical Calibration (Opt-in)
+---
 
-The default thresholds are industry-standard values. An opt-in empirically validated overlay is available for Java, derived from the Defects4J defect dataset.
+## Example Tool Response
 
-Enable with:
+```json
+{
+  "followUpInstruction": "Apply the refactoringInstructions using model claude-opus-4-7. Then run code_health_review to verify. Loop until loopComplete: true (score ≥ 9.5). Minimum 3 iterations — most files need 3–5 passes.",
+  "smell": { "type": "ComplexMethod", "severity": "high", "functionName": "validateUser", "line": 42 },
+  "refactoringStrategy": "extract_method",
+  "refactoringInstructions": [
+    "1. Identify logically cohesive sections within 'validateUser'.",
+    "2. Extract lines 42–55 into 'validateUserInput'.",
+    "3. Extract lines 56–70 into 'checkUserPermissions'.",
+    "4. Replace each block with a call to the new helper.",
+    "5. Ensure 'validateUser' now reads as a sequence of named calls."
+  ],
+  "predictedScoreDelta": "+2.5",
+  "remainingSmellTypes": ["DeepNesting", "LowDocCoverage"],
+  "currentHealthScore": 5.2,
+  "targetFunction": "validateUser",
+  "currentCode": "function validateUser(...) { ... }"
+}
+```
+
+---
+
+## Empirical Calibration (opt-in)
+
+Validated thresholds derived from the Defects4J Java defect dataset. Active for Java only.
 
 ```
 set_config useCalibratedThresholds true
 ```
 
-See `docs/calibration/README.md` for methodology and ROC/AUC validation.
+See [`docs/calibration/`](docs/calibration/) for methodology and ROC/AUC results.
 
-## Self-Correcting Loop
+---
 
-```
-AI runs code_health_score (quick screen)
-        ↓
-score ≥ 9.5? ──Yes──→ AI runs pre_commit_code_health_safeguard
-        │
-        No
-        ↓
-AI runs code_health_auto_refactor
-  (returns primary target + code context + step-by-step instructions)
-        ↓
-Claude Opus 4.7 subagent applies the targeted refactoring
-  (model: claude-opus-4-7 — highest fix rate on structured refactoring)
-        ↓
-AI runs code_health_review (verify improvement)
-        ↓
-loopComplete: true? ──Yes──→ pre_commit_code_health_safeguard
-        │
-        No
-        └──────────────────→ repeat from code_health_auto_refactor
-```
+## Skills
 
-## Example Response
+Nine prompt templates for common workflows in `skills/`:
 
-When a file has problems, every tool response includes explicit next-step instructions:
+| Skill | Purpose |
+|-------|---------|
+| `installing-and-configuring` | First-time setup |
+| `explaining-code-health` | Audience-specific explanations (dev / lead / PM) |
+| `safeguarding-ai-generated-code` | Mandatory 3-gate review for AI output |
+| `guided-refactoring` | Score-driven refactoring loop |
+| `making-the-business-case` | ROI calculation and stakeholder framing |
+| `code-health-review-workflow` | Single-file and PR review workflows |
+| `knowledge-risk-assessment` | Bus factor and temporal coupling analysis |
+| `prioritizing-technical-debt` | Health × frequency priority matrix |
+| `pre-commit-protection` | Manual, Git hook, and CI/CD protection levels |
 
-```json
-{
-  "score": 4.2,
-  "category": "red",
-  "loopComplete": false,
-  "nextAction": {
-    "action": "refactor",
-    "instruction": "Refactor 'validateUser' to reduce cyclomatic complexity from 18 to under 10. Extract logic into separate helper functions. Then run code_health_review again.",
-    "priority": { "smell": "ComplexMethod", "function": "validateUser" },
-    "toolToCallAfter": "code_health_review"
-  }
-}
-```
-
-## Self-Audit
-
-This project uses its own MCP server to monitor its own code health. Current status:
-
-```
-63 / 63 files — 10/10 (green)   ✓ AI-ready
-```
-
-Run the audit yourself:
-
-```bash
-node scripts/health-audit.mjs
-```
+---
 
 ## Local Development
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run all tests
-pnpm test
-
-# Run only core tests
-pnpm --filter @healthy-ai-code/core test
-
-# Run only MCP server tests
-pnpm --filter @healthy-ai-code/mcp-server test
-
-# Typecheck all packages
-pnpm -r typecheck
-
-# Run the self-audit script
-node scripts/health-audit.mjs
+pnpm install          # install dependencies
+pnpm build            # build all packages
+pnpm test             # run all 1 013 tests
+pnpm -r typecheck     # TypeScript check all packages
+pnpm --filter @healthy-ai-code/core test        # core tests only
+pnpm --filter @healthy-ai-code/mcp-server test  # MCP server tests only
+node scripts/health-audit.mjs                   # self-audit
 ```
+
+---
 
 ## Project Structure
 
 ```
 healthy-ai-code-mcp/
 ├── packages/
-│   ├── core/                    # @healthy-ai-code/core
+│   ├── core/                     # @healthy-ai-code/core — all analysis logic
 │   │   ├── src/
-│   │   │   ├── analyzers/       # Language-specific AST parsers
-│   │   │   ├── metrics/         # Individual metrics
-│   │   │   ├── scoring/         # Score aggregation
-│   │   │   ├── smells/          # Code smell detectors
-│   │   │   ├── temporal/        # Git-history biomarkers
-│   │   │   └── index.ts         # Public API
-│   │   └── tests/
-│   │       └── fixtures/        # healthy/ unhealthy/ edge-cases/
-│   └── mcp-server/              # @healthy-ai-code/mcp-server
+│   │   │   ├── analyzers/        # Language-specific AST + regex parsers (46 languages)
+│   │   │   ├── refactor/         # auto-refactor-analyzer, smell-instructions, loop
+│   │   │   ├── scoring/          # weights, scorer, calibration
+│   │   │   ├── smells/           # 28 biomarker detectors
+│   │   │   ├── temporal/         # git-history biomarkers
+│   │   │   ├── validation/       # dataset runner, correlation metrics
+│   │   │   └── index.ts          # public API
+│   │   └── tests/                # 80 test files, 895 tests
+│   └── mcp-server/               # @healthy-ai-code/mcp-server — MCP wire protocol
 │       ├── src/
-│       │   ├── tools/           # One file per MCP tool
-│       │   ├── server.ts
-│       │   └── index.ts         # Entry point (bin)
-│       └── tests/
-│           └── integration/
-├── skills/                      # AI prompt templates for workflows
-├── Formula/                     # Homebrew formula
-├── scripts/                     # Development and audit scripts
-├── .vscode/mcp.json             # VS Code MCP auto-configuration
-├── Dockerfile                   # Multi-stage Docker build
-├── install.ps1                  # Windows PowerShell installer
-├── server.json                  # MCP registry schema
-├── AGENTS.md                    # Copy to your repo root
-└── README.md
+│       │   ├── tools/            # one file per MCP tool (27 tools)
+│       │   └── server.ts         # tool registration
+│       └── tests/                # 20 test files, 118 tests
+├── docs/
+│   ├── benchmarks/               # refactoring-loop-benchmark.md + JSON, claude-benchmark
+│   └── calibration/              # Defects4J-derived Java threshold validation
+├── before-after/                 # real before/after files from refactoring runs
+├── skills/                       # 9 AI prompt templates
+├── scripts/                      # health-audit, benchmark, loop test scripts
+├── AGENTS.md                     # copy to your repo root for agent health enforcement
+├── CLAUDE.md                     # codebase reference for AI assistants
+└── server.json                   # MCP registry schema
 ```
+
+---
 
 ## License
 
