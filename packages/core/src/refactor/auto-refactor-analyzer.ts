@@ -258,10 +258,15 @@ export function analyzeForAutoRefactor(
     : focusLines
     ? 'focusLines is the primary context — consult currentCode only if more context is needed. '
     : '';
+  // Hard smells benefit from extended thinking: +42.86% on complex reasoning tasks (2025 research).
+  const hardSmellNote = successLikelihood === 'hard'
+    ? 'HARD SMELL: Enable extended thinking in claude-opus-4-7 (budget_tokens: 5000) for deeper analysis before coding — significantly improves success rate on complex refactorings. '
+    : '';
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       'Apply only the single refactoring in refactoringInstructions using model claude-opus-4-7. ' +
+      hardSmellNote +
       'Never rename — causes oscillation that undoes quality gains. ' +
       'Preserve all existing code comments. ' +
       scopeNote +
@@ -272,6 +277,7 @@ export function analyzeForAutoRefactor(
       'Stop immediately if stagnating: true — accept current score.'
     : 'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       'Apply the refactoringInstructions using model claude-opus-4-7. ' +
+      hardSmellNote +
       'Never rename variables or functions — causes oscillation. ' +
       'Preserve all existing code comments. ' +
       scopeNote +
