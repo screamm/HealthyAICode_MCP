@@ -17,11 +17,12 @@ export function registerAutoRefactor(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_auto_refactor',
     'Returns structured refactoring instructions for the highest-priority smell in a source file. ' +
-      'Output fields (reasoning-first order): followUpInstruction, smell, refactoringStrategy, ' +
+      'Output fields (reasoning-first order): followUpInstruction (read first), smell, refactoringStrategy, ' +
       'refactoringInstructions (numbered steps), exampleSkeleton, predictedScoreDelta, ' +
-      'remainingSmellTypes (next smells to fix), then currentCode block. ' +
-      'Apply using model claude-opus-4-7. Verify with code_health_review. ' +
-      'Repeat until loopComplete: true (score ≥ 9.5) — minimum 3 iterations, typically 3–5.',
+      'remainingSmellTypes (next smells to fix), then currentCode/focusLines context. ' +
+      'Follow followUpInstruction exactly — it specifies model, effort level, and stop conditions. ' +
+      'Verify with code_health_review after each change. Stop when loopComplete: true (score ≥ 9.5) ' +
+      'or stagnating: true or score Δ < 0.1 — do NOT continue past these signals.',
     {
       filePath: z.string().describe('Absolute or relative path to the file to refactor'),
       language: z

@@ -87,7 +87,9 @@ export interface AutoRefactorResult {
    * 'medium' — 50–80 % (ComplexMethod, DeepNesting, LargeMethod, …)
    * 'hard'   — <50 % (GodClass, FeatureEnvy, BrainMethod, SATD)
    * If the current smell is 'hard' and stagnating, prefer switching to an easier co-located smell.
-   * Research: EM-Assist (arXiv 2401.15298) 53.4 % recall; SATD repayment only 10 % EM (arXiv 2501.09888).
+   * Research: EM-Assist (arXiv 2401.15298) 53.4 % recall; SmellBench (arXiv 2605.07001) 47.7 %
+   * best-case resolution; SATD repayment only 10 % EM (arXiv 2501.09888).
+   * Thinking effort scales with difficulty: easy→low, medium→medium, hard→high, hard+score<5→max.
    */
   successLikelihood: 'easy' | 'medium' | 'hard';
 }
@@ -153,7 +155,10 @@ export function analyzeForAutoRefactor(
 
   // For large functions, compute a focused excerpt around the smell's line.
   // Research (CigaR 2024): targeted context narrowing reduces token cost by up to 73 %.
-  const FOCUS_WINDOW = 8;
+  // Near target (score ≥ 9.0): skipCurrentCode will be set, so focusLines MUST cover enough
+  // context for the surgical fix without reading currentCode.
+  // Research: "containing method body is the right unit" — ±20 lines is sufficient for targeted fixes.
+  const FOCUS_WINDOW = result.score >= 9.0 ? 20 : 8;
   const LARGE_FN_THRESHOLD = 40;
   const focusLines = functionLineCount > LARGE_FN_THRESHOLD
     ? (() => {
@@ -275,11 +280,17 @@ export function analyzeForAutoRefactor(
     ? 'focusLines is the primary context — consult currentCode only if more context is needed. '
     : '';
   // Adaptive thinking effort for Claude Opus 4.x — budget_tokens is deprecated since March 2026.
-  // nearTarget → "low" (surgical 1-line change, no deep planning needed).
-  // hard        → "high" (complex structural refactoring, max reasoning budget).
-  // else        → "medium" (default was silently lowered in March 2026; be explicit).
-  const effortParam = nearTarget ? '"low"'
-    : successLikelihood === 'hard' ? '"high"'
+  // nearTarget          → "low"  (surgical 1-line change, no deep planning needed).
+  // hard + score < 5   → "max"  (architectural debt — GodClass/BrainMethod on near-untestable code).
+  // hard               → "high" (complex structural refactoring, max reasoning budget).
+  // else               → "medium" (default was silently lowered in March 2026; be explicit).
+  // Note: Opus 4.7 supports effort: "xhigh" for sustained deep reasoning across long loops.
+  const effortParam = nearTarget
+    ? '"low"'
+    : (successLikelihood === 'hard' && result.score < 5)
+    ? '"max"'
+    : successLikelihood === 'hard'
+    ? '"high"'
     : '"medium"';
   const modelNote = `claude-opus-4-7 with thinking effort: ${effortParam}`;
 
@@ -295,31 +306,43 @@ export function analyzeForAutoRefactor(
   const typicalNote = successLikelihood === 'easy' ? 'Typically 1–2. '
     : successLikelihood === 'hard' ? 'Typically 3–5. '
     : 'Typically 2–3. ';
+  // Convergence noise floor (CodeScene empirical calibration): stop if score delta < 0.1.
+  // Research: arXiv 2602.21833 — structural metrics stabilise after iteration 2; gains < 0.1
+  // are statistical noise. Prevents wasted iterations on files that have already converged.
+  const deltaNote = 'Also stop if score Δ < 0.1 between iterations — convergence noise floor. ';
+  // Constraint re-injection per turn prevents "constraint decay" in long agentic loops.
+  // Research: arXiv 2605.06445 — constraints weaken as context grows; re-stating each call prevents drift.
+  const preserveNote = 'Preserve: public API signatures, all imports, all existing tests, inline comments. ';
+  // Explicitly naming the strategy raises LLM success rate from 15.6 % to 86.7 %
+  // (arXiv 2511.21788): telling the model which specific refactoring to apply
+  // rather than "improve code quality" prevents superficial or wrong transforms.
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
-      `Apply only the single refactoring in refactoringInstructions using model ${modelNote}. ` +
+      `Apply ${strategyLabel} (refactoringInstructions) using model ${modelNote}. ` +
       hardSmellNote +
       diffNote +
       'Never rename — causes oscillation that undoes quality gains. ' +
-      'Preserve all existing code comments. ' +
+      preserveNote +
       scopeNote +
       focusNote +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
       `Hard stop after ${iterationBudget} total iterations. ` +
+      deltaNote +
       'Stop immediately if stagnating: true — accept current score.'
     : 'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
-      `Apply the refactoringInstructions using model ${modelNote}. ` +
+      `Apply ${strategyLabel} (refactoringInstructions) using model ${modelNote}. ` +
       hardSmellNote +
       'Never rename variables or functions — causes oscillation. ' +
-      'Preserve all existing code comments. ' +
+      preserveNote +
       scopeNote +
       focusNote +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
       `Hard stop after ${iterationBudget} iterations. ` +
       typicalNote +
+      deltaNote +
       'Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
       'Target: ≥ 9.5.';
 
@@ -356,22 +379,39 @@ export function analyzeForAutoRefactor(
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
 /**
- * Returns the highest-priority smell: severity first (critical > high > medium > low),
- * then by score weight (higher weight = more score impact = fix first).
- * Derived metrics (LowMaintainability) are deprioritised — they resolve automatically
- * once their root-cause smells are addressed.
+ * Returns the highest-priority smell using severity first, then marginal score gain.
+ *
+ * Marginal gain = w × (√n − √(n-1)) where n = count of that smell type in this file.
+ * Because the scoring formula uses √count, fixing the FIRST instance of a smell type
+ * returns w (full weight), while fixing a 4th instance returns only ≈0.27w — so one
+ * high-weight unique smell is worth more than the same smell type appearing many times.
+ * Research: score formula derivation; arXiv 2604.10508 confirms most gains in first pass.
+ *
+ * Derived metrics (LowMaintainability, temporal smells) are deprioritised — they resolve
+ * automatically once their root-cause smells are addressed.
  */
 function pickWorst(smells: Smell[]): Smell | null {
   if (smells.length === 0) return null;
+
+  // Precompute per-type count so we can compute marginal gain for each smell.
+  const typeCounts = new Map<string, number>();
+  for (const s of smells) typeCounts.set(s.type, (typeCounts.get(s.type) ?? 0) + 1);
+
+  // Marginal gain: fixing one instance reduces the score penalty by w × (√n − √(n-1)).
+  const marginalGain = (s: Smell): number => {
+    const w = SMELL_WEIGHTS[s.type as SmellType] ?? 0;
+    const n = typeCounts.get(s.type) ?? 1;
+    return w * (Math.sqrt(n) - Math.sqrt(n - 1));
+  };
+
   const sort = (arr: Smell[]) =>
     [...arr].sort((a, b) => {
       const severityDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
       if (severityDiff !== 0) return severityDiff;
-      // Break ties by scoring weight so ComplexMethod (1.5) beats LowDocCoverage (0.3).
-      const wa = SMELL_WEIGHTS[a.type as SmellType] ?? 0;
-      const wb = SMELL_WEIGHTS[b.type as SmellType] ?? 0;
-      return wb - wa;
+      // Break severity ties by marginal score gain — not raw weight.
+      return marginalGain(b) - marginalGain(a);
     });
+
   // Prefer actionable smells over derived metrics; fall back if only derived smells exist.
   const actionable = smells.filter(s => !DERIVED_SMELL_TYPES.has(s.type as SmellType));
   return sort(actionable.length > 0 ? actionable : smells)[0];
