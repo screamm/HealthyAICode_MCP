@@ -29,6 +29,15 @@ const SNIPPETS: Record<string, string> = {
   groovy: 'def add(a, b) {\n    return a + b\n}',
   objc: '- (NSInteger)addA:(NSInteger)a toB:(NSInteger)b {\n    return a + b;\n}',
   powershell: 'function Add-Numbers {\n    param($a, $b)\n    return $a + $b\n}',
+  erlang: 'add(A, B) -> A + B.',
+  // Tier A — tree-sitter AST
+  haskell: 'add :: Int -> Int -> Int\nadd x y = x + y',
+  julia: 'function add(a, b)\n  return a + b\nend',
+  ocaml: 'let add x y = x + y',
+  // Tier B — new languages
+  zig: 'fn add(a: i32, b: i32) i32 {\n    return a + b;\n}',
+  nim: 'proc add(a, b: int): int =\n  return a + b',
+  crystal: 'def add(a, b)\n  a + b\nend',
 };
 
 describe('analyzeByLanguage — all languages return valid metrics', () => {

@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "date": "2026-05-25",
+    "model": "opus",
+    "sessionType": "Claude Code Pro/Max (no API key required)",
+    "method": "Claude Opus 4.7 acting on structured instructions from analyzeForAutoRefactor()",
+    "aiReadyThreshold": 9.5,
+    "corpus": "packages/core/tests/fixtures/unhealthy (score < 9.5 with actionable smells)",
+    "maxFilesProcessed": 5
+  },
+  "summary": {
+    "filesEvaluated": 5,
+    "filesFixed": 1,
+    "filesNotFixed": 4,
+    "filesErrored": 0,
+    "fixRate": 20,
+    "avgScoreImprovement": 2.04
+  },
+  "comparisonVsMechanical": {
+    "mechanicalFixRate": 11.8,
+    "claudeFixRate": 20,
+    "improvementPct": 8.2
+  },
+  "files": [
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\agents-md-fixture.ts",
+      "language": "typescript",
+      "initialScore": 3.6,
+      "finalScore": 5.6,
+      "scoreDelta": 2,
+      "smellType": "DeepNesting",
+      "targetFunction": "processOrder",
+      "status": "NOT_FIXED",
+      "error": null
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\bumpy-road-fixture.ts",
+      "language": "typescript",
+      "initialScore": 8.9,
+      "finalScore": 9.2,
+      "scoreDelta": 0.3,
+      "smellType": "BumpyRoad",
+      "targetFunction": "processRequest",
+      "status": "NOT_FIXED",
+      "error": null
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\Complex.cs",
+      "language": "csharp",
+      "initialScore": 5.5,
+      "finalScore": 8.7,
+      "scoreDelta": 3.2,
+      "smellType": "DeepNesting",
+      "targetFunction": "ProcessData",
+      "status": "NOT_FIXED",
+      "error": null
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.ex",
+      "language": "elixir",
+      "initialScore": 5.1,
+      "finalScore": 9.6,
+      "scoreDelta": 4.5,
+      "smellType": "ComplexMethod",
+      "targetFunction": "process_order",
+      "status": "FIXED",
+      "error": null
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.go",
+      "language": "go",
+      "initialScore": 8,
+      "finalScore": 8.2,
+      "scoreDelta": 0.2,
+      "smellType": "DeepNesting",
+      "targetFunction": "processData",
+      "status": "NOT_FIXED",
+      "error": null
+    }
+  ]
+}

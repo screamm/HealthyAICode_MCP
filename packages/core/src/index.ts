@@ -4,6 +4,7 @@ import { analyzeByLanguage } from './analyzers/index';
 import { detectSmells } from './smells/detector';
 import { calculateScore, categorize } from './scoring/scorer';
 import { detectBrainMethods } from './temporal/brain-method';
+import { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
 import type { HealthResult, Language } from './types';
 import { buildEmptyResult, buildUnparseableResult, buildUnsupportedResult, appendLargeFileSmellIfNeeded, type FileContext } from './core-helpers';
 
@@ -55,6 +56,23 @@ export { getChangeFrequency } from './analyzers/change-frequency';
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
 export { loadCalibration, getThresholds, getWeights, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
+/** Debt goals tracking system for technical debt supervision (Sprint 34). */
+export {
+  loadGoals,
+  saveGoals,
+  getGoal,
+  setGoal,
+  removeGoal,
+  listGoals,
+  updateGoalStatus,
+} from './debt-goals';
+export type {
+  GoalType,
+  GoalStatus,
+  DebtGoal,
+  DebtGoalsStore,
+} from './debt-goals';
+
 /** Static security analysis: secret detection, injection risks, SARIF output (Sprint 28). */
 export {
   auditSecurity,
@@ -144,6 +162,15 @@ export type { AIReadinessResult, AIReadinessFile, AIBlocker } from './ai-readine
 /** Sprint 32: Auto-refactor analysis — returns structured refactoring instructions for the worst smell. */
 export { analyzeForAutoRefactor } from './refactor/auto-refactor-analyzer';
 export type { AutoRefactorResult, RefactoringStrategy } from './refactor/index';
+/** Sprint 33: Auto-refactor applier — mechanically transforms source code based on analysis. */
+export { applyAutoRefactor } from './refactor/auto-refactor-applier';
+export type { ApplyResult } from './refactor/auto-refactor-applier';
+/** Sprint 34: JSDoc generator — adds JSDoc to exported functions missing documentation. */
+export { generateMissingJsDoc } from './refactor/jsdoc-generator';
+export type { JsDocResult } from './refactor/jsdoc-generator';
+/** Sprint 34: Refactoring loop — iterates auto-refactor + JSDoc until code health target is reached. */
+export { runRefactoringLoop } from './refactor/refactoring-loop';
+export type { RefactoringStep, RefactoringLoopResult } from './refactor/refactoring-loop';
 /** Detects the source language from a file path extension (Sprint 32: exposed for MCP tool use). */
 export { detectLanguage } from './language-detect';
 
@@ -156,14 +183,48 @@ export {
   pearsonCorrelation,
   spearmanCorrelation,
   computeAUROC,
+  bootstrapAUROC,
+  mannWhitneyU,
+  DEFECTS4J_INFO,
+  generateExtractionInstructions,
+  generateBugsJSInstructions,
 } from './validation/index';
-export type { BugRecord, ValidationReport, Defects4JEntry } from './validation/index';
+export type { BugRecord, ValidationReport, Defects4JEntry, Defects4JInfo } from './validation/index';
 
 /** Reads a file from disk, detects language, and returns a HealthResult. Throws if the file cannot be read. */
 export async function analyzeFile(filePath: string): Promise<HealthResult> {
   const code = await fs.readFile(filePath, 'utf-8');
   const language = detectLanguage(filePath);
   return analyzeCode(code, language, filePath);
+}
+
+/**
+ * Blocker 1: enriched file analysis that incorporates git-based MethodTemporalCoupling smells.
+ *
+ * Runs static analysis (analyzeFile) and git-history analysis (analyzeMethodCoupling) in
+ * parallel, then merges the resulting smells and recalculates the score so that
+ * MethodTemporalCoupling weight (0.3) is reflected in the final HealthResult.
+ *
+ * @param filePath  Absolute or repo-relative path to the source file.
+ * @param repoPath  Root of the git repository (passed to simpleGit).
+ */
+export async function analyzeFileWithHistory(filePath: string, repoPath: string): Promise<HealthResult> {
+  const [baseResult, couplingResult] = await Promise.all([
+    analyzeFile(filePath),
+    analyzeMethodCoupling(repoPath, filePath),
+  ]);
+
+  const couplingSmells = methodCouplingToSmells(couplingResult);
+  if (couplingSmells.length === 0) return baseResult;
+
+  const enrichedSmells = [...baseResult.smells, ...couplingSmells];
+  const newScore = calculateScore(enrichedSmells, baseResult.language);
+  return {
+    ...baseResult,
+    smells: enrichedSmells,
+    score: newScore,
+    category: categorize(newScore),
+  };
 }
 
 /** Analyzes a code string directly. filePath is used only as metadata in the result (defaults to '<inline>'). */

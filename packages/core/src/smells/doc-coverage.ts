@@ -13,7 +13,7 @@ interface ExportInfo {
 }
 
 export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, profile: LanguageProfile): Smell[] {
-  const exports = collectExports(root, source, profile);
+  const exports = collectExports(root, source, profile, profile.docCommentIsLineStyle ?? false);
   if (exports.length < MIN_EXPORTS_FOR_CHECK) return [];
 
   const documented = exports.filter(e => e.hasJsDoc).length;
@@ -31,14 +31,16 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, pr
   }];
 }
 
-function collectExports(root: Parser.SyntaxNode, source: string, profile: LanguageProfile): ExportInfo[] {
+function collectExports(root: Parser.SyntaxNode, source: string, profile: LanguageProfile, isLineStyle: boolean): ExportInfo[] {
   const lines = source.split('\n');
   const exports: ExportInfo[] = [];
   function visit(node: Parser.SyntaxNode): void {
     if (profile.exportableNodeTypes.has(node.type)) {
       const name = getExportedName(node) ?? '<anonymous>';
       const line = node.startPosition.row + 1;
-      const hasJsDoc = lineAboveMatchesDocPattern(lines, line, profile.docCommentPattern);
+      const hasJsDoc = isLineStyle
+        ? lineAboveMatchesLineComment(lines, line, profile.docCommentPattern)
+        : lineAboveMatchesDocPattern(lines, line, profile.docCommentPattern);
       exports.push({ name, line, hasJsDoc });
     }
     for (const child of node.children) visit(child);
@@ -52,6 +54,23 @@ function getExportedName(node: Parser.SyntaxNode): string | null {
   if (!decl) return null;
   const named = decl.childForFieldName('name');
   return named?.text ?? null;
+}
+
+/**
+ * For line-comment languages (Go `//`, Ruby `#`, Rust `///`):
+ * Check whether any of the consecutive comment lines immediately above the
+ * exported symbol matches the doc-comment pattern.
+ * We walk upward from the line before the export, skipping blank lines, and
+ * check the first non-blank line. If it matches the pattern (i.e. is a doc
+ * comment), the symbol is considered documented.
+ */
+function lineAboveMatchesLineComment(lines: string[], exportLine: number, pattern: RegExp): boolean {
+  // Walk backward from the line immediately above the exported symbol.
+  let idx = exportLine - 2; // exportLine is 1-based; idx is 0-based
+  // Skip at most one blank line (allow one blank line between comment and symbol).
+  if (idx >= 0 && lines[idx].trim() === '') idx--;
+  if (idx < 0) return false;
+  return pattern.test(lines[idx].trim());
 }
 
 function lineAboveMatchesDocPattern(lines: string[], exportLine: number, pattern: RegExp): boolean {

@@ -29,8 +29,10 @@ function render(state: FileState): string {
 }
 
 function bumped(s: string, version: number): string {
-  // Inject a comment to force a real line-change without breaking the parser
-  return s.replace('{\n', `{\n  // v${version}\n`);
+  // Replace a trailing comment on the same line to force a real change without altering line count.
+  // This preserves the exact line positions that the mock in the test relies on.
+  // We target the return statement and append a trailing comment: "// v<n>"
+  return s.replace(/;(\n})$/, `;  // v${version}$1`);
 }
 
 export async function buildMethodCouplingFixtureRepo(): Promise<FixtureRepo> {

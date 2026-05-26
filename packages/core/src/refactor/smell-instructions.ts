@@ -7,7 +7,9 @@ export type RefactoringStrategy =
   | 'split_at_seam'
   | 'extract_chunks'
   | 'simplify_conditional'
-  | 'inline_variable';
+  | 'inline_variable'
+  | 'add_docstrings'
+  | 'extract_constants';
 
 export interface RefactoringTemplate {
   strategy: RefactoringStrategy;
@@ -41,6 +43,18 @@ export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: s
 
     case 'ComplexConditional':
       return buildSimplifyConditionalTemplate(smell, fn, code);
+
+    case 'PrimitiveObsession':
+      return buildParameterObjectTemplate(smell, fn, code);
+
+    case 'CognitiveComplexity':
+      return buildExtractMethodTemplate(smell, fn, code);
+
+    case 'LowDocCoverage':
+      return buildAddDocstringsTemplate(smell, fn, code);
+
+    case 'MagicNumber':
+      return buildExtractConstantsTemplate(smell, fn, code);
 
     default:
       return buildGenericTemplate(smell, fn, code);
@@ -184,6 +198,42 @@ function buildSimplifyConditionalTemplate(smell: Smell, fn: FunctionResult, _cod
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const isValid = checkValidity(args);\n  const meetsThreshold = checkThreshold(args);\n  if (isValid && meetsThreshold) {\n    // ...\n  }\n}`,
     expectedScoreImprovement: 1.5,
+  };
+}
+
+function buildAddDocstringsTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'add_docstrings',
+    instructions: () => [
+      `1. Add a documentation comment immediately above '${fnName}' that describes what it does in one sentence.`,
+      `2. Document each parameter: name, type, and purpose.`,
+      `3. Document the return value: what is returned and when it can be null or undefined.`,
+      `4. If the function throws or has important side effects, document those too.`,
+      `5. Use the appropriate format for the language (JSDoc /** */ for JS/TS, """docstring""" for Python, /** Javadoc */ for Java).`,
+      `6. Apply the same pattern to ALL other undocumented public functions in the file to fully resolve LowDocCoverage.`,
+    ],
+    skeletonHint: `/**\n * [One-line description of what ${fnName} does.]\n * @param paramName - description of the parameter\n * @returns description of what is returned\n */`,
+    expectedScoreImprovement: 1.5,
+  };
+}
+
+function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'extract_constants',
+    instructions: () => [
+      `1. Identify ALL magic numbers and magic strings in '${fnName}' (literal values whose meaning is not immediately obvious).`,
+      `2. For each magic value, declare a named constant at module/class level that explains its purpose.`,
+      `3. Use SCREAMING_SNAKE_CASE for constants (e.g., MAX_RETRY_COUNT = 3, DEFAULT_TIMEOUT_MS = 5000).`,
+      `4. Replace EVERY occurrence of each magic value throughout the file with its named constant.`,
+      `5. The constant name should read like a business rule: prefer MAX_LOGIN_ATTEMPTS over LIMIT.`,
+      `6. Group related constants together and add a comment describing the group if there are 3 or more.`,
+    ],
+    skeletonHint: `// --- Configuration constants ---\nconst MAX_ITEMS = 100;\nconst DEFAULT_TIMEOUT_MS = 5000;\n\nfunction ${fnName}(...) {\n  if (count > MAX_ITEMS) { ... }\n  setTimeout(callback, DEFAULT_TIMEOUT_MS);\n}`,
+    expectedScoreImprovement: 0.8,
   };
 }
 

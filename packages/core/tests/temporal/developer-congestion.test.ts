@@ -43,4 +43,4 @@ describe('analyzeDeveloperCongestion', () => {
       expect(['low', 'medium', 'high']).toContain(result.smell.severity);
     }
   });
-}, 15000);
+}, 60000); // git log on the real repo can be slow as the repo grows

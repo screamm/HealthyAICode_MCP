@@ -4,6 +4,15 @@ import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
 import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
+import { rubyProfile } from '../smells/language-profile';
+import { detectGodClass } from '../smells/god-class';
+import { detectFeatureEnvy } from '../smells/feature-envy';
+import { detectMessageChain } from '../smells/message-chain';
+import { detectDataClumps } from '../smells/data-clumps';
+import { detectPrimitiveObsession } from '../smells/primitive-obsession';
+import { detectComplexConditional } from '../smells/complex-conditional';
+import { detectLowDocCoverage } from '../smells/doc-coverage';
+import { detectBumpyRoadChunks } from '../smells/bumpy-road';
 
 const parser = new Parser();
 type Language = Parameters<(typeof parser)['setLanguage']>[0];
@@ -42,17 +51,43 @@ export function analyzeRuby(code: string, filePath = '<inline>'): {
   smells: Smell[];
 } {
   const tree = parser.parse(code);
+  const fnNodes: Parser.SyntaxNode[] = [];
   const fns: FunctionResult[] = [];
   function visit(node: Parser.SyntaxNode): void {
-    if (METHOD_NODE_TYPES.has(node.type)) fns.push(extractFunction(node));
+    if (METHOD_NODE_TYPES.has(node.type)) {
+      fnNodes.push(node);
+      fns.push(extractFunction(node));
+    }
     for (const child of node.children) visit(child);
   }
   visit(tree.rootNode);
   const totalLines = code === '' ? 0 : code.split('\n').length;
+
+  // Text-based detectors (language-agnostic)
   const smells: Smell[] = [
     ...detectSATDFromText(code),
     ...detectMagicNumbersFromText(code, filePath),
   ];
+
+  // AST-based profile detectors — Ruby is dynamically typed with no explicit
+  // imports, so we pass an empty Set for god-class/feature-envy importedTypeNames.
+  const emptyNames = new Set<string>();
+  smells.push(
+    ...detectGodClass(tree.rootNode, emptyNames, rubyProfile),
+    ...detectFeatureEnvy(tree.rootNode, emptyNames, rubyProfile),
+    ...detectMessageChain(tree.rootNode, rubyProfile),
+    ...detectDataClumps(tree.rootNode, rubyProfile),
+    ...detectPrimitiveObsession(tree.rootNode, rubyProfile),
+    ...detectComplexConditional(tree.rootNode, rubyProfile),
+    ...detectLowDocCoverage(tree.rootNode, code, rubyProfile),
+  );
+
+  // Per-function BumpyRoad detection
+  for (const fnNode of fnNodes) {
+    const br = detectBumpyRoadChunks(fnNode);
+    if (br) smells.push(br);
+  }
+
   return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 

@@ -31,6 +31,12 @@ const DEFAULT_MAX_COMMITS = 200;
 const HIGH_STRENGTH = 0.7;
 const MEDIUM_STRENGTH = 0.55;
 
+/** Blocker 2: minimum co-change observations required before a pair is considered statistically meaningful. */
+export const MIN_CO_CHANGE_COUNT = 4;
+
+/** Blocker 6: minimum number of commits required before the algorithm produces signal. */
+export const MIN_COMMITS_FOR_SIGNAL = 10;
+
 /**
  * Analyzes method-level temporal coupling for a single file by walking its git history.
  *
@@ -74,8 +80,15 @@ export async function analyzeMethodCoupling(
     return { filePath, commitsAnalyzed: 0, threshold, pairs: [] };
   }
 
-  const touchCount = new Map<string, number>();
-  const coChangeCount = new Map<string, number>();
+  // Blocker 6: require minimum commit history for statistical significance
+  if (shas.length < MIN_COMMITS_FOR_SIGNAL) {
+    return { filePath, commitsAnalyzed: shas.length, threshold, pairs: [], tooFewCommits: true };
+  }
+
+  // Blocker 3: keys are "name@startLine" to disambiguate same-named methods in the same file.
+  // Display names (methodA/methodB in output pairs) remain bare method names.
+  const touchCount = new Map<string, number>();   // key: "name@line"
+  const coChangeCount = new Map<string, number>(); // key: "name@line||name@line"
 
   for (const sha of shas) {
     // Parallelise the two I/O operations per commit for ~2× speedup on SSD
@@ -87,15 +100,17 @@ export async function analyzeMethodCoupling(
     // Short-circuit: skip commits where the analyzer found no methods or no diff hunks
     if (ranges.length === 0 || changed.length === 0) continue;
 
+    // intersectChangedMethods now returns { name, line }[] (Blocker 3)
     const changedMethods = intersectChangedMethods(changed, ranges);
     for (const m of changedMethods) {
-      touchCount.set(m, (touchCount.get(m) ?? 0) + 1);
+      const qKey = `${m.name}@${m.line}`;
+      touchCount.set(qKey, (touchCount.get(qKey) ?? 0) + 1);
     }
 
-    const sorted = [...changedMethods].sort();
-    for (let i = 0; i < sorted.length; i++) {
-      for (let j = i + 1; j < sorted.length; j++) {
-        const key = `${sorted[i]}||${sorted[j]}`;
+    const sortedKeys = changedMethods.map(m => `${m.name}@${m.line}`).sort();
+    for (let i = 0; i < sortedKeys.length; i++) {
+      for (let j = i + 1; j < sortedKeys.length; j++) {
+        const key = `${sortedKeys[i]}||${sortedKeys[j]}`;
         coChangeCount.set(key, (coChangeCount.get(key) ?? 0) + 1);
       }
     }
@@ -116,15 +131,22 @@ function buildPairs(
 ): MethodCouplingPair[] {
   const pairs: MethodCouplingPair[] = [];
   for (const [key, count] of coChangeCount) {
-    const [a, b] = key.split('||');
+    // Blocker 2: skip pairs with insufficient co-change evidence (statistically meaningless)
+    if (count < MIN_CO_CHANGE_COUNT) continue;
+
+    // Keys are "name@line||name@line" (Blocker 3); extract display names for output
+    const [qualifiedA, qualifiedB] = key.split('||');
+    const displayNameA = qualifiedA.split('@')[0];
+    const displayNameB = qualifiedB.split('@')[0];
+
     // Use the maximum touch count as the denominator — this measures coupling relative to
     // the method that was touched more often, giving a conservative strength estimate.
-    const combined = Math.max(touchCount.get(a) ?? 1, touchCount.get(b) ?? 1);
+    const combined = Math.max(touchCount.get(qualifiedA) ?? 1, touchCount.get(qualifiedB) ?? 1);
     const strength = count / combined;
     if (strength < threshold) continue;
     pairs.push({
-      methodA: a,
-      methodB: b,
+      methodA: displayNameA,
+      methodB: displayNameB,
       coChangeCount: count,
       combinedTouches: combined,
       couplingStrength: parseFloat(strength.toFixed(2)),

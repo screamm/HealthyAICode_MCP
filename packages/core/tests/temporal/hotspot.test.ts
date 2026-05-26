@@ -62,4 +62,4 @@ describe('detectHotspots', () => {
       expect(['low', 'medium', 'high']).toContain(h.severity);
     }
   });
-}, 20000);
+}, 60000); // git log on the real repo can be slow as the repo grows

@@ -5,7 +5,7 @@ import { simpleGit } from 'simple-git';
 import { analyzeCode } from '../index';
 import { detectLanguage } from '../language-detect';
 import type { Language } from '../types';
-import { pearsonCorrelation, spearmanCorrelation, computeAUROC } from './correlation';
+import { pearsonCorrelation, spearmanCorrelation, computeAUROC, bootstrapAUROC, mannWhitneyU } from './correlation';
 
 /** A single file record in a validation dataset. */
 export interface BugRecord {
@@ -46,6 +46,12 @@ export interface ValidationReport {
   healthSeparation: number;
   /** Human-readable interpretation of the validation result. */
   interpretation: string;
+  /** Bootstrap 95% CI for AUROC (optional — computed when records.length > 0). */
+  aurocBootstrapCi?: { lower: number; upper: number; mean: number };
+  /** Mann-Whitney U p-value (optional — computed when records.length > 0). */
+  mannWhitneyPValue?: number;
+  /** Per-language AUROC breakdown (optional — computed when records.length > 0). */
+  perLanguageBreakdown?: Array<{ language: string; auroc: number; count: number }>;
   /** Per-file breakdown. */
   fileResults: Array<{
     filePath: string;
@@ -206,6 +212,10 @@ export function runValidation(records: BugRecord[]): ValidationReport {
   const meanHealthClean = mean(cleanScores);
   const healthSeparation = meanHealthClean - meanHealthBuggy;
 
+  const aurocBoot = bootstrapAUROC(scores, bugLabels);
+  const mw = mannWhitneyU(scores, bugLabels);
+  const perLang = computePerLanguageBreakdown(records, fileResults);
+
   return {
     totalFiles: fileResults.length,
     buggyFiles: buggyScores.length,
@@ -217,6 +227,41 @@ export function runValidation(records: BugRecord[]): ValidationReport {
     meanHealthClean,
     healthSeparation,
     interpretation: interpret(auroc),
+    aurocBootstrapCi: { lower: aurocBoot.lower, upper: aurocBoot.upper, mean: aurocBoot.mean },
+    mannWhitneyPValue: mw.pValue,
+    perLanguageBreakdown: perLang,
     fileResults,
   };
+}
+
+function computePerLanguageBreakdown(
+  records: BugRecord[],
+  fileResults: ValidationReport['fileResults'],
+): Array<{ language: string; auroc: number; count: number }> {
+  const langGroups = new Map<string, { scores: number[]; labels: boolean[] }>();
+
+  for (let i = 0; i < records.length; i++) {
+    const lang = records[i].language;
+    if (!langGroups.has(lang)) {
+      langGroups.set(lang, { scores: [], labels: [] });
+    }
+    const group = langGroups.get(lang)!;
+    group.scores.push(fileResults[i].healthScore);
+    group.labels.push(records[i].hasBug);
+  }
+
+  const breakdown: Array<{ language: string; auroc: number; count: number }> = [];
+  for (const [language, data] of langGroups) {
+    const buggyCount = data.labels.filter(Boolean).length;
+    const cleanCount = data.labels.filter((l) => !l).length;
+    if (buggyCount > 0 && cleanCount > 0) {
+      breakdown.push({
+        language,
+        auroc: computeAUROC(data.scores, data.labels),
+        count: data.labels.length,
+      });
+    }
+  }
+
+  return breakdown;
 }

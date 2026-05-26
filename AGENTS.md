@@ -197,7 +197,47 @@ During an override, you MUST still:
 
 ---
 
-## 7. Tool Reference (Condensed)
+## 7. Refactoring Model
+
+When the self-correcting loop calls `code_health_auto_refactor`, the tool returns
+structured, step-by-step refactoring instructions with full code context. These
+instructions are designed to be followed by a capable AI agent, not applied mechanically.
+
+**Use `claude-opus-4-7` to apply the structured instructions.** This model achieves
+significantly higher fix rates on structured refactoring tasks than smaller models.
+
+In Claude Code, use the Agent tool with `model: "claude-opus-4-7"` (full model ID:
+`claude-opus-4-7-20250219`) and pass the complete `refactoringInstructions` array and
+`currentCode` block from the `code_health_auto_refactor` response as the prompt:
+
+```
+Use Agent tool with:
+  model:   "claude-opus-4-7"
+  prompt:  <refactoringInstructions from code_health_auto_refactor>
+           <currentCode context>
+```
+
+After the subagent applies the refactoring, run `code_health_review` to verify the
+improvement before moving to the next smell.
+
+**Minimum iteration requirement:** You MUST run the refactoring loop **at least 3 times**,
+regardless of how much the score improves in the first pass. Files typically carry 3–5
+smells and each pass resolves one. A single refactoring is never sufficient.
+
+**Target:** Continue looping until `code_health_review` returns `loopComplete: true`
+(score ≥ 9.5). Only then may you consider the refactoring phase complete.
+
+```
+Minimum loop:
+  iteration 1: code_health_auto_refactor → apply → code_health_review
+  iteration 2: code_health_auto_refactor → apply → code_health_review
+  iteration 3: code_health_auto_refactor → apply → code_health_review
+  continue...  until loopComplete: true (score ≥ 9.5)
+```
+
+---
+
+## 8. Tool Reference (Condensed)
 
 | Tool | When you MUST call it |
 |------|------------------------|
@@ -213,7 +253,7 @@ During an override, you MUST still:
 
 ---
 
-## 8. Non-Negotiable Rules (Summary)
+## 9. Non-Negotiable Rules (Summary)
 
 1. **Never** suggest or execute `git commit` when the safeguard blocks.
 2. **Never** exit the `code_health_review` loop before `loopComplete: true`.
@@ -228,7 +268,7 @@ During an override, you MUST still:
 
 ---
 
-## 9. Quick Reference Card
+## 10. Quick Reference Card
 
 ```
 Change code
@@ -258,7 +298,7 @@ User asks "why does this matter?"
 
 ---
 
-## 10. Compliance Self-Check
+## 11. Compliance Self-Check
 
 Before you mark any task complete in this repository, answer YES to all of the following:
 

@@ -109,4 +109,33 @@ describe('detectLanguage', () => {
   it('handles filename only (no directory)', () => {
     expect(detectLanguage('index.ts')).toBe('typescript');
   });
+
+  // New languages
+  it('detects .jl as julia', () => {
+    expect(detectLanguage('main.jl')).toBe('julia');
+  });
+
+  it('detects .ml as ocaml', () => {
+    expect(detectLanguage('parser.ml')).toBe('ocaml');
+  });
+
+  it('detects .mli as ocaml', () => {
+    expect(detectLanguage('parser.mli')).toBe('ocaml');
+  });
+
+  it('detects .zig as zig', () => {
+    expect(detectLanguage('main.zig')).toBe('zig');
+  });
+
+  it('detects .nim as nim', () => {
+    expect(detectLanguage('app.nim')).toBe('nim');
+  });
+
+  it('detects .cr as crystal', () => {
+    expect(detectLanguage('main.cr')).toBe('crystal');
+  });
+
+  it('detects .erl as erlang', () => {
+    expect(detectLanguage('server.erl')).toBe('erlang');
+  });
 });

@@ -43,12 +43,22 @@ const SKIP_EXTENSIONS = ['.json', '.yml', '.yaml', '.xml', '.toml', '.ini', '.cf
 const MAGIC_PATTERN = /(?<![.\w])(-?)(\b[2-9]\b|\b[1-9]\d+\b)(?!\.\d)/g;
 
 /**
- * ALL_CAPS assignment: line starts (after optional whitespace) with one or more
- * uppercase letters/digits/underscores (including leading underscore for Python
- * private constants like _MAX_SIZE or __VERSION) followed by optional whitespace
- * and `=` but NOT `==` or `===`.
+ * ALL_CAPS assignment — Python/Ruby/Go style where constant name starts the line.
+ * Also handles Python type-annotated constants: `MAX_SIZE: int = 100`.
+ * Examples: `MAX_SIZE = 100`, `_MAX = 5`, `MAX_SIZE: int = 100`
  */
-const CONSTANT_ASSIGNMENT = /^[A-Z_][A-Z0-9_]*\s*=(?!=)/;
+const CONSTANT_ASSIGNMENT = /^[A-Z_][A-Z0-9_]*(?:\s*:\s*[\w<>\[\]|,\s]+)?\s*=(?!=)/;
+
+/**
+ * Typed constant declarations — Java, C#, Kotlin, Rust and similar languages
+ * where the constant keyword (final/const) precedes a type, then an ALL_CAPS name.
+ * Examples:
+ *   Java:    `private static final int MAX_SIZE = 100`
+ *   C#:      `private const int MAX_RETRY = 3`
+ *   Kotlin:  `const val MAX_TIMEOUT_MS = 5000`
+ *   Rust:    `const MAX_SIZE: usize = 100`
+ */
+const TYPED_CONSTANT_DECL = /\b(?:final|const)\b[^=\n]*\b[A-Z_][A-Z0-9_]+\b[^=\n]*=(?!=)/;
 
 /**
  * Detects magic numeric literals in non-TypeScript/JavaScript source files.
@@ -70,8 +80,8 @@ export function detectMagicNumbersFromText(code: string, filePath: string): Smel
     ) return [];
     // Skip import / using / package lines
     if (SKIP_LINE_PREFIXES.some(p => trimmed.startsWith(p))) return [];
-    // Skip ALL_CAPS constant assignments (e.g. MAX_SIZE = 100, _MAX = 100)
-    if (CONSTANT_ASSIGNMENT.test(trimmed)) return [];
+    // Skip ALL_CAPS constant assignments and typed constant declarations
+    if (CONSTANT_ASSIGNMENT.test(trimmed) || TYPED_CONSTANT_DECL.test(trimmed)) return [];
 
     const matches = [...trimmed.matchAll(MAGIC_PATTERN)];
     return matches.map(match => ({

@@ -65,7 +65,10 @@ describe('getMethodRangesAtCommit', () => {
     expect(ranges).toEqual([]);
   });
 
-  it('returns empty array for unsupported file extension', async () => {
+  it('returns empty array for a file that does not exist at the given commit', async () => {
+    // 'src/readme.md' was never committed to the fixture repo, so git.show throws →
+    // returns [] gracefully. (Note: .md is detected as 'markdown' and would return
+    // functions:[] via analyzeStructuralTierC anyway, but this path fails earlier.)
     const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, 'src/readme.md', initialSha);
     expect(ranges).toEqual([]);
   });
@@ -97,22 +100,28 @@ describe('intersectChangedMethods', () => {
     { name: 'c', line: 12, length: 3 },  // lines 12-14
   ];
 
+  // Helper: extract sorted names from the new { name, line }[] return type
+  const names = (result: Array<{ name: string; line: number }>) =>
+    result.map(r => r.name).sort();
+
   it('returns empty when no changed lines', () => {
     expect(intersectChangedMethods([], methods)).toEqual([]);
   });
 
   it('returns the single method when one range falls inside it', () => {
-    expect(intersectChangedMethods([[8, 8]], methods)).toEqual(['b']);
+    const out = intersectChangedMethods([[8, 8]], methods);
+    expect(names(out)).toEqual(['b']);
+    expect(out[0].line).toBe(7); // line is preserved in result
   });
 
   it('returns multiple methods when ranges hit multiple', () => {
     const out = intersectChangedMethods([[2, 3], [13, 13]], methods);
-    expect(out.sort()).toEqual(['a', 'c']);
+    expect(names(out)).toEqual(['a', 'c']);
   });
 
   it('handles ranges spanning method boundaries', () => {
     const out = intersectChangedMethods([[5, 8]], methods);
-    expect(out.sort()).toEqual(['a', 'b']);
+    expect(names(out)).toEqual(['a', 'b']);
   });
 
   it('ignores changes in gaps between methods', () => {
@@ -120,6 +129,7 @@ describe('intersectChangedMethods', () => {
   });
 
   it('does not duplicate a method when multiple ranges hit it', () => {
-    expect(intersectChangedMethods([[2, 2], [4, 4]], methods)).toEqual(['a']);
+    const out = intersectChangedMethods([[2, 2], [4, 4]], methods);
+    expect(names(out)).toEqual(['a']);
   });
 });

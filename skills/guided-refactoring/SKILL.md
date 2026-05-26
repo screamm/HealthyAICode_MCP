@@ -74,6 +74,12 @@ Fokusera uteslutande på `primaryTarget`. Ändra inte annat — inte ens om du s
 
 Följ `refactoringInstructions` noggrant. Använd `fullFileContent` och `codeContext` för att förstå helheten.
 
+> **Modellval:** Applicera instruktionerna med modellen `claude-opus-4-7`
+> (`claude-opus-4-7-20250219`). Denna modell uppnår den högsta andelen lyckade
+> refaktoreringar på strukturerade instruktioner. I Claude Code: använd Agent-verktyget
+> med `model: "claude-opus-4-7"` och skicka med `refactoringInstructions` och
+> `currentCode` från svaret.
+
 **Steg 2.3 — Verifiera förbättringen**
 
 **Mät efter varje steg. Inte efter flera. Inte i slutet.** Det här är 3–5-stegskadensen

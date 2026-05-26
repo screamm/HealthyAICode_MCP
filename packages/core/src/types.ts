@@ -31,6 +31,17 @@ export type Language =
   | 'groovy'
   | 'objc'
   | 'powershell'
+  // Tier B — additional languages
+  | 'erlang'
+  // Tier A — promoted from Tier B (tree-sitter AST)
+  | 'julia'
+  | 'ocaml'
+  // Tier B — new languages
+  | 'zig'
+  | 'nim'
+  | 'crystal'
+  // Tier A bridge — Vue SFC (extracts script block → TS/JS)
+  | 'vue'
   // Tier C — structural complexity only (Sprint 25)
   | 'yaml'
   | 'json'
@@ -187,6 +198,11 @@ export interface MethodCouplingResult {
   threshold: number;
   /** Pairs sorted by couplingStrength descending; only pairs above threshold included. */
   pairs: MethodCouplingPair[];
+  /**
+   * Set to true when the file has fewer than MIN_COMMITS_FOR_SIGNAL commits in history,
+   * indicating that the result is statistically unreliable (Blocker 6).
+   */
+  tooFewCommits?: boolean;
 }
 
 /** Describes a file whose health score improved in the current changeset. */

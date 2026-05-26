@@ -4,6 +4,15 @@ import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
 import { detectSATDFromText, detectMagicNumbersFromText } from '../smells/text-detectors';
+import { rustProfile } from '../smells/language-profile';
+import { detectGodClass } from '../smells/god-class';
+import { detectFeatureEnvy } from '../smells/feature-envy';
+import { detectMessageChain } from '../smells/message-chain';
+import { detectDataClumps } from '../smells/data-clumps';
+import { detectPrimitiveObsession } from '../smells/primitive-obsession';
+import { detectComplexConditional } from '../smells/complex-conditional';
+import { detectLowDocCoverage } from '../smells/doc-coverage';
+import { detectBumpyRoadChunks } from '../smells/bumpy-road';
 
 const parser = new Parser();
 parser.setLanguage(Rust as unknown as Parameters<(typeof parser)['setLanguage']>[0]);
@@ -30,17 +39,43 @@ export function analyzeRust(code: string, filePath = '<inline>'): {
   smells: Smell[];
 } {
   const tree = parser.parse(code);
+  const fnNodes: Parser.SyntaxNode[] = [];
   const fns: FunctionResult[] = [];
   function visit(node: Parser.SyntaxNode): void {
-    if (node.type === 'function_item') fns.push(extractFunction(node));
+    if (node.type === 'function_item') {
+      fnNodes.push(node);
+      fns.push(extractFunction(node));
+    }
     for (const child of node.children) visit(child);
   }
   visit(tree.rootNode);
   const totalLines = code === '' ? 0 : code.split('\n').length;
+
+  // Text-based detectors (language-agnostic)
   const smells: Smell[] = [
     ...detectSATDFromText(code),
     ...detectMagicNumbersFromText(code, filePath),
   ];
+
+  // AST-based profile detectors — Rust has no class imports; crate types are
+  // resolved at compile time. Pass empty Set for god-class/feature-envy.
+  const emptyNames = new Set<string>();
+  smells.push(
+    ...detectGodClass(tree.rootNode, emptyNames, rustProfile),
+    ...detectFeatureEnvy(tree.rootNode, emptyNames, rustProfile),
+    ...detectMessageChain(tree.rootNode, rustProfile),
+    ...detectDataClumps(tree.rootNode, rustProfile),
+    ...detectPrimitiveObsession(tree.rootNode, rustProfile),
+    ...detectComplexConditional(tree.rootNode, rustProfile),
+    ...detectLowDocCoverage(tree.rootNode, code, rustProfile),
+  );
+
+  // Per-function BumpyRoad detection
+  for (const fnNode of fnNodes) {
+    const br = detectBumpyRoadChunks(fnNode);
+    if (br) smells.push(br);
+  }
+
   return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 

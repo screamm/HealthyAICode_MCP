@@ -196,7 +196,7 @@ function formatReport(
         ? 'defects4j_dataset'
         : 'directory_heuristic';
 
-  return {
+  const output: Record<string, unknown> = {
     mode,
     summary: {
       totalFiles: report.totalFiles,
@@ -220,6 +220,28 @@ function formatReport(
       bugCount: f.bugCount,
     })),
   };
+
+  if (report.aurocBootstrapCi) {
+    output.aurocBootstrapCi = {
+      lower: round(report.aurocBootstrapCi.lower),
+      upper: round(report.aurocBootstrapCi.upper),
+      mean: round(report.aurocBootstrapCi.mean),
+    };
+  }
+
+  if (report.mannWhitneyPValue !== undefined) {
+    output.mannWhitneyPValue = round(report.mannWhitneyPValue);
+  }
+
+  if (report.perLanguageBreakdown && report.perLanguageBreakdown.length > 0) {
+    output.perLanguageBreakdown = report.perLanguageBreakdown.map(b => ({
+      language: b.language,
+      auroc: round(b.auroc),
+      count: b.count,
+    }));
+  }
+
+  return output;
 }
 
 function round(n: number): number {

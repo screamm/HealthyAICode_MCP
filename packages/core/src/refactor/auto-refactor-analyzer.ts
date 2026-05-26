@@ -79,7 +79,11 @@ export function analyzeForAutoRefactor(
     predictedHealthScore,
     predictedScoreDelta,
     followUpInstruction:
-      'Run code_health_review on the file after making the changes to verify the improvement.',
+      'Apply these refactoring instructions using model claude-opus-4-7 (claude-opus-4-7-20250219) for the highest fix rate on structured refactoring tasks. ' +
+      'Then run code_health_review on the file to verify the improvement. ' +
+      'IMPORTANT: Run at least 3 iterations of this refactoring loop — each pass resolves one smell and files typically need 3–5 passes to reach AI-ready status. ' +
+      'Continue until code_health_review returns loopComplete: true (score ≥ 9.5). ' +
+      'Do not stop after a single refactoring — call code_health_auto_refactor again to get the next smell.',
   };
 }
 

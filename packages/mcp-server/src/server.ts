@@ -9,6 +9,7 @@ import { registerKnowledgeMap } from './tools/knowledge-map';
 import { registerMethodCoupling } from './tools/method-coupling';
 import { registerConfigTools } from './tools/config';
 import { registerAutoRefactor } from './tools/auto-refactor';
+import { registerAutoRefactorApply } from './tools/auto-refactor-apply';
 import { registerBusFactor } from './tools/bus-factor';
 import { registerArchitectureDebt } from './tools/architecture-debt';
 import { registerHotspots } from './tools/hotspots';
@@ -20,6 +21,7 @@ import { registerModelBenchmark } from './tools/model-benchmark';
 import { registerSecurityAudit } from './tools/security-audit';
 import { registerArchitectureReport } from './tools/architecture-report';
 import { registerValidateDataset } from './tools/validate-dataset';
+import { registerDebtGoalsTools } from './tools/debt-goals';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -39,6 +41,7 @@ export async function createServer(): Promise<McpServer> {
   registerArchitectureDebt(server);
   registerConfigTools(server);
   registerAutoRefactor(server);
+  registerAutoRefactorApply(server);
   registerBusFactor(server);
   registerHotspots(server);
   registerTrendAnalysis(server);
@@ -49,6 +52,7 @@ export async function createServer(): Promise<McpServer> {
   registerSecurityAudit(server);
   registerArchitectureReport(server);
   registerValidateDataset(server);
+  registerDebtGoalsTools(server);
 
   return server;
 }

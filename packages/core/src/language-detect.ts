@@ -60,6 +60,23 @@ const EXTENSION_MAP: Record<string, Language> = {
   '.mm': 'objc',
   '.ps1': 'powershell',
   '.psm1': 'powershell',
+  // Tier B — additional languages
+  '.erl': 'erlang',
+  '.hrl': 'erlang',
+  // Tier A — Julia (tree-sitter-julia)
+  '.jl': 'julia',
+  // Tier A — OCaml (tree-sitter-ocaml)
+  '.ml': 'ocaml',
+  '.mli': 'ocaml',
+  // Tier B — Zig
+  '.zig': 'zig',
+  // Tier B — Nim
+  '.nim': 'nim',
+  '.nims': 'nim',
+  // Tier B — Crystal
+  '.cr': 'crystal',
+  // Vue.js SFC
+  '.vue': 'vue',
   // Tier C languages
   '.yaml': 'yaml',
   '.yml': 'yaml',

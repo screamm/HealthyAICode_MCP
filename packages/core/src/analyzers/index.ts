@@ -8,20 +8,19 @@ import { analyzeRust } from './rust';
 import { analyzePhp } from './php';
 import { analyzeRuby } from './ruby';
 import { analyzeSwift } from './swift';
-// Tier B — Kotlin native
+// Tier A — Kotlin (tree-sitter-kotlin, promoted from Tier B)
 import { analyzeKotlin } from './kotlin';
-// Tier B — new language analyzers
+// Tier B — language analyzers
 import { analyzeBash } from './bash';
 import { analyzeLua } from './lua';
-import { analyzeElixir } from './elixir';
-import { analyzeHaskell } from './haskell';
+import { analyzeElixir } from './elixir'; // Tier A — tree-sitter-elixir
 import { analyzeR } from './r';
 import { analyzeClojure } from './clojure';
 // Tier B — Sprint 25 gap languages
 import { analyzeDart } from './dart';
 import { analyzeCLang } from './c-lang';
 import { analyzeCpp } from './cpp';
-import { analyzeScala } from './scala';
+import { analyzeScala } from './scala'; // Tier A — tree-sitter-scala
 // Tier B — Sprint 30 niche languages
 import { analyzeCobol } from './cobol';
 import { analyzeApex } from './apex';
@@ -31,6 +30,17 @@ import { analyzePerl } from './perl';
 import { analyzeGroovy } from './groovy';
 import { analyzeObjC } from './objc';
 import { analyzePowerShell } from './powershell';
+// Additional languages
+import { analyzeErlang } from './erlang';
+// Tier A — new languages (tree-sitter AST)
+import { analyzeHaskell } from './haskell'; // promoted from Tier B to Tier A
+import { analyzeJulia } from './julia';
+import { analyzeOCaml } from './ocaml';
+// Tier B — new languages
+import { analyzeZig } from './zig';
+import { analyzeNim } from './nim';
+import { analyzeCrystal } from './crystal';
+import { analyzeVue } from './vue';
 // Tier C — structural analyzers
 import { analyzeYaml } from './yaml';
 import { analyzeJson } from './json-lang';
@@ -57,15 +67,15 @@ export { analyzePhp } from './php';
 export { analyzeRuby } from './ruby';
 /** Analyzes Swift source files. */
 export { analyzeSwift } from './swift';
-/** Analyzes Kotlin source files (native Tier B). */
+/** Analyzes Kotlin source files (Tier A — tree-sitter-kotlin). */
 export { analyzeKotlin } from './kotlin';
 /** Analyzes Bash/Shell source files. */
 export { analyzeBash } from './bash';
 /** Analyzes Lua source files. */
 export { analyzeLua } from './lua';
-/** Analyzes Elixir source files. */
+/** Analyzes Elixir source files (Tier A — tree-sitter-elixir). */
 export { analyzeElixir } from './elixir';
-/** Analyzes Haskell source files. */
+/** Analyzes Haskell source files (Tier A — tree-sitter-haskell). */
 export { analyzeHaskell } from './haskell';
 /** Analyzes R source files. */
 export { analyzeR } from './r';
@@ -77,7 +87,7 @@ export { analyzeDart } from './dart';
 export { analyzeCLang } from './c-lang';
 /** Analyzes C++ source files (Tier B). */
 export { analyzeCpp } from './cpp';
-/** Analyzes Scala source files (Tier B). */
+/** Analyzes Scala source files (Tier A — tree-sitter-scala). */
 export { analyzeScala } from './scala';
 /** Analyzes COBOL source files (Tier B). */
 export { analyzeCobol } from './cobol';
@@ -95,6 +105,20 @@ export { analyzeGroovy } from './groovy';
 export { analyzeObjC } from './objc';
 /** Analyzes PowerShell source files (Tier B). */
 export { analyzePowerShell } from './powershell';
+/** Analyzes Erlang source files (Tier B). */
+export { analyzeErlang } from './erlang';
+/** Analyzes Julia source files (Tier A — tree-sitter-julia). */
+export { analyzeJulia } from './julia';
+/** Analyzes OCaml source files (Tier A — tree-sitter-ocaml). */
+export { analyzeOCaml } from './ocaml';
+/** Analyzes Zig source files (Tier B). */
+export { analyzeZig } from './zig';
+/** Analyzes Nim source files (Tier B). */
+export { analyzeNim } from './nim';
+/** Analyzes Crystal source files (Tier B). */
+export { analyzeCrystal } from './crystal';
+/** Analyzes Vue.js Single-File Components — extracts script block and routes to TS/JS analyzer. */
+export { analyzeVue } from './vue';
 /** Analyzes YAML files (Tier C structural). */
 export { analyzeYaml } from './yaml';
 /** Analyzes JSON files (Tier C structural). */
@@ -138,15 +162,16 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeRuby(code, filePath);
     case 'swift':
       return analyzeSwift(code, filePath);
+    // Tier A — promoted languages (tree-sitter AST)
+    case 'elixir':
+      return analyzeElixir(code, filePath);
+    case 'scala':
+      return analyzeScala(code, filePath);
     // Tier B languages
     case 'bash':
       return analyzeBash(code, filePath);
     case 'lua':
       return analyzeLua(code, filePath);
-    case 'elixir':
-      return analyzeElixir(code, filePath);
-    case 'haskell':
-      return analyzeHaskell(code, filePath);
     case 'r':
       return analyzeR(code, filePath);
     case 'clojure':
@@ -158,8 +183,6 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeCLang(code, filePath);
     case 'cpp':
       return analyzeCpp(code, filePath);
-    case 'scala':
-      return analyzeScala(code, filePath);
     // Tier B — Sprint 30 niche languages
     case 'cobol':
       return analyzeCobol(code, filePath);
@@ -177,6 +200,24 @@ export function analyzeByLanguage(code: string, language: Language, filePath = '
       return analyzeObjC(code, filePath);
     case 'powershell':
       return analyzePowerShell(code, filePath);
+    case 'erlang':
+      return analyzeErlang(code, filePath);
+    // Tier A — new languages (tree-sitter AST)
+    case 'haskell':
+      return analyzeHaskell(code, filePath);
+    case 'julia':
+      return analyzeJulia(code, filePath);
+    case 'ocaml':
+      return analyzeOCaml(code, filePath);
+    // Tier B — new languages
+    case 'zig':
+      return analyzeZig(code, filePath);
+    case 'nim':
+      return analyzeNim(code, filePath);
+    case 'crystal':
+      return analyzeCrystal(code, filePath);
+    case 'vue':
+      return analyzeVue(code, filePath);
     // Tier C languages
     case 'yaml':
       return analyzeYaml(code, filePath);

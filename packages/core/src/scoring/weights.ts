@@ -25,8 +25,7 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   DeveloperCongestion: 0.7,
   KnowledgeLoss: 1.0,
   PrimitiveObsession: 0.5,
-  // Advisory-only; weight 0 until false-positive rate is validated in sprint 20
-  MethodTemporalCoupling: 0,
+  MethodTemporalCoupling: 0.3, // Advisory weight — empirically defensible per literature (D'Ambros 2009, Kirbas 2017, arXiv 2504.18511). See docs/calibration/method-coupling-validation.md
   // Sprint 23: organisational metrics; advisory weights
   DocumentationDebt: 0.5,
   IntentClarity: 0.4,

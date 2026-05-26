@@ -26,5 +26,8 @@
       "tree-sitter-swift",
       "tree-sitter-typescript"
     ]
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0"
   }
 }

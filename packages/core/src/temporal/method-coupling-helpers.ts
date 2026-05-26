@@ -9,7 +9,19 @@ export interface MethodRange {
   length: number;   // number of lines
 }
 
+// Blocker 5: Simple LRU-style cache bounded to MAX_CACHE_SIZE entries.
+// When the limit is reached the oldest inserted entry (first key) is evicted.
+const MAX_CACHE_SIZE = 500;
 const rangesCache = new Map<string, MethodRange[]>();
+
+function setCacheBounded(key: string, value: MethodRange[]): void {
+  if (rangesCache.size >= MAX_CACHE_SIZE) {
+    // Delete the first (oldest) entry to keep the map bounded
+    const firstKey = rangesCache.keys().next().value;
+    if (firstKey !== undefined) rangesCache.delete(firstKey);
+  }
+  rangesCache.set(key, value);
+}
 
 /**
  * Returns the method/function line ranges of `filePath` as they were at `commitSha`.
@@ -17,10 +29,9 @@ const rangesCache = new Map<string, MethodRange[]>();
  * Uses `git.raw()` convention consistent with all other temporal helpers in this directory
  * (see hotspot-helpers.ts:33 as reference, C1-fix from sprint review).
  *
- * NOTE: JSX/TSX files may yield sparse function results at historical commits because
- * TypeScript analyzer uses plain TS grammar, not TSX grammar. This is acceptable — the
- * co-change count will be lower but the coupling strength denominator (total touches)
- * compensates correctly.
+ * Blocker 4: TSX/JSX files are normalised to .ts/.js for language detection so that the
+ * TypeScript/JavaScript analyzer (which uses plain TS/JS grammar) can extract function
+ * ranges correctly from historical commits instead of yielding sparse results.
  */
 export async function getMethodRangesAtCommit(
   repoPath: string,
@@ -36,13 +47,16 @@ export async function getMethodRangesAtCommit(
   try {
     content = await git.show([`${commitSha}:${filePath}`]);
   } catch {
-    rangesCache.set(cacheKey, []);
+    setCacheBounded(cacheKey, []);
     return [];
   }
 
-  const language = detectLanguage(filePath);
+  // Blocker 4: normalise .tsx/.jsx → .ts/.js so detectLanguage returns typescript/javascript,
+  // enabling the analyzer to extract function ranges reliably from historical commits.
+  const normalizedPath = filePath.replace(/\.tsx$/, '.ts').replace(/\.jsx$/, '.js');
+  const language = detectLanguage(normalizedPath);
   if (language === 'unsupported') {
-    rangesCache.set(cacheKey, []);
+    setCacheBounded(cacheKey, []);
     return [];
   }
 
@@ -50,10 +64,10 @@ export async function getMethodRangesAtCommit(
   // (e.g. pre-release TypeScript syntax that today's parser rejects)
   let functions: Array<{ name: string; line: number; length: number }>;
   try {
-    const result = analyzeByLanguage(content, language, filePath);
+    const result = analyzeByLanguage(content, language, normalizedPath);
     functions = result.functions;
   } catch {
-    rangesCache.set(cacheKey, []);
+    setCacheBounded(cacheKey, []);
     return [];
   }
 
@@ -62,7 +76,7 @@ export async function getMethodRangesAtCommit(
     line: f.line,
     length: f.length,
   }));
-  rangesCache.set(cacheKey, ranges);
+  setCacheBounded(cacheKey, ranges);
   return ranges;
 }
 
@@ -98,23 +112,33 @@ export async function getChangedLineRanges(
 
 /**
  * Pure function. Given (a) changed line ranges for a commit and (b) method ranges
- * at the same commit: returns names of methods that contain at least one changed line.
+ * at the same commit: returns the methods (name + start line) that contain at least
+ * one changed line.
+ *
+ * Blocker 3: returning `{ name, line }` instead of just `name` lets callers build
+ * qualified keys ("name@line") that disambiguate overloaded or same-named methods
+ * within the same file (e.g. multiple `render`, `validate`, `toString` functions).
  */
 export function intersectChangedMethods(
   changedRanges: Array<[number, number]>,
   methodRanges: MethodRange[],
-): string[] {
-  const hit = new Set<string>();
+): Array<{ name: string; line: number }> {
+  const seen = new Set<string>();
+  const result: Array<{ name: string; line: number }> = [];
   for (const m of methodRanges) {
     const methodEnd = m.line + m.length - 1;
     for (const [start, end] of changedRanges) {
       if (end >= m.line && start <= methodEnd) {
-        hit.add(m.name);
+        const qualifiedKey = `${m.name}@${m.line}`;
+        if (!seen.has(qualifiedKey)) {
+          seen.add(qualifiedKey);
+          result.push({ name: m.name, line: m.line });
+        }
         break;
       }
     }
   }
-  return [...hit];
+  return result;
 }
 
 /**
