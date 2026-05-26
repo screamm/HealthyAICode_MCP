@@ -9,7 +9,8 @@ export type RefactoringStrategy =
   | 'simplify_conditional'
   | 'inline_variable'
   | 'add_docstrings'
-  | 'extract_constants';
+  | 'extract_constants'
+  | 'introduce_intermediary';
 
 export interface RefactoringTemplate {
   strategy: RefactoringStrategy;
@@ -56,6 +57,9 @@ export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: s
     case 'MagicNumber':
       return buildExtractConstantsTemplate(smell, fn, code);
 
+    case 'MessageChain':
+      return buildMessageChainTemplate(smell, fn, code);
+
     default:
       return buildGenericTemplate(smell, fn, code);
   }
@@ -75,13 +79,27 @@ function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: stri
   return {
     strategy: 'extract_method',
     instructions: () => [
+      `0. PLAN: In 1 sentence, name the helper functions you will extract and state what each will contain.`,
       `1. Identify logically cohesive sections within '${fnName}' (each section should do one thing).`,
       `2. Extract lines ${startLine}–${firstSeam - 1} into a helper function named after what that section does (e.g., 'validate${capitalize(fnName)}Input').`,
       `3. Extract lines ${firstSeam}–${secondSeam - 1} into a second helper (e.g., 'process${capitalize(fnName)}Result').`,
       `4. Replace each extracted block with a call to the new helper function.`,
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
     ],
-    skeletonHint: `function ${fnName}(...args) {\n  const validated = validate${capitalize(fnName)}Input(args);\n  const result = process${capitalize(fnName)}Result(validated);\n  return result;\n}`,
+    skeletonHint: [
+      `// Before:`,
+      `function ${fnName}(...args) {`,
+      `  // [inline logic A — lines ${startLine}–${firstSeam - 1}]`,
+      `  // [inline logic B — lines ${firstSeam}–${secondSeam - 1}]`,
+      `}`,
+      ``,
+      `// After:`,
+      `function ${fnName}(...args) {`,
+      `  const validated = validate${capitalize(fnName)}Input(args);`,
+      `  const result = process${capitalize(fnName)}Result(validated);`,
+      `  return result;`,
+      `}`,
+    ].join('\n'),
     expectedScoreImprovement: 2.5,
   };
 }
@@ -92,6 +110,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
   return {
     strategy: 'extract_method',
     instructions: () => [
+      `0. PLAN: In 1 sentence, list every responsibility you will extract and the helper name for each.`,
       `1. '${fnName}' is a Brain Method — it does too much. Identify ALL distinct responsibilities.`,
       `2. Extract each responsibility into its own well-named function (aim for 3–5 helpers).`,
       `3. Each extracted helper should be independently testable.`,
@@ -115,7 +134,24 @@ function buildEarlyReturnTemplate(smell: Smell, fn: FunctionResult, _code: strin
       `4. Repeat for each nested conditional until nesting depth is ≤ 2.`,
       `5. Each guard clause should express a precondition — use descriptive names in the condition.`,
     ],
-    skeletonHint: `function ${fnName}(...args) {\n  if (!preconditionA) return null;\n  if (!preconditionB) return defaultValue;\n  // main logic here — no deep nesting\n}`,
+    skeletonHint: [
+      `// Before:`,
+      `function ${fnName}(...args) {`,
+      `  if (valid) {`,
+      `    // [nested logic A]`,
+      `    if (ready) {`,
+      `      // [nested logic B]`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `// After:`,
+      `function ${fnName}(...args) {`,
+      `  if (!preconditionA) return null;`,
+      `  if (!preconditionB) return defaultValue;`,
+      `  // main logic here — no deep nesting`,
+      `}`,
+    ].join('\n'),
     expectedScoreImprovement: 2.0,
   };
 }
@@ -130,6 +166,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
       const chunkRanges = s.chunkRanges ?? [];
       if (chunkRanges.length === 0) {
         return [
+          `0. PLAN: In 1 sentence, name each step function you will introduce and describe what it handles.`,
           `1. Identify each sequential control-flow chunk in '${fnName}' (if/for/while blocks that run in sequence).`,
           `2. Extract each chunk into a named helper function that describes what it does.`,
           `3. Replace each chunk with a call to the corresponding helper.`,
@@ -137,6 +174,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
         ];
       }
       return [
+        `0. PLAN: In 1 sentence, name each step function you will introduce and describe what it handles.`,
         `1. '${fnName}' has ${chunkRanges.length} sequential control-flow chunks to extract.`,
         ...chunkRanges.map((r, i) =>
           `${i + 2}. Extract lines ${r.startLine}–${r.endLine} into a helper named 'handle${capitalize(fnName)}Step${i + 1}' (or a more descriptive name).`
@@ -239,6 +277,37 @@ function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: 
       `6. Group related constants together and add a comment describing the group if there are 3 or more.`,
     ],
     skeletonHint: `// --- Configuration constants ---\nconst MAX_ITEMS = 100;\nconst DEFAULT_TIMEOUT_MS = 5000;\n\nfunction ${fnName}(...) {\n  if (count > MAX_ITEMS) { ... }\n  setTimeout(callback, DEFAULT_TIMEOUT_MS);\n}`,
+    expectedScoreImprovement: 0.8,
+  };
+}
+
+function buildMessageChainTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+  const fnName = fn.name;
+
+  return {
+    strategy: 'introduce_intermediary',
+    instructions: () => [
+      `0. PLAN: In 1 sentence, name the intermediate variable(s) you will introduce to break the chain.`,
+      `1. Identify the message chain in '${fnName}' (call chains like a.getB().getC().getD()).`,
+      `2. Extract each intermediate object into a named local variable that describes what it represents.`,
+      `3. If the same chain appears more than once, introduce a helper method that encapsulates the navigation.`,
+      `4. The final expression should use at most one dot-access per line — follow the Law of Demeter.`,
+      `5. If deeper access is needed, add a method to the intermediate class rather than chaining from outside.`,
+    ],
+    skeletonHint: [
+      `// Before:`,
+      `function ${fnName}() {`,
+      `  return obj.getA().getB().getC().value;`,
+      `}`,
+      ``,
+      `// After:`,
+      `function ${fnName}() {`,
+      `  const a = obj.getA();`,
+      `  const b = a.getB();`,
+      `  const c = b.getC();`,
+      `  return c.value;`,
+      `}`,
+    ].join('\n'),
     expectedScoreImprovement: 0.8,
   };
 }
