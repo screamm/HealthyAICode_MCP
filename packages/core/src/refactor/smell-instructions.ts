@@ -140,7 +140,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
       `3. Each extracted helper should be independently testable.`,
       `4. The refactored '${fnName}' should contain only high-level orchestration calls — no inline logic.`,
       `5. Verify cyclomatic complexity drops below 10 after extraction.`,
-      `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and extract fewer responsibilities.`,
+      `VERIFY: Mentally trace 2 representative inputs through the refactored '${fnName}' and confirm identical outputs. Then confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and extract fewer responsibilities.`,
     ],
     skeletonHint: `function ${fnName}(...args) {\n  const data = prepareData(args);\n  validate(data);\n  const result = computeResult(data);\n  return formatOutput(result);\n}`,
     expectedScoreImprovement: 3.0,
@@ -316,12 +316,12 @@ function buildAddDocstringsTemplate(smell: Smell, fn: FunctionResult, _code: str
   return {
     strategy: 'add_docstrings',
     instructions: () => [
-      `1. Add a documentation comment immediately above '${fnName}' that describes what it does in one sentence.`,
-      `2. Document each parameter: name, type, and purpose.`,
-      `3. Document the return value: what is returned and when it can be null or undefined.`,
-      `4. If the function throws or has important side effects, document those too.`,
-      `5. Use the appropriate format for the language (JSDoc /** */ for JS/TS, """docstring""" for Python, /** Javadoc */ for Java).`,
-      `6. Apply the same pattern to ALL other undocumented public functions in the file to fully resolve LowDocCoverage.`,
+      `1. SCOPE: Document EVERY undocumented public function and type in the entire file — not just '${fnName}'. LowDocCoverage is a file-wide smell.`,
+      `2. For each undocumented symbol, add a documentation comment immediately above it: one sentence describing what it does.`,
+      `3. Document each parameter: name, type, and purpose.`,
+      `4. Document the return value: what is returned and when it can be null/undefined.`,
+      `5. If the function throws, has side effects, or is async, document those too.`,
+      `6. Use the appropriate format for the language (JSDoc /** */ for JS/TS, """docstring""" for Python, /** Javadoc */ for Java).`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -350,12 +350,11 @@ function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: 
   return {
     strategy: 'extract_constants',
     instructions: () => [
-      `1. Identify ALL magic numbers and magic strings in '${fnName}' (literal values whose meaning is not immediately obvious).`,
-      `2. For each magic value, declare a named constant at module/class level that explains its purpose.`,
-      `3. Use SCREAMING_SNAKE_CASE for constants (e.g., MAX_RETRY_COUNT = 3, DEFAULT_TIMEOUT_MS = 5000).`,
-      `4. Replace EVERY occurrence of each magic value throughout the file with its named constant.`,
-      `5. The constant name should read like a business rule: prefer MAX_LOGIN_ATTEMPTS over LIMIT.`,
-      `6. Group related constants together and add a comment describing the group if there are 3 or more.`,
+      `1. Scan THE ENTIRE FILE (not just '${fnName}') and list every magic number and magic string — literal values whose meaning is not immediately obvious.`,
+      `2. For each magic value, declare a named constant at module/class level: use SCREAMING_SNAKE_CASE (e.g., MAX_RETRY_COUNT = 3, DEFAULT_TIMEOUT_MS = 5000).`,
+      `3. The constant name must read like a business rule: prefer MAX_LOGIN_ATTEMPTS over LIMIT, FLUSH_INTERVAL_MS over 5000.`,
+      `4. Replace EVERY occurrence of each magic value throughout the entire file with its named constant — not just the one in '${fnName}'.`,
+      `5. Group related constants together with a describing comment when 3 or more belong to the same domain.`,
     ],
     skeletonHint: [
       `// Before:`,
@@ -393,7 +392,7 @@ function buildGodClassTemplate(smell: Smell, fn: FunctionResult, _code: string):
       `3. Each new class should own its data: move the relevant fields in alongside the methods.`,
       `4. Make '${fnName}' delegate to the new classes instead of implementing the logic inline.`,
       `5. Ensure each new class exposes a minimal, cohesive public interface — no more than one responsibility.`,
-      `VERIFY: Re-read all affected classes — confirm (1) behaviour unchanged, (2) no circular dependencies introduced, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and extract one fewer class.`,
+      `VERIFY: Mentally trace the primary use-case through all affected classes and confirm identical behaviour. Then confirm (1) no circular dependencies introduced, (2) all call sites still valid, (3) existing comments preserved. If compilation fails, revert to currentCode and extract one fewer class.`,
     ],
     skeletonHint: [
       `// Before: ${fnName} has 400+ lines — validates, persists, formats, notifies`,
@@ -428,7 +427,7 @@ function buildMoveMethodTemplate(smell: Smell, fn: FunctionResult, _code: string
       `3. In the original location, replace the method body with a delegation call to the new location.`,
       `4. If only part of '${fnName}' shows Feature Envy, extract that part first (Extract Method), then move it.`,
       `5. Remove the delegation stub in the original class if nothing outside calls it there.`,
-      `VERIFY: Re-read both classes — confirm (1) behaviour unchanged, (2) no new coupling introduced, (3) all call sites still valid, (4) existing comments preserved. If compilation fails, revert to currentCode and add the delegation stub back.`,
+      `VERIFY: Mentally trace the method's primary use-case in its new location and confirm identical behaviour. Then confirm (1) no new coupling introduced, (2) all call sites still valid, (3) existing comments preserved. If compilation fails, revert to currentCode and add the delegation stub back.`,
     ],
     skeletonHint: [
       `// Before: method in ClassA accessing ClassB's data — Feature Envy`,
@@ -454,9 +453,9 @@ function buildMessageChainTemplate(smell: Smell, fn: FunctionResult, _code: stri
   return {
     strategy: 'introduce_intermediary',
     instructions: () => [
-      `0. PLAN: In 1 sentence, name the intermediate variable(s) you will introduce to break the chain.`,
-      `1. Identify the message chain in '${fnName}' (call chains like a.getB().getC().getD()).`,
-      `2. Extract each intermediate object into a named local variable that describes what it represents.`,
+      `0. PLAN: List ALL message chains in '${fnName}' you will break, and name the intermediate variable for each.`,
+      `1. SCOPE: Find every message chain in '${fnName}' (call chains like a.getB().getC().getD()) — fix them all in this pass.`,
+      `2. For each chain: extract every intermediate object into a named local variable describing what it represents.`,
       `3. If the same chain appears more than once, introduce a helper method that encapsulates the navigation.`,
       `4. The final expression should use at most one dot-access per line — follow the Law of Demeter.`,
       `5. If deeper access is needed, add a method to the intermediate class rather than chaining from outside.`,

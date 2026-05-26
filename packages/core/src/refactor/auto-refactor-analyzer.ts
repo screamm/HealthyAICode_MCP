@@ -35,6 +35,15 @@ export interface AutoRefactorResult {
    */
   nearTarget: boolean;
   /**
+   * True when nearTarget AND focusLines is present (large function near target score).
+   * When true, focusLines contains all necessary context — reading currentCode is wasteful.
+   * Saves 50–200 input tokens per iteration for large functions in the final refactoring passes.
+   * Research: SWE-Pruner (arXiv 2601.16746) shows aggressive context pruning improves
+   * coding-agent accuracy; irrelevant padding degrades model performance (67.6 pt MMLU drop
+   * at 30K padding tokens).
+   */
+  skipCurrentCode: boolean;
+  /**
    * Hard-stop iteration budget for the refactoring loop.
    * Always 5 — research shows >95 % of achievable gains occur within 5 iterations.
    * Sources: arXiv 2602.21833 (5-iteration large-scale experiment),
@@ -165,7 +174,7 @@ export function analyzeForAutoRefactor(
   // Research (EM-Assist 2024): explicit type specification raises LLM success rate from 15.6 % to 86.7 %.
   const strategyLabel = template.strategy.replace(/_/g, ' ').toUpperCase();
   instructions.unshift(
-    `[REFACTORING: ${strategyLabel} — ${candidate.type} in '${fn.name}' — ${candidate.description.slice(0, 100)}]`
+    `[REFACTORING: ${strategyLabel} — ${candidate.type} in '${fn.name}' — ${candidate.description.slice(0, 150)}]`
   );
 
   // Compute co-located smells: other smells on the same function, sorted by weight.
@@ -199,6 +208,10 @@ export function analyzeForAutoRefactor(
   // Near-target: score ≥ 9.0 means we are in the stabilisation phase.
   // Research (arXiv 2602.21833): LLMs over-refactor past this point — use minimal-diff mode.
   const nearTarget = result.score >= 9.0;
+
+  // skipCurrentCode: when near target with a large function, focusLines is sufficient context.
+  // Reading currentCode adds 50–200 wasted tokens per call (arXiv 2601.16746).
+  const skipCurrentCode = nearTarget && focusLines !== undefined;
 
   // Hard-stop budget: 5 iterations is the empirical ceiling for diminishing returns.
   const iterationBudget = 5;
@@ -240,7 +253,11 @@ export function analyzeForAutoRefactor(
   // < 9.0              → restructuring phase → standard instructions apply.
   // Citations are kept in JSDoc above, not in the output, to reduce inference-time token waste.
   const scopeNote = `Edit only within changeScope: ${changeScope}. `;
-  const focusNote = focusLines ? 'focusLines is the primary context — consult currentCode only if more context is needed. ' : '';
+  const focusNote = skipCurrentCode
+    ? 'CONTEXT OPTIMISATION: focusLines contains all needed context for this surgical change — do not read currentCode (saves tokens). '
+    : focusLines
+    ? 'focusLines is the primary context — consult currentCode only if more context is needed. '
+    : '';
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
@@ -276,6 +293,7 @@ export function analyzeForAutoRefactor(
     predictedScoreDelta,
     stagnating,
     nearTarget,
+    skipCurrentCode,
     iterationBudget,
     changeScope,
     remainingSmellTypes: uniqueRemaining,
