@@ -18,6 +18,20 @@ export interface AutoRefactorResult {
    * When stagnating, consider accepting the current score or switching to a different file.
    */
   stagnating: boolean;
+  /**
+   * True when currentHealthScore ≥ 9.0 — code is entering the stabilisation phase.
+   * Switch to minimal-diff mode: fix one smell per pass, avoid structural changes.
+   * Research: arXiv 2602.21833 found LLMs over-refactor past the 9.0 mark, trading
+   * readability gains for regressions. Explicit "near-target" signalling prevents this.
+   */
+  nearTarget: boolean;
+  /**
+   * Hard-stop iteration budget for the refactoring loop.
+   * Always 5 — research shows >95 % of achievable gains occur within 5 iterations.
+   * Sources: arXiv 2602.21833 (5-iteration large-scale experiment),
+   *          arXiv 2505.02931 (10-patch ceiling for repair tasks, 5 sufficient for style).
+   */
+  iterationBudget: number;
   /** Top remaining smell types after this fix (helpful for planning multi-pass). */
   remainingSmellTypes: string[];
   /**
@@ -173,6 +187,13 @@ export function analyzeForAutoRefactor(
   // Stagnation: when predicted gain is tiny, the loop should consider stopping.
   const stagnating = delta < 0.3;
 
+  // Near-target: score ≥ 9.0 means we are in the stabilisation phase.
+  // Research (arXiv 2602.21833): LLMs over-refactor past this point — use minimal-diff mode.
+  const nearTarget = result.score >= 9.0;
+
+  // Hard-stop budget: 5 iterations is the empirical ceiling for diminishing returns.
+  const iterationBudget = 5;
+
   // Compute the top remaining smell types (excluding the one we're fixing) for planning.
   const remainingSmellTypes = result.smells
     .filter(s => s !== candidate)
@@ -195,15 +216,35 @@ export function analyzeForAutoRefactor(
     );
   }
 
-  return {
-    // Reasoning-first: instructions and context before the code block.
-    followUpInstruction:
-      'Apply the refactoringInstructions using model claude-opus-4-7. ' +
-      'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
+  // Score-adaptive follow-up instruction.
+  // ≥ 9.0 (nearTarget) → stabilisation phase → minimal-diff mode to prevent over-refactoring.
+  // < 9.0              → restructuring phase → standard instructions apply.
+  // SCoT skeleton-first: adapt exampleSkeleton before writing code (+36% smell reduction, ACM 3690635).
+  const followUpInstruction = nearTarget
+    ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
+      'Step 0: adapt the exampleSkeleton to the actual function and write it out as your plan before touching any code ' +
+      '(Structured CoT: +36 % smell reduction vs plain CoT, ACM 3690635). ' +
+      'Apply only the single refactoring in refactoringInstructions using model claude-opus-4-7. ' +
+      'Structural changes only — no renaming. ' +
+      `${focusLines ? 'focusLines shows the key area — start there, consult currentCode only if needed. ' : ''}` +
       'Then run code_health_review. ' +
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
-      'Typically 2–4 iterations total. Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
-      'Target: ≥ 9.5 (research shows AI-induced defect risk increases 60 % below this threshold).',
+      `Hard stop after ${iterationBudget} total iterations — research shows over-refactoring risk and diminishing returns beyond 5 (arXiv 2602.21833). ` +
+      'Stop immediately if stagnating: true — accept current score.'
+    : 'Step 0: adapt the exampleSkeleton to the actual function and write it out as your plan before touching any code ' +
+      '(Structured CoT: +36 % smell reduction vs plain CoT, ACM 3690635). ' +
+      'Apply the refactoringInstructions using model claude-opus-4-7. ' +
+      'Structural changes only — do not rename variables or functions unless the refactoring requires it. ' +
+      `${focusLines ? 'focusLines shows the smell area — start there, consult currentCode only if context is needed. ' : ''}` +
+      'Then run code_health_review. ' +
+      'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
+      `Hard stop after ${iterationBudget} total iterations. Typically 2–4. ` +
+      'Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
+      'Target: ≥ 9.5 (research shows AI-induced defect risk increases 60 % below this threshold).';
+
+  return {
+    // Reasoning-first: instructions and context before the code block.
+    followUpInstruction,
     smell: candidate,
     refactoringStrategy: template.strategy,
     refactoringInstructions: instructions,
@@ -211,6 +252,8 @@ export function analyzeForAutoRefactor(
     predictedHealthScore,
     predictedScoreDelta,
     stagnating,
+    nearTarget,
+    iterationBudget,
     remainingSmellTypes: uniqueRemaining,
     colocatedSmells,
     successLikelihood,
