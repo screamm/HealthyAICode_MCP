@@ -49,13 +49,25 @@ Running `code_health_auto_refactor → apply → code_health_review` until `loop
 
 Files near the scoring floor (< 5.0) need more passes and benefit from targeting the highest-weight smell first (enforced since Sprint 34).
 
+### Sprint 50 BEFORE → AFTER benchmark
+
+Purpose-built bad-code fixtures (≈1.0–1.2 score, 32–34 smells) refactored to ≥ 9.5 in one session. Fixtures live in [`before-after/benchmark-sprint50/`](before-after/benchmark-sprint50/).
+
+| File | BEFORE | AFTER | Δ Score | Smells↓ |
+|------|--------|-------|---------|---------|
+| `typescript.ts` | 1.00 | **9.60** | +8.60 | 32 → 1 |
+| `python.py` | 1.00 | **9.70** | +8.70 | 33 → 1 |
+| `go.go` | 1.20 | **10.00** | +8.80 | 34 → 0 |
+
+Key smells eliminated per file: DeepNesting, ComplexMethod, MagicNumber, BumpyRoad, LargeMethod, DataClumps, LowDocCoverage, CognitiveComplexity, PrimitiveObsession. Run: `pnpm --filter @healthy-ai-code/core test tests/benchmark/sprint50-after.test.ts`
+
 ### Test suite
 
 | Package | Test files | Tests | Status |
 |---------|-----------|-------|--------|
-| `@healthy-ai-code/core` | 80 | 895 | ✅ all passing |
+| `@healthy-ai-code/core` | 82 | 905 | ✅ all passing |
 | `@healthy-ai-code/mcp-server` | 20 | 118 | ✅ all passing |
-| **Total** | **100** | **1 013** | ✅ |
+| **Total** | **102** | **1 023** | ✅ |
 
 Run: `pnpm test`
 
