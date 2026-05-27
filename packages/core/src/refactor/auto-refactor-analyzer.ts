@@ -322,11 +322,21 @@ export function analyzeForAutoRefactor(
   // Constraint re-injection per turn prevents "constraint decay" in long agentic loops.
   // Research: arXiv 2605.06445 — constraints weaken as context grows; re-stating each call prevents drift.
   const preserveNote = 'Preserve: public API signatures, all imports, all existing tests, inline comments. ';
+  // CRANE pattern: free-form reasoning BEFORE constrained code output.
+  // Research: CRANE (arXiv 2502.09061) — hard schema/code constraints during reasoning degrade
+  // accuracy 10–30 %; alternating free reasoning → code output recovers +10 pp.
+  // Explicitly instructing "think then apply" reproduces this benefit without model retraining.
+  const craneNote = 'THINK FIRST: before touching any code, write out (a) why this specific change is correct and (b) what regression risk exists. Then apply. ';
+  // Security degradation hard stop.
+  // Research: arXiv 2506.11022 — 37.6 % increase in critical vulnerabilities after 5+ quality-focused
+  // iterations. Security regressions introduced mid-loop are not recoverable by further quality work.
+  const securityNote = 'SECURITY STOP: if code_health_review shows new SecuritySmells vs. session start, stop immediately — do not continue quality iterations. ';
   // Explicitly naming the strategy raises LLM success rate from 15.6 % to 86.7 %
   // (arXiv 2511.21788): telling the model which specific refactoring to apply
   // rather than "improve code quality" prevents superficial or wrong transforms.
   const followUpInstruction = nearTarget
     ? 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
+      craneNote +
       'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       `Apply ${strategyLabel} (refactoringInstructions) using model ${modelNote}. ` +
       hardSmellNote +
@@ -339,8 +349,10 @@ export function analyzeForAutoRefactor(
       'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
       `Hard stop after ${iterationBudget} total iterations. ` +
       deltaNote +
+      securityNote +
       'Stop immediately if stagnating: true — accept current score.'
-    : 'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
+    : craneNote +
+      'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
       `Apply ${strategyLabel} (refactoringInstructions) using model ${modelNote}. ` +
       hardSmellNote +
       'Never rename variables or functions — causes oscillation. ' +
@@ -352,6 +364,7 @@ export function analyzeForAutoRefactor(
       `Hard stop after ${iterationBudget} iterations. ` +
       typicalNote +
       deltaNote +
+      securityNote +
       'Stop immediately if stagnating: true — accept the current score or switch to a different file. ' +
       'Target: ≥ 9.5.';
 

@@ -16,13 +16,10 @@ type McpToolRegistrar = (
 export function registerAutoRefactor(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_auto_refactor',
-    'Returns structured refactoring instructions for the highest-priority smell in a source file. ' +
-      'Output fields (reasoning-first order): followUpInstruction (read first), smell, refactoringStrategy, ' +
-      'refactoringInstructions (numbered steps), exampleSkeleton, predictedScoreDelta, ' +
-      'remainingSmellTypes (next smells to fix), then currentCode/focusLines context. ' +
-      'Follow followUpInstruction exactly — it specifies model, effort level, and stop conditions. ' +
-      'Verify with code_health_review after each change. Stop when loopComplete: true (score ≥ 9.5) ' +
-      'or stagnating: true or score Δ < 0.1 — do NOT continue past these signals.',
+    'Refactoring plan for the top code smell in a source file. ' +
+      'Read followUpInstruction first — it prescribes model, effort level, and all stop conditions. ' +
+      'Loop: apply change → code_health_review → repeat. ' +
+      'Stop on loopComplete:true, stagnating:true, score Δ<0.1, or new SecuritySmells.',
     {
       filePath: z.string().describe('Absolute or relative path to the file to refactor'),
       language: z
