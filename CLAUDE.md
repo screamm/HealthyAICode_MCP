@@ -85,6 +85,59 @@ Weights are in `packages/core/src/scoring/weights.ts`. Key values:
 
 ---
 
+## API Usage Tips (custom Claude API clients)
+
+Tips for operators building custom clients around the refactoring loop tools. These are
+**opt-in headers / parameters** — the MCP server itself does not set them; include them in
+your HTTP client when calling the Anthropic Messages API directly.
+
+### Token-efficient tools (beta)
+```
+anthropic-beta: token-efficient-tools-2025-02-19
+```
+Reduces token usage for tool-use responses by ~40 % with no change to tool behaviour.
+Safe to enable globally on all refactoring loop calls.
+
+### Structured outputs / schema caching (beta)
+```
+anthropic-beta: structured-outputs-2025-11-13
+```
+Enables constrained decoding (output always matches the JSON schema) and caches the
+tool schemas for 24 hours. Reduces both per-call latency and schema-transmission tokens
+when the same tool is called many times in a loop.
+
+### Task budgets — total loop cost cap (beta)
+```
+anthropic-beta: task-budgets-2026-03-13
+```
+Attach a `task_budget` object to the first call in a refactoring loop to hard-cap the
+total tokens consumed across all iterations. Reduces loop cost by 40–60 % on long
+sessions. The model returns `budget_exhausted: true` when the cap is hit, which maps
+cleanly to `loopComplete: true`.
+
+### Adaptive thinking effort (`effort`) — Opus 4.x
+The `code_health_auto_refactor` tool already computes and returns the correct effort
+level in `followUpInstruction`. When calling Opus 4.7 directly:
+
+| Situation | `effort` value |
+|---|---|
+| `nearTarget: true` (score ≥ 9.0) | `"low"` |
+| `successLikelihood: "medium"` | `"medium"` |
+| `successLikelihood: "hard"` | `"high"` |
+| `successLikelihood: "hard"` AND score < 5 | `"max"` |
+| Long-horizon agentic session (Opus 4.7 only) | `"xhigh"` |
+
+`"xhigh"` is Opus 4.7-exclusive; on earlier models it falls back to `"high"`.
+
+### Prompt cache TTL — session-level savings
+The Anthropic prompt cache has a **1-hour TTL** for paid tiers. For a multi-file
+refactoring session, structure the system prompt (tool schemas, project instructions)
+as the first cache-breakpoint message so the same cache block is reused across all
+tool calls within the session. This requires no API changes — just keep the system
+prompt identical across calls.
+
+---
+
 ## Language Support
 
 ### Tier A — Full AST (tree-sitter)

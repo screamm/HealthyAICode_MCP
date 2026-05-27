@@ -153,6 +153,12 @@ export function analyzeForAutoRefactor(
   const currentCode = lines.slice(startLine - 1, endLine).join('\n');
   const functionLineCount = endLine - startLine + 1;
 
+  // Scope smell sets — defined early so focusLines can skip wide-scope smells below.
+  // File-scoped smells require touching all exports; class-scoped smells span multiple methods;
+  // most smells are contained to a single function.
+  const FILE_SCOPE_SMELLS = new Set<SmellType>(['LowDocCoverage', 'DocumentationDebt']);
+  const CLASS_SCOPE_SMELLS = new Set<SmellType>(['GodClass', 'FeatureEnvy', 'DataClumps']);
+
   // For large functions, compute a focused excerpt around the smell's line.
   // Research (CigaR 2024): targeted context narrowing reduces token cost by up to 73 %.
   // Near target (score ≥ 9.0): skipCurrentCode will be set, so focusLines MUST cover enough
@@ -160,7 +166,13 @@ export function analyzeForAutoRefactor(
   // Research: "containing method body is the right unit" — ±20 lines is sufficient for targeted fixes.
   const FOCUS_WINDOW = result.score >= 9.0 ? 20 : 8;
   const LARGE_FN_THRESHOLD = 40;
-  const focusLines = functionLineCount > LARGE_FN_THRESHOLD
+  // GodClass targets the entire class body — a windowed excerpt is useless and misleading.
+  // The operator needs currentCode (full class) to plan decomposition.
+  // Research: GodClass requires cross-class reasoning; method-level focusLines doesn't apply
+  // (arXiv 2503.20934: Move Method + IDE semantics needed; GodClass not reliably automated).
+  const isClassLevelSmell = CLASS_SCOPE_SMELLS.has(candidate.type as SmellType)
+    || FILE_SCOPE_SMELLS.has(candidate.type as SmellType);
+  const focusLines = !isClassLevelSmell && functionLineCount > LARGE_FN_THRESHOLD
     ? (() => {
         const smellIdx = candidate.line - 1; // 0-based
         const focusStart = Math.max(startLine - 1, smellIdx - FOCUS_WINDOW);
@@ -238,10 +250,7 @@ export function analyzeForAutoRefactor(
   const outputMode: 'diff' | 'full' = skipCurrentCode ? 'diff' : 'full';
 
   // Change scope: tells the LLM how broadly to edit.
-  // File-scoped smells require touching all exports; class-scoped smells span multiple methods;
-  // most smells are contained to a single function.
-  const FILE_SCOPE_SMELLS = new Set<SmellType>(['LowDocCoverage', 'DocumentationDebt']);
-  const CLASS_SCOPE_SMELLS = new Set<SmellType>(['GodClass', 'FeatureEnvy', 'DataClumps']);
+  // FILE_SCOPE_SMELLS / CLASS_SCOPE_SMELLS are declared above near the focusLines logic.
   const changeScope: 'function' | 'class' | 'file' =
     FILE_SCOPE_SMELLS.has(candidate.type as SmellType) ? 'file'
     : CLASS_SCOPE_SMELLS.has(candidate.type as SmellType) ? 'class'
