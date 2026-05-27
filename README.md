@@ -97,7 +97,7 @@ code_health_review (verify improvement)
         ▼
 loopComplete: true? ──Yes──→ done
         │
-        No  (minimum 3 iterations; most files need 3–5)
+        No  (loop stops only when score ≥ 9.5 — no minimum; typical: 2–4 iterations)
         └──────────────────→ code_health_auto_refactor (next smell)
 ```
 
@@ -336,7 +336,7 @@ The square-root term makes penalties sub-linear: three `ComplexMethod` smells de
 
 ```json
 {
-  "followUpInstruction": "Apply the refactoringInstructions using model claude-opus-4-7. Then run code_health_review to verify. Loop until loopComplete: true (score ≥ 9.5). Minimum 3 iterations — most files need 3–5 passes.",
+  "followUpInstruction": "Apply the refactoringInstructions using model claude-opus-4-7. Then run code_health_review to verify. Loop until loopComplete: true (score ≥ 9.5) — stops immediately when threshold is reached, no minimum. Hard stop after 3–5 iterations depending on difficulty.",
   "smell": { "type": "ComplexMethod", "severity": "high", "functionName": "validateUser", "line": 42 },
   "refactoringStrategy": "extract_method",
   "refactoringInstructions": [
