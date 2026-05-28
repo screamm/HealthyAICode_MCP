@@ -151,6 +151,20 @@ do not auto-enable interleaved thinking. Allows the model to think between tool 
 rather than only at the start, improving multi-step refactoring decisions.
 Opus 4.6 and Opus 4.7 enable interleaved thinking automatically.
 
+### Programmatic tool calling — eliminate inference round-trips
+Claude can write code that calls your tools programmatically inside a code execution
+container, eliminating one API inference pass per tool call. For a refactoring loop
+that normally invokes `code_health_auto_refactor` → edit → `code_health_review` in
+separate turns, programmatic tool calling can collapse all three into one assistant turn.
+When Claude orchestrates 20+ tool calls in a single code block, you eliminate 19+
+inference passes — reducing both latency and token overhead by up to 60 %.
+See: [Programmatic tool calling](https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling)
+
+### Parallel tool calls — multi-file analysis
+Independent tool calls within a single assistant turn run concurrently (`Promise.all` /
+`asyncio.gather`). Use this to analyze 3–5 files in parallel with `code_health_review`
+before deciding which to refactor next, rather than serializing them.
+
 ### Prompt cache TTL — session-level savings
 The Anthropic prompt cache has a **1-hour TTL** for paid tiers. Cache reads cost
 **0.10× base input price** (90 % off). For a multi-file refactoring session, structure
@@ -159,6 +173,10 @@ message so the same cache block is reused across all tool calls within the sessi
 This requires no API changes — just keep the system prompt identical across calls.
 At $5/M input tokens (Opus 4.7), a cached 10K-token system prompt costs $0.005 uncached
 vs. $0.0005 cached — savings compound quickly across 50+ loop iterations.
+
+**Cache minimum floor:** Opus 4.x requires **≥ 4 096 cacheable tokens** before caching
+activates; Sonnet 4.6 requires ≥ 1 024. If your prefix is below the floor, caching
+silently does not apply — verify with `cache_creation_input_tokens > 0` in the response.
 
 ---
 

@@ -62,6 +62,9 @@ function assembleFollowUpNotes(p: FollowUpParams): FollowUpNotes {
     deltaNote: 'Also stop if score Δ < 0.1 between iterations — convergence noise floor. ',
     // Constraint re-injection per turn prevents "constraint decay" in long agentic loops.
     // Research: arXiv 2605.06445 — constraints weaken as context grows; re-stating each call prevents drift.
+    // arXiv 2605.17304 (Context Codec, May 2026): "existing methods rarely specify which semantic
+    // commitments must survive compression"; re-injecting explicit constraints (API signatures,
+    // imports, tests) is the commitment-preservation mechanism that survives context compression.
     preserveNote: 'Preserve: public API signatures, all imports, all existing tests, inline comments. ',
     // CRANE pattern: free-form reasoning BEFORE constrained code output.
     // Research: CRANE (arXiv 2502.09061) — hard schema/code constraints during reasoning degrade

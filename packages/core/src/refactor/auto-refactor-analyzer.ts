@@ -75,6 +75,13 @@ export interface AutoRefactorResult {
   endLine: number;
   /** Number of lines in the target function — helps gauge refactoring scope. */
   functionLineCount: number;
+  /**
+   * Full source of the target function. Placed LAST in the JSON schema (reasoning-first order).
+   * Research: "lost in the middle" effect (Apr 2026 testing) shows 10–25 % accuracy degradation
+   * for information in the middle of long contexts; placing code after instructions ensures
+   * the model reads strategy before encountering the code, avoiding mid-context retrieval loss.
+   * Use `focusLines` instead when `skipCurrentCode: true` to save 50–200 input tokens.
+   */
   currentCode: string;
   /**
    * Lines immediately surrounding the smell location (± 8 lines, capped at function bounds).
@@ -91,6 +98,9 @@ export interface AutoRefactorResult {
    * If the current smell is 'hard' and stagnating, prefer switching to an easier co-located smell.
    * Research: EM-Assist (arXiv 2401.15298) 53.4 % recall; SmellBench (arXiv 2605.07001) 47.7 %
    * best-case resolution; SATD repayment only 10 % EM (arXiv 2501.09888).
+   * SWE-Refactor (arXiv 2602.03712): compound/multi-smell refactorings are the primary failure source
+   * (only 39.4 % success); targeting one smell at a time is the correct approach for 'hard' smells.
+   * CC is the most reliable complexity metric for LLM correlation (ρ > 0.9, arXiv 2601.21894).
    * Thinking effort scales with difficulty: easy→low, medium→medium, hard→xhigh (Opus 4.7), hard+score<5→max.
    */
   successLikelihood: 'easy' | 'medium' | 'hard';
