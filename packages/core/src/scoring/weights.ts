@@ -17,7 +17,7 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   TestProximity: 0.5,
   MessageChain: 0.5,
   DataClumps: 0.5,
-  SATD: 0.6,
+  SATD: 0.6, // arXiv 2601.06266: LLM-generated code accumulates MORE SATD than human-written code — weight reflects elevated risk in AI-assisted codebases
   GodClass: 1.5,
   FeatureEnvy: 0.7,
   LowMaintainability: 0.3, // Reduced from 0.4 — single instance now scores 9.7 instead of 9.6, removing the derived-smell ceiling
@@ -27,6 +27,10 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   PrimitiveObsession: 0.5,
   MethodTemporalCoupling: 0.3, // Advisory weight — empirically defensible per literature (D'Ambros 2009, Kirbas 2017, arXiv 2504.18511). See docs/calibration/method-coupling-validation.md
   // Sprint 23: organisational metrics; advisory weights
+  // arXiv 2603.22106 (Triple Debt Model, Mar 2026): in AI-assisted development, "cognitive debt"
+  // (erosion of shared understanding) and "intent debt" (missing rationale for decisions) may
+  // surpass technical debt in importance. DocumentationDebt and IntentClarity are our proxies
+  // for intent debt — weights reflect their growing significance in AI-heavy codebases.
   DocumentationDebt: 0.5,
   IntentClarity: 0.4,
   // Sprint 22: architecture debt; advisory weight

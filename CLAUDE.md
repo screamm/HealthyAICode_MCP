@@ -178,6 +178,20 @@ vs. $0.0005 cached — savings compound quickly across 50+ loop iterations.
 activates; Sonnet 4.6 requires ≥ 1 024. If your prefix is below the floor, caching
 silently does not apply — verify with `cache_creation_input_tokens > 0` in the response.
 
+### Claude Routines — scheduled automation
+Claude Routines (Anthropic, May 2026) lets you schedule automated Claude workflows that
+run on a cron-like schedule without a human in the loop. Useful patterns for this project:
+
+- **Documentation drift scan** (daily): run `code_health_review` on recently changed files
+  and flag any newly introduced smells before they accumulate.
+- **Self-health audit** (weekly): run `node scripts/health-audit.mjs` and post a summary
+  to a Slack channel or GitHub issue so regressions are caught early.
+- **Stale debt-goal cleanup** (monthly): call `listGoals()` and surface goals whose target
+  score has already been reached so they can be removed.
+
+Configure via the Claude web console → "Routines". Each routine receives the same MCP
+tool set as an interactive session, so all 27 `code_health_*` tools are available.
+
 ---
 
 ## Language Support

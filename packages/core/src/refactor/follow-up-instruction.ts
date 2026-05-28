@@ -59,6 +59,9 @@ function assembleFollowUpNotes(p: FollowUpParams): FollowUpNotes {
     // Convergence noise floor (CodeScene empirical calibration): stop if score delta < 0.1.
     // Research: arXiv 2602.21833 — structural metrics stabilise after iteration 2; gains < 0.1
     // are statistical noise. Prevents wasted iterations on files that have already converged.
+    // Geometric Dynamics of Agentic Loops (arXiv 2512.10350): agentic loops exhibit contractive
+    // (convergence toward stable attractor), oscillatory (cycling), or exploratory (divergent) regimes.
+    // The Δ < 0.1 stop condition enforces the contractive regime; without it loops drift into oscillation.
     deltaNote: 'Also stop if score Δ < 0.1 between iterations — convergence noise floor. ',
     // Constraint re-injection per turn prevents "constraint decay" in long agentic loops.
     // Research: arXiv 2605.06445 — constraints weaken as context grows; re-stating each call prevents drift.
@@ -77,6 +80,9 @@ function assembleFollowUpNotes(p: FollowUpParams): FollowUpNotes {
     // arXiv 2605.02741 (AI-Generated Smells): LLM-generated code introduces new smells (God Class,
     // Feature Envy, DataClumps) at measurable rates; code_health_review after each iteration is the
     // primary guard against regression — stopping on new smells is evidence-backed.
+    // Agent Drift (arXiv 2601.04170): behavioral degradation (semantic/coordination/behavioral drift)
+    // compounds over extended sessions — iterationBudget is the primary mitigation; security stop
+    // is the safety valve for drift into vulnerability introduction.
     securityNote: 'SECURITY STOP: if code_health_review shows new SecuritySmells vs. session start, stop immediately — do not continue quality iterations. ',
   };
 }
@@ -110,7 +116,7 @@ function buildNearTargetInstruction(p: FollowUpParams, n: FollowUpNotes): string
     `Apply ${p.strategyLabel} (refactoringInstructions) using model ${p.modelNote}. ` +
     n.hardSmellNote +
     n.diffNote +
-    'Never rename — causes oscillation that undoes quality gains. ' +
+    'Never rename — causes oscillation (arXiv 2512.10350) and requires multi-file coordination beyond single-file scope (arXiv 2601.00482). ' +
     n.preserveNote +
     n.scopeNote +
     n.focusNote +
@@ -128,7 +134,7 @@ function buildStandardInstruction(p: FollowUpParams, n: FollowUpNotes): string {
     'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
     `Apply ${p.strategyLabel} (refactoringInstructions) using model ${p.modelNote}. ` +
     n.hardSmellNote +
-    'Never rename variables or functions — causes oscillation. ' +
+    'Never rename variables or functions — causes oscillation (arXiv 2512.10350) and requires cross-file coordination out of scope here (arXiv 2601.00482). ' +
     n.preserveNote +
     n.scopeNote +
     n.focusNote +
