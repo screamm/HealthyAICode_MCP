@@ -27,79 +27,141 @@ const LANGUAGE_EXTENSIONS: Record<string, string[]> = {
   swift: ['swift'],
 };
 
+const directorySchema = z.string().describe('Absolut sökväg till katalogen som ska analyseras');
+const languageEnum = z.enum(['typescript', 'javascript', 'python', 'java', 'kotlin', 'csharp', 'rust', 'go', 'php', 'ruby', 'swift']);
+const languageSchema = languageEnum.optional().describe('Primärt språk att filtrera filer på. Default: typescript.');
+const maxFilesNum = z.number().int();
+const maxFilesBounded = maxFilesNum.min(1).max(500);
+const maxFilesWithDefault = maxFilesBounded.default(200);
+const maxFilesSchema = maxFilesWithDefault.describe('Maxantal filer att analysera (default 200)');
+
+const AI_READINESS_SCHEMA = {
+  directory: directorySchema,
+  language: languageSchema,
+  maxFiles: maxFilesSchema,
+};
+
+interface AIReadinessOptions {
+  directory: string;
+  language: string;
+  maxFiles: number;
+}
+
 export function registerAIReadiness(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_ai_readiness',
     'Beräknar AI-Readiness Score (0-10) för en katalog. Composite-metric som mäter hur väl en kodbas lämpar sig för AI-assisterad utveckling: naming clarity, type coverage, context window fit, doc signal och modularity. Returnerar score, per-dimensionsbreakdown, AI-blockers och en kort sammanfattning.',
-    {
-      directory: z.string().describe('Absolut sökväg till katalogen som ska analyseras'),
-      language: z.enum([
-        'typescript', 'javascript', 'python', 'java', 'kotlin',
-        'csharp', 'rust', 'go', 'php', 'ruby', 'swift',
-      ]).optional().describe('Primärt språk att filtrera filer på. Default: typescript.'),
-      maxFiles: z.number().int().min(1).max(500).default(200).describe('Maxantal filer att analysera (default 200)'),
-    },
-    async (args) => handleAIReadiness(
-      args.directory as string,
-      (args.language as string | undefined) ?? 'typescript',
-      (args.maxFiles as number | undefined) ?? 200,
-    ),
+    AI_READINESS_SCHEMA,
+    async (args) => handleAIReadiness({
+      directory: args.directory as string,
+      language: (args.language as string | undefined) ?? 'typescript',
+      maxFiles: (args.maxFiles as number | undefined) ?? 200,
+    }),
   );
 }
 
+async function discoverFiles(directory: string, exts: string[], maxFiles: number): Promise<string[]> {
+  const normalized = directory.replace(/\\/g, '/');
+  const pattern = `${normalized}/**/*.{${exts.join(',')}}`;
+  const filePaths = await fg(pattern, {
+    ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
+    absolute: true,
+    onlyFiles: true,
+  });
+  return filePaths.slice(0, maxFiles);
+}
+
+interface FunctionSlice {
+  content: string;
+  startLine: number;
+  length: number;
+}
+
+function extractFunctionContent(slice: FunctionSlice): string {
+  const lines = slice.content.split('\n');
+  const fromIdx = Math.max(0, slice.startLine - 1);
+  const toIdx = Math.min(lines.length, fromIdx + Math.max(1, slice.length));
+  return lines.slice(fromIdx, toIdx).join('\n');
+}
+
+/** Lacking a direct doc-coverage ratio on HealthResult, infer from LowDocCoverage smells. */
+function estimateDocCoverageRatio(smellCount: number, functionCount: number): number {
+  if (functionCount === 0) return 1;
+  // Conservative heuristic: assume 0.7 ratio absent specific signal.
+  // If the file produced any smells at all, drop slightly. Real per-file
+  // doc-coverage ratio could be wired through later.
+  return smellCount === 0 ? 0.8 : 0.6;
+}
+
+interface ReadinessFileContext {
+  filePath: string;
+  directory: string;
+  language: string;
+}
+
+async function buildReadinessFile(ctx: ReadinessFileContext): Promise<AIReadinessFile | null> {
+  const { filePath: fp, directory, language } = ctx;
+  try {
+    const content = await fs.readFile(fp, 'utf-8');
+    const health = await analyzeFile(fp);
+    const avgCC = health.functions.length === 0
+      ? 0
+      : health.functions.reduce((acc, fn) => acc + fn.cognitiveComplexity, 0) / health.functions.length;
+    const functionsForFit = health.functions.map(fn => ({
+      name: fn.name,
+      startLine: fn.line,
+      endLine: fn.line + fn.length,
+      content: extractFunctionContent({ content, startLine: fn.line, length: fn.length }),
+    }));
+    const docCoverageRatio = estimateDocCoverageRatio(health.smells.length, health.functions.length);
+    return {
+      path: path.relative(directory, fp),
+      content,
+      language,
+      functions: functionsForFit,
+      cognitiveComplexity: avgCC,
+      docCoverageRatio,
+    };
+  } catch {
+    return null;
+  }
+}
+
+interface ErrorContext {
+  message: string;
+  directory: string;
+  language: string;
+}
+
+function errorResponse(ctx: ErrorContext) {
+  const { message, directory, language } = ctx;
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify({ error: message, directory, language }) }],
+    isError: true,
+  };
+}
+
 async function handleAIReadiness(
-  directory: string,
-  language: string,
-  maxFiles: number,
+  opts: AIReadinessOptions,
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean }> {
+  const { directory, language, maxFiles } = opts;
   try {
     const exts = LANGUAGE_EXTENSIONS[language];
     if (!exts) {
-      return errorResponse(`Unsupported language: ${language}`, directory, language);
+      return errorResponse({ message: `Unsupported language: ${language}`, directory, language });
     }
 
     const stat = await fs.stat(directory);
     if (!stat.isDirectory()) {
-      return errorResponse(`Not a directory: ${directory}`, directory, language);
+      return errorResponse({ message: `Not a directory: ${directory}`, directory, language });
     }
 
-    // fast-glob requires forward slashes on Windows.
-    const normalized = directory.replace(/\\/g, '/');
-    const pattern = `${normalized}/**/*.{${exts.join(',')}}`;
-    const filePaths = await fg(pattern, {
-      ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
-      absolute: true,
-      onlyFiles: true,
-    });
-    const limited = filePaths.slice(0, maxFiles);
+    const limited = await discoverFiles(directory, exts, maxFiles);
 
-    const files: AIReadinessFile[] = [];
-    for (const fp of limited) {
-      try {
-        const content = await fs.readFile(fp, 'utf-8');
-        const health = await analyzeFile(fp);
-        const avgCC = health.functions.length === 0
-          ? 0
-          : health.functions.reduce((acc, fn) => acc + fn.cognitiveComplexity, 0) / health.functions.length;
-        const functionsForFit = health.functions.map(fn => ({
-          name: fn.name,
-          startLine: fn.line,
-          endLine: fn.line + fn.length,
-          content: extractFunctionContent(content, fn.line, fn.length),
-        }));
-        const docCoverageRatio = estimateDocCoverageRatio(health.smells.length, health.functions.length);
-        files.push({
-          path: path.relative(directory, fp),
-          content,
-          language,
-          functions: functionsForFit,
-          cognitiveComplexity: avgCC,
-          docCoverageRatio,
-        });
-      } catch {
-        // Skip unreadable files.
-      }
-    }
+    const maybeFiles = await Promise.all(
+      limited.map(fp => buildReadinessFile({ filePath: fp, directory, language })),
+    );
+    const files: AIReadinessFile[] = maybeFiles.filter((f): f is AIReadinessFile => f !== null);
 
     const result = analyzeAIReadiness(files);
     const body = {
@@ -114,29 +176,6 @@ async function handleAIReadiness(
     return { content: [{ type: 'text' as const, text: JSON.stringify(body, null, 2) }] };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return errorResponse(message, directory, language);
+    return errorResponse({ message, directory, language });
   }
-}
-
-function extractFunctionContent(content: string, startLine: number, length: number): string {
-  const lines = content.split('\n');
-  const fromIdx = Math.max(0, startLine - 1);
-  const toIdx = Math.min(lines.length, fromIdx + Math.max(1, length));
-  return lines.slice(fromIdx, toIdx).join('\n');
-}
-
-/** Lacking a direct doc-coverage ratio on HealthResult, infer from LowDocCoverage smells. */
-function estimateDocCoverageRatio(smellCount: number, functionCount: number): number {
-  if (functionCount === 0) return 1;
-  // Conservative heuristic: assume 0.7 ratio absent specific signal.
-  // If the file produced any smells at all, drop slightly. Real per-file
-  // doc-coverage ratio could be wired through later.
-  return smellCount === 0 ? 0.8 : 0.6;
-}
-
-function errorResponse(message: string, directory: string, language: string) {
-  return {
-    content: [{ type: 'text' as const, text: JSON.stringify({ error: message, directory, language }) }],
-    isError: true,
-  };
 }

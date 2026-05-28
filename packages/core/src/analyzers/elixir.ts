@@ -115,34 +115,41 @@ function extractFunction(node: Parser.SyntaxNode): FunctionResult {
  * Structure: call[identifier="def", arguments[call[identifier=<name>, arguments[...params...]] | binary_operator[call...]]]
  */
 function getFunctionMeta(node: Parser.SyntaxNode): { name: string; paramCount: number } {
-  const argsNode = node.namedChildren.find(c => c.type === 'arguments');
-  if (!argsNode) return { name: '<anonymous>', paramCount: 0 };
-
-  // First named child of arguments is either:
-  // - a call node (no guard): call[identifier=<name>, arguments[...]]
-  // - a binary_operator node (with 'when' guard): binary_operator[call[...], when, ...]
-  let callNode: Parser.SyntaxNode | undefined;
-
-  const firstArg = argsNode.namedChildren[0];
-  if (!firstArg) return { name: '<anonymous>', paramCount: 0 };
-
-  if (firstArg.type === 'call') {
-    callNode = firstArg;
-  } else if (firstArg.type === 'binary_operator') {
-    // when guard: left side is the function call
-    callNode = firstArg.namedChildren.find(c => c.type === 'call');
-  }
-
+  const callNode = resolveDefCallNode(node);
   if (!callNode) return { name: '<anonymous>', paramCount: 0 };
+  return extractNameAndParamCount(callNode);
+}
 
+/**
+ * Resolves the inner function-name call node from a def/defp AST node.
+ * Handles both plain calls and calls with `when` guards.
+ */
+function resolveDefCallNode(node: Parser.SyntaxNode): Parser.SyntaxNode | undefined {
+  const argsNode = node.namedChildren.find(c => c.type === 'arguments');
+  const firstArg = argsNode?.namedChildren[0];
+  if (!firstArg) return undefined;
+  return resolveFirstArgToCall(firstArg);
+}
+
+/** Extracts a call node from a plain call or binary_operator (when-guard) node. */
+function resolveFirstArgToCall(firstArg: Parser.SyntaxNode): Parser.SyntaxNode | undefined {
+  if (firstArg.type === 'call') return firstArg;
+  if (firstArg.type === 'binary_operator') {
+    return firstArg.namedChildren.find(c => c.type === 'call');
+  }
+  return undefined;
+}
+
+/**
+ * Extracts name and parameter count from the resolved function call node.
+ */
+function extractNameAndParamCount(callNode: Parser.SyntaxNode): { name: string; paramCount: number } {
   const nameIdent = callNode.namedChildren.find(c => c.type === 'identifier');
   const name = nameIdent?.text ?? '<anonymous>';
-
   const paramArgs = callNode.namedChildren.find(c => c.type === 'arguments');
   const paramCount = paramArgs
     ? paramArgs.namedChildren.filter(c => c.type !== ',').length
     : 0;
-
   return { name, paramCount };
 }
 

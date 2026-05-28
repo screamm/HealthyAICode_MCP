@@ -46,23 +46,13 @@ function kotlinBinaryCheck(n: Parser.SyntaxNode): boolean {
   return op !== undefined;
 }
 
-export function analyzeKotlin(code: string, filePath = '<inline>'): {
-  functions: FunctionResult[];
-  metrics: MetricBreakdown;
-  smells: Smell[];
+/** Collects all function nodes and FunctionResult objects from the AST. */
+function collectFunctions(rootNode: Parser.SyntaxNode): {
+  fnNodes: Parser.SyntaxNode[];
+  fns: FunctionResult[];
 } {
-  if (!code || code.trim() === '') {
-    return {
-      functions: [],
-      smells: detectSATDFromText(code),
-      metrics: emptyMetrics(0),
-    };
-  }
-
-  const tree = parser.parse(code);
   const fnNodes: Parser.SyntaxNode[] = [];
   const fns: FunctionResult[] = [];
-
   function visit(node: Parser.SyntaxNode): void {
     if (FUNCTION_NODE_TYPES.has(node.type)) {
       fnNodes.push(node);
@@ -70,31 +60,50 @@ export function analyzeKotlin(code: string, filePath = '<inline>'): {
     }
     for (const child of node.children) visit(child);
   }
-  visit(tree.rootNode);
+  visit(rootNode);
+  return { fnNodes, fns };
+}
 
-  const totalLines = code.split('\n').length;
-
+/** Detects AST-based and text-based smells for a Kotlin file. */
+function detectKotlinSmells(
+  rootNode: Parser.SyntaxNode,
+  fnNodes: Parser.SyntaxNode[],
+  code: string,
+  filePath: string,
+): Smell[] {
   const smells: Smell[] = [
     ...detectSATDFromText(code),
     ...detectMagicNumbersFromText(code, filePath),
   ];
-
   const emptyNames = new Set<string>();
   smells.push(
-    ...detectGodClass(tree.rootNode, emptyNames, kotlinProfile),
-    ...detectFeatureEnvy(tree.rootNode, emptyNames, kotlinProfile),
-    ...detectMessageChain(tree.rootNode, kotlinProfile),
-    ...detectDataClumps(tree.rootNode, kotlinProfile),
-    ...detectPrimitiveObsession(tree.rootNode, kotlinProfile),
-    ...detectComplexConditional(tree.rootNode, kotlinProfile),
-    ...detectLowDocCoverage(tree.rootNode, code, kotlinProfile),
+    ...detectGodClass(rootNode, emptyNames, kotlinProfile),
+    ...detectFeatureEnvy(rootNode, emptyNames, kotlinProfile),
+    ...detectMessageChain(rootNode, kotlinProfile),
+    ...detectDataClumps(rootNode, kotlinProfile),
+    ...detectPrimitiveObsession(rootNode, kotlinProfile),
+    ...detectComplexConditional(rootNode, kotlinProfile),
+    ...detectLowDocCoverage(rootNode, code, kotlinProfile),
   );
-
   for (const fnNode of fnNodes) {
     const br = detectBumpyRoadChunks(fnNode);
     if (br) smells.push(br);
   }
+  return smells;
+}
 
+export function analyzeKotlin(code: string, filePath = '<inline>'): {
+  functions: FunctionResult[];
+  metrics: MetricBreakdown;
+  smells: Smell[];
+} {
+  if (!code || code.trim() === '') {
+    return { functions: [], smells: detectSATDFromText(code), metrics: emptyMetrics(0) };
+  }
+  const tree = parser.parse(code);
+  const { fnNodes, fns } = collectFunctions(tree.rootNode);
+  const totalLines = code.split('\n').length;
+  const smells = detectKotlinSmells(tree.rootNode, fnNodes, code, filePath);
   return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
 }
 

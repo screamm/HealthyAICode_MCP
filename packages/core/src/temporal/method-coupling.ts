@@ -7,6 +7,7 @@ import {
 } from './method-coupling-helpers';
 import type { MethodCouplingPair, MethodCouplingResult, Smell } from '../types';
 
+/** Options for controlling method-level temporal coupling analysis. */
 export interface MethodCouplingOptions {
   /**
    * Minimum coupling strength to report a pair. Default 0.5 (50%).
@@ -37,6 +38,19 @@ export const MIN_CO_CHANGE_COUNT = 4;
 /** Blocker 6: minimum number of commits required before the algorithm produces signal. */
 export const MIN_COMMITS_FOR_SIGNAL = 10;
 
+/** Mutable accumulators passed through commit processing. */
+interface CommitAccumulators {
+  touchCount: Map<string, number>;
+  coChangeCount: Map<string, number>;
+}
+
+/** Identifies a specific commit within a file's git history. */
+interface CommitRef {
+  repoPath: string;
+  filePath: string;
+  sha: string;
+}
+
 /**
  * Analyzes method-level temporal coupling for a single file by walking its git history.
  *
@@ -58,11 +72,47 @@ export async function analyzeMethodCoupling(
 ): Promise<MethodCouplingResult> {
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const maxCommits = options.maxCommits ?? DEFAULT_MAX_COMMITS;
-  const git = simpleGit(repoPath);
 
-  // C1: use git.raw() convention — consistent with hotspot-helpers.ts:33 and the rest
-  // of the temporal module family.
-  let shas: string[];
+  const shas = await fetchCommitShas({ repoPath, filePath, maxCommits });
+
+  const earlyResult = checkEarlyExit(shas, filePath, threshold);
+  if (earlyResult !== null) return earlyResult;
+
+  const validShas = shas as string[];
+
+  // Blocker 3: keys are "name@startLine" to disambiguate same-named methods in the same file.
+  const accumulators: CommitAccumulators = {
+    touchCount: new Map<string, number>(),    // key: "name@line"
+    coChangeCount: new Map<string, number>(), // key: "name@line||name@line"
+  };
+
+  for (const sha of validShas) {
+    await processCommit({ repoPath, filePath, sha }, accumulators);
+  }
+
+  return {
+    filePath,
+    commitsAnalyzed: validShas.length,
+    threshold,
+    pairs: buildPairs(accumulators.coChangeCount, accumulators.touchCount, threshold),
+  };
+}
+
+/** Query parameters for fetching commit SHAs. */
+interface FileCommitQuery {
+  repoPath: string;
+  filePath: string;
+  maxCommits: number;
+}
+
+/**
+ * Fetches the list of commit SHAs that touched the given file.
+ * Returns null if the git command fails, or an empty array if no commits found.
+ * C1: uses git.raw() convention — consistent with hotspot-helpers.ts:33.
+ */
+async function fetchCommitShas(query: FileCommitQuery): Promise<string[] | null> {
+  const { repoPath, filePath, maxCommits } = query;
+  const git = simpleGit(repoPath);
   try {
     const output = await git.raw([
       'log', '--follow',
@@ -71,57 +121,78 @@ export async function analyzeMethodCoupling(
       '--',
       filePath,
     ]);
-    shas = output.trim().split('\n').filter(Boolean);
+    return output.trim().split('\n').filter(Boolean);
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Checks whether analysis should exit early due to missing or insufficient commit history.
+ * Returns a MethodCouplingResult if early exit applies, or null to continue.
+ */
+function checkEarlyExit(
+  shas: string[] | null,
+  filePath: string,
+  threshold: number,
+): MethodCouplingResult | null {
+  if (shas === null || shas.length === 0) {
     return { filePath, commitsAnalyzed: 0, threshold, pairs: [] };
   }
-
-  if (shas.length === 0) {
-    return { filePath, commitsAnalyzed: 0, threshold, pairs: [] };
-  }
-
   // Blocker 6: require minimum commit history for statistical significance
   if (shas.length < MIN_COMMITS_FOR_SIGNAL) {
     return { filePath, commitsAnalyzed: shas.length, threshold, pairs: [], tooFewCommits: true };
   }
+  return null;
+}
 
-  // Blocker 3: keys are "name@startLine" to disambiguate same-named methods in the same file.
-  // Display names (methodA/methodB in output pairs) remain bare method names.
-  const touchCount = new Map<string, number>();   // key: "name@line"
-  const coChangeCount = new Map<string, number>(); // key: "name@line||name@line"
+/**
+ * Processes a single commit: fetches method ranges and changed line ranges in parallel,
+ * then accumulates touch counts and co-change counts for the changed methods.
+ */
+async function processCommit(
+  ref: CommitRef,
+  accumulators: CommitAccumulators,
+): Promise<void> {
+  const { repoPath, filePath, sha } = ref;
+  // Parallelise the two I/O operations per commit for ~2× speedup on SSD
+  const [ranges, changed] = await Promise.all([
+    getMethodRangesAtCommit({ repoPath, filePath, commitSha: sha }),
+    getChangedLineRanges({ repoPath, filePath, commitSha: sha }),
+  ]);
 
-  for (const sha of shas) {
-    // Parallelise the two I/O operations per commit for ~2× speedup on SSD
-    const [ranges, changed] = await Promise.all([
-      getMethodRangesAtCommit(repoPath, filePath, sha),
-      getChangedLineRanges(repoPath, filePath, sha),
-    ]);
+  // Short-circuit: skip commits where the analyzer found no methods or no diff hunks
+  if (ranges.length === 0 || changed.length === 0) return;
 
-    // Short-circuit: skip commits where the analyzer found no methods or no diff hunks
-    if (ranges.length === 0 || changed.length === 0) continue;
+  // intersectChangedMethods now returns { name, line }[] (Blocker 3)
+  const changedMethods = intersectChangedMethods(changed, ranges);
+  accumulateTouchCounts(changedMethods, accumulators.touchCount);
+  accumulateCoChangeCounts(changedMethods, accumulators.coChangeCount);
+}
 
-    // intersectChangedMethods now returns { name, line }[] (Blocker 3)
-    const changedMethods = intersectChangedMethods(changed, ranges);
-    for (const m of changedMethods) {
-      const qKey = `${m.name}@${m.line}`;
-      touchCount.set(qKey, (touchCount.get(qKey) ?? 0) + 1);
-    }
+/** Updates touch counts for each method changed in a commit. */
+function accumulateTouchCounts(
+  changedMethods: Array<{ name: string; line: number }>,
+  touchCount: Map<string, number>,
+): void {
+  for (const m of changedMethods) {
+    const qKey = `${m.name}@${m.line}`;
+    touchCount.set(qKey, (touchCount.get(qKey) ?? 0) + 1);
+  }
+}
 
-    const sortedKeys = changedMethods.map(m => `${m.name}@${m.line}`).sort();
-    for (let i = 0; i < sortedKeys.length; i++) {
-      for (let j = i + 1; j < sortedKeys.length; j++) {
-        const key = `${sortedKeys[i]}||${sortedKeys[j]}`;
-        coChangeCount.set(key, (coChangeCount.get(key) ?? 0) + 1);
-      }
+/** Updates co-change counts for every pair of methods changed together in a commit. */
+function accumulateCoChangeCounts(
+  changedMethods: Array<{ name: string; line: number }>,
+  coChangeCount: Map<string, number>,
+): void {
+  const sortedKeys = changedMethods.map(m => `${m.name}@${m.line}`).sort();
+  for (let i = 0; i < sortedKeys.length; i++) {
+    for (let j = i + 1; j < sortedKeys.length; j++) {
+      const key = `${sortedKeys[i]}||${sortedKeys[j]}`;
+      coChangeCount.set(key, (coChangeCount.get(key) ?? 0) + 1);
     }
   }
-
-  return {
-    filePath,
-    commitsAnalyzed: shas.length,
-    threshold,
-    pairs: buildPairs(coChangeCount, touchCount, threshold),
-  };
 }
 
 function buildPairs(

@@ -5,19 +5,19 @@ import type { BugRecord } from './dataset-runner';
 export interface Defects4JEntry {
   /** Project identifier, e.g. "Lang" or "Math". */
   project: string;
-  /** Bug identifier, e.g. "1b" or "2b". */
+  /** Defect identifier, e.g. "1b" or "2b". */
   bugId: string;
   /** Fully-qualified Java class name. */
   className: string;
-  /** Source code AFTER the bug was fixed (clean). */
+  /** Source code AFTER the defect was fixed (clean). */
   fixedCode: string;
-  /** Source code BEFORE the fix was applied (buggy). */
+  /** Source code BEFORE the fix was applied (defective). */
   buggyCode: string;
 }
 
 /**
  * Loads a Defects4J JSON file (`Defects4JEntry[]`) and converts it to
- * `BugRecord[]` pairs: one buggy record (hasBug: true) and one clean
+ * `BugRecord[]` pairs: one record (hasBug: true) and one clean
  * record (hasBug: false) per entry.
  */
 export async function loadDefects4JFromJson(jsonPath: string): Promise<BugRecord[]> {
@@ -28,7 +28,7 @@ export async function loadDefects4JFromJson(jsonPath: string): Promise<BugRecord
   for (const entry of entries) {
     const baseName = `${entry.project}_${entry.bugId}_${entry.className}`;
     records.push({
-      filePath: `${baseName}.buggy.java`,
+      filePath: `${baseName}.defective.java`,
       language: 'java',
       code: entry.buggyCode,
       hasBug: true,
@@ -45,21 +45,16 @@ export async function loadDefects4JFromJson(jsonPath: string): Promise<BugRecord
   return records;
 }
 
-/**
- * Returns a small hard-coded TypeScript benchmark (5 buggy + 5 clean functions)
- * so that validation tests can run without any external data files.
- *
- * Buggy files deliberately contain code smells (DeepNesting, ComplexMethod)
- * that push the health score down. Clean files are simple one-liner functions.
- */
-export function createSyntheticBenchmark(): BugRecord[] {
-  const buggyRecords: BugRecord[] = [
-    {
-      filePath: 'buggy/deeply-nested.ts',
-      language: 'typescript',
-      hasBug: true,
-      bugCount: 3,
-      code: `
+// ---------------------------------------------------------------------------
+// Synthetic benchmark records
+// ---------------------------------------------------------------------------
+
+const DEEPLY_NESTED_RECORD: BugRecord = {
+  filePath: 'defective/deeply-nested.ts',
+  language: 'typescript',
+  hasBug: true,
+  bugCount: 3,
+  code: `
 export function process(data: unknown): string {
   if (data) {
     if (typeof data === 'object') {
@@ -79,13 +74,14 @@ export function process(data: unknown): string {
   return '';
 }
 `.trim(),
-    },
-    {
-      filePath: 'buggy/complex-switch.ts',
-      language: 'typescript',
-      hasBug: true,
-      bugCount: 2,
-      code: `
+};
+
+const COMPLEX_SWITCH_RECORD: BugRecord = {
+  filePath: 'defective/complex-switch.ts',
+  language: 'typescript',
+  hasBug: true,
+  bugCount: 2,
+  code: `
 export function classify(x: number, y: number, z: number, w: number, v: number): string {
   if (x > 0 && y > 0) {
     if (z > 0) {
@@ -111,13 +107,14 @@ export function classify(x: number, y: number, z: number, w: number, v: number):
   return 'unknown';
 }
 `.trim(),
-    },
-    {
-      filePath: 'buggy/long-chain.ts',
-      language: 'typescript',
-      hasBug: true,
-      bugCount: 2,
-      code: `
+};
+
+const LONG_CHAIN_RECORD: BugRecord = {
+  filePath: 'defective/long-chain.ts',
+  language: 'typescript',
+  hasBug: true,
+  bugCount: 2,
+  code: `
 export function compute(
   a: number, b: number, c: number, d: number,
   e: number, f: number, g: number
@@ -156,13 +153,14 @@ export function compute(
   return result;
 }
 `.trim(),
-    },
-    {
-      filePath: 'buggy/many-params.ts',
-      language: 'typescript',
-      hasBug: true,
-      bugCount: 1,
-      code: `
+};
+
+const MANY_PARAMS_RECORD: BugRecord = {
+  filePath: 'defective/many-params.ts',
+  language: 'typescript',
+  hasBug: true,
+  bugCount: 1,
+  code: `
 export function buildUrl(
   protocol: string, host: string, port: number, path: string,
   query: string, fragment: string, username: string, password: string,
@@ -184,13 +182,14 @@ export function buildUrl(
   return '';
 }
 `.trim(),
-    },
-    {
-      filePath: 'buggy/complex-conditions.ts',
-      language: 'typescript',
-      hasBug: true,
-      bugCount: 2,
-      code: `
+};
+
+const COMPLEX_CONDITIONS_RECORD: BugRecord = {
+  filePath: 'defective/complex-conditions.ts',
+  language: 'typescript',
+  hasBug: true,
+  bugCount: 2,
+  code: `
 export function validate(
   name: string | null | undefined,
   age: number,
@@ -214,46 +213,30 @@ export function validate(
   return false;
 }
 `.trim(),
-    },
-  ];
+};
 
-  const cleanRecords: BugRecord[] = [
-    {
-      filePath: 'clean/add.ts',
-      language: 'typescript',
-      hasBug: false,
-      bugCount: 0,
-      code: `export function add(a: number, b: number): number { return a + b; }`,
-    },
-    {
-      filePath: 'clean/greet.ts',
-      language: 'typescript',
-      hasBug: false,
-      bugCount: 0,
-      code: `export function greet(name: string): string { return \`Hello, \${name}!\`; }`,
-    },
-    {
-      filePath: 'clean/clamp.ts',
-      language: 'typescript',
-      hasBug: false,
-      bugCount: 0,
-      code: `export function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), max); }`,
-    },
-    {
-      filePath: 'clean/isEven.ts',
-      language: 'typescript',
-      hasBug: false,
-      bugCount: 0,
-      code: `export function isEven(n: number): boolean { return n % 2 === 0; }`,
-    },
-    {
-      filePath: 'clean/toUpperCase.ts',
-      language: 'typescript',
-      hasBug: false,
-      bugCount: 0,
-      code: `export function toUpperCase(s: string): string { return s.toUpperCase(); }`,
-    },
-  ];
+const CLEAN_RECORDS: BugRecord[] = [
+  { filePath: 'clean/add.ts', language: 'typescript', hasBug: false, bugCount: 0, code: `export function add(a: number, b: number): number { return a + b; }` },
+  { filePath: 'clean/greet.ts', language: 'typescript', hasBug: false, bugCount: 0, code: `export function greet(name: string): string { return \`Hello, \${name}!\`; }` },
+  { filePath: 'clean/clamp.ts', language: 'typescript', hasBug: false, bugCount: 0, code: `export function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), max); }` },
+  { filePath: 'clean/isEven.ts', language: 'typescript', hasBug: false, bugCount: 0, code: `export function isEven(n: number): boolean { return n % 2 === 0; }` },
+  { filePath: 'clean/toUpperCase.ts', language: 'typescript', hasBug: false, bugCount: 0, code: `export function toUpperCase(s: string): string { return s.toUpperCase(); }` },
+];
 
-  return [...buggyRecords, ...cleanRecords];
+/**
+ * Returns a small hard-coded TypeScript benchmark (5 defective + 5 clean functions)
+ * so that validation tests can run without any external data files.
+ *
+ * Defective files deliberately contain code smells (DeepNesting, ComplexMethod)
+ * that push the health score down. Clean files are simple one-liner functions.
+ */
+export function createSyntheticBenchmark(): BugRecord[] {
+  return [
+    DEEPLY_NESTED_RECORD,
+    COMPLEX_SWITCH_RECORD,
+    LONG_CHAIN_RECORD,
+    MANY_PARAMS_RECORD,
+    COMPLEX_CONDITIONS_RECORD,
+    ...CLEAN_RECORDS,
+  ];
 }

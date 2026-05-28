@@ -20,7 +20,7 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   SATD: 0.6,
   GodClass: 1.5,
   FeatureEnvy: 0.7,
-  LowMaintainability: 0.4,
+  LowMaintainability: 0.3, // Reduced from 0.4 — single instance now scores 9.7 instead of 9.6, removing the derived-smell ceiling
   CodeChurn: 0.6,
   DeveloperCongestion: 0.7,
   KnowledgeLoss: 1.0,

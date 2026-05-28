@@ -14,9 +14,9 @@ export interface BugRecord {
   language: Language;
   /** Full source code of the file. */
   code: string;
-  /** True when the file is known to contain at least one bug. */
+  /** True when the file is known to contain at least one defect. */
   hasBug: boolean;
-  /** Optional count of known bugs (for regression metrics). */
+  /** Optional count of known defects (for regression metrics). */
   bugCount?: number;
 }
 
@@ -25,23 +25,23 @@ export interface ValidationReport {
   totalFiles: number;
   buggyFiles: number;
   cleanFiles: number;
-  /** Pearson correlation between health score and bug-free status (1 = bug-free). */
+  /** Pearson correlation between health score and clean status (1 = defect-free). */
   pearsonR: number;
   /** Spearman rank correlation. */
   spearmanRho: number;
   /**
    * Area Under the ROC Curve.
    * 0.5 = random classifier, 1.0 = perfect separation.
-   * Lower health score → more likely buggy.
+   * Lower health score → more likely defective.
    */
   auroc: number;
-  /** Mean health score of buggy files. */
+  /** Mean health score of defective files. */
   meanHealthBuggy: number;
   /** Mean health score of clean files. */
   meanHealthClean: number;
   /**
    * meanHealthClean − meanHealthBuggy.
-   * Positive values indicate the scorer correctly assigns lower health to buggy files.
+   * Positive values indicate the scorer correctly assigns lower health to defective files.
    */
   healthSeparation: number;
   /** Human-readable interpretation of the validation result. */
@@ -66,6 +66,16 @@ const SOURCE_EXTENSIONS = new Set([
   '.php', '.rb', '.swift',
 ]);
 
+/** Returns true when the directory name should be traversed (skips hidden and vendor dirs). */
+function isTraversableDirectory(name: string): boolean {
+  return !name.startsWith('.') && name !== 'node_modules';
+}
+
+/** Returns true when the file extension is a recognised source code extension. */
+function isSourceFile(name: string): boolean {
+  return SOURCE_EXTENSIONS.has(path.extname(name).toLowerCase());
+}
+
 async function collectSourceFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
 
@@ -79,15 +89,10 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
     }
     for (const entry of entries) {
       const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
-          await walk(full);
-        }
-      } else if (entry.isFile()) {
-        const ext = path.extname(entry.name).toLowerCase();
-        if (SOURCE_EXTENSIONS.has(ext)) {
-          results.push(full);
-        }
+      if (entry.isDirectory() && isTraversableDirectory(entry.name)) {
+        await walk(full);
+      } else if (entry.isFile() && isSourceFile(entry.name)) {
+        results.push(full);
       }
     }
   }
@@ -98,7 +103,7 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
 
 /**
  * Builds BugRecord[] from a directory by scanning source files and using
- * git log as a heuristic: files that appear in commits with "fix" or "bug"
+ * git log as a heuristic: files that appear in commits with "fix" or "defect"
  * in the message are marked hasBug: true.
  *
  * Falls back gracefully when git is not available (all files are marked clean).
@@ -116,7 +121,7 @@ export async function buildRecordsFromDirectory(directory: string): Promise<BugR
       '--pretty=format:',
       '--diff-filter=M',
       '--grep=fix',
-      '--grep=bug',
+      '--grep=defect',
       '--regexp-ignore-case',
     ]);
     for (const line of logOutput.split('\n')) {
@@ -161,32 +166,28 @@ function interpret(auroc: number): string {
   return 'Svag korrelation — kräver fler datapunkter eller kalibrering';
 }
 
-/**
- * Runs the core validation pipeline:
- * 1. Analyzes every BugRecord with `analyzeCode`.
- * 2. Computes correlation and AUROC between health scores and bug labels.
- * 3. Returns a `ValidationReport`.
- *
- * An empty `records` array returns a zero-filled report without throwing.
- */
-export function runValidation(records: BugRecord[]): ValidationReport {
-  if (records.length === 0) {
-    return {
-      totalFiles: 0,
-      buggyFiles: 0,
-      cleanFiles: 0,
-      pearsonR: 0,
-      spearmanRho: 0,
-      auroc: 0.5,
-      meanHealthBuggy: 0,
-      meanHealthClean: 0,
-      healthSeparation: 0,
-      interpretation: interpret(0.5),
-      fileResults: [],
-    };
-  }
+/** Empty report returned when no records are provided. */
+function buildEmptyReport(): ValidationReport {
+  return {
+    totalFiles: 0,
+    buggyFiles: 0,
+    cleanFiles: 0,
+    pearsonR: 0,
+    spearmanRho: 0,
+    auroc: 0.5,
+    meanHealthBuggy: 0,
+    meanHealthClean: 0,
+    healthSeparation: 0,
+    interpretation: interpret(0.5),
+    fileResults: [],
+  };
+}
 
-  const fileResults = records.map(record => {
+/** Analyzes each record and returns per-file health results. */
+function buildFileResults(
+  records: BugRecord[],
+): ValidationReport['fileResults'] {
+  return records.map(record => {
     const result = analyzeCode(record.code, record.language, record.filePath);
     return {
       filePath: record.filePath,
@@ -195,41 +196,70 @@ export function runValidation(records: BugRecord[]): ValidationReport {
       bugCount: record.bugCount ?? (record.hasBug ? 1 : 0),
     };
   });
+}
 
+/** Computes aggregate correlation and AUROC statistics from file results. */
+function computeAggregateStats(
+  fileResults: ValidationReport['fileResults'],
+  records: BugRecord[],
+) {
   const scores = fileResults.map(r => r.healthScore);
-  // Encode hasBug as binary label for correlation (1 = bug-free, so higher health ~ bug-free)
+  // Encode hasBug as binary label for correlation (1 = defect-free, so higher health ~ defect-free)
   const cleanLabels = fileResults.map(r => (r.hasBug ? 0 : 1));
   const bugLabels = fileResults.map(r => r.hasBug);
-
-  const pearsonR = pearsonCorrelation(scores, cleanLabels);
-  const spearmanRho = spearmanCorrelation(scores, cleanLabels);
-  const auroc = computeAUROC(scores, bugLabels);
 
   const buggyScores = fileResults.filter(r => r.hasBug).map(r => r.healthScore);
   const cleanScores = fileResults.filter(r => !r.hasBug).map(r => r.healthScore);
 
-  const meanHealthBuggy = mean(buggyScores);
-  const meanHealthClean = mean(cleanScores);
-  const healthSeparation = meanHealthClean - meanHealthBuggy;
-
+  const auroc = computeAUROC(scores, bugLabels);
   const aurocBoot = bootstrapAUROC(scores, bugLabels);
   const mw = mannWhitneyU(scores, bugLabels);
-  const perLang = computePerLanguageBreakdown(records, fileResults);
+
+  return {
+    scores,
+    bugLabels,
+    buggyScores,
+    cleanScores,
+    pearsonR: pearsonCorrelation(scores, cleanLabels),
+    spearmanRho: spearmanCorrelation(scores, cleanLabels),
+    auroc,
+    meanHealthBuggy: mean(buggyScores),
+    meanHealthClean: mean(cleanScores),
+    healthSeparation: mean(cleanScores) - mean(buggyScores),
+    aurocBootstrapCi: { lower: aurocBoot.lower, upper: aurocBoot.upper, mean: aurocBoot.mean },
+    mannWhitneyPValue: mw.pValue,
+    perLanguageBreakdown: computePerLanguageBreakdown(records, fileResults),
+  };
+}
+
+/**
+ * Runs the core validation pipeline:
+ * 1. Analyzes every BugRecord with `analyzeCode`.
+ * 2. Computes correlation and AUROC between health scores and defect labels.
+ * 3. Returns a `ValidationReport`.
+ *
+ * An empty `records` array returns a zero-filled report without throwing.
+ */
+export function runValidation(records: BugRecord[]): ValidationReport {
+  if (records.length === 0) return buildEmptyReport();
+
+  const fileResults = buildFileResults(records);
+  const stats = computeAggregateStats(fileResults, records);
 
   return {
     totalFiles: fileResults.length,
-    buggyFiles: buggyScores.length,
-    cleanFiles: cleanScores.length,
-    pearsonR,
-    spearmanRho,
-    auroc,
-    meanHealthBuggy,
-    meanHealthClean,
-    healthSeparation,
-    interpretation: interpret(auroc),
-    aurocBootstrapCi: { lower: aurocBoot.lower, upper: aurocBoot.upper, mean: aurocBoot.mean },
-    mannWhitneyPValue: mw.pValue,
-    perLanguageBreakdown: perLang,
+    buggyFiles: stats.buggyScores.length,
+    cleanFiles: stats.cleanScores.length,
+    pearsonR: stats.pearsonR,
+    spearmanRho: stats.spearmanRho,
+    auroc: stats.auroc,
+    meanHealthBuggy: stats.meanHealthBuggy,
+    meanHealthClean: stats.meanHealthClean,
+    healthSeparation: stats.healthSeparation,
+    interpretation: interpret(stats.auroc),
+    aurocBootstrapCi: stats.aurocBootstrapCi,
+    mannWhitneyPValue: stats.mannWhitneyPValue,
+    perLanguageBreakdown: stats.perLanguageBreakdown,
     fileResults,
   };
 }

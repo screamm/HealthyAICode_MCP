@@ -19,6 +19,52 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
 ) => void;
 
+type BenchmarkLanguage = 'typescript' | 'javascript' | 'python' | 'java';
+
+interface BenchmarkArgs {
+  modelName: string;
+  generatedCode: string;
+  referenceCode: string;
+  filePath: string;
+  language: string;
+  historyPath: string;
+}
+
+/** Returns aggregated statistics for a specific model from the benchmark history. */
+async function handleGetStats(modelName: string, historyPath: string) {
+  const entries = await getModelStats(modelName, historyPath);
+  const history = await loadHistory(historyPath);
+  const stats = aggregateModelStats(history.entries, modelName);
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify({ model_name: modelName, stats, total_entries: entries.length }, null, 2),
+    }],
+  };
+}
+
+/** Runs a single benchmark comparison and persists it to the history file. */
+async function handleRunBenchmark(bArgs: BenchmarkArgs) {
+  const { modelName, generatedCode, referenceCode, filePath, language, historyPath } = bArgs;
+  const runAnalysis = (code: string, fp: string) => {
+    const result = analyzeCode(code, language as BenchmarkLanguage, fp);
+    return { score: result.score, smells: result.smells.map(s => s.type) };
+  };
+
+  const entry = compareToBaseline(modelName, generatedCode, referenceCode, filePath, language, runAnalysis);
+  await appendEntry(entry, historyPath);
+
+  const updatedHistory = await loadHistory(historyPath);
+  const stats = aggregateModelStats(updatedHistory.entries, modelName);
+
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify({ benchmark_entry: entry, model_stats: stats, history_path: historyPath, summary: buildBenchmarkSummary(entry) }, null, 2),
+    }],
+  };
+}
+
 export function registerModelBenchmark(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_model_benchmark',
@@ -44,64 +90,21 @@ async function handleModelBenchmark(
   args: Record<string, unknown>,
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean }> {
   const modelName = args.model_name as string;
-  const generatedCode = args.generated_code as string;
-  const referenceCode = args.reference_code as string;
-  const filePath = args.file_path as string;
-  const language = (args.language as string) ?? 'typescript';
-  const getStats = (args.get_stats as boolean | undefined) ?? false;
   const historyPath = (args.history_path as string | undefined) ?? DEFAULT_HISTORY_PATH;
 
   try {
-    if (getStats) {
-      // Return aggregated model stats
-      const entries = await getModelStats(modelName, historyPath);
-      const history = await loadHistory(historyPath);
-      const stats = aggregateModelStats(history.entries, modelName);
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({ model_name: modelName, stats, total_entries: entries.length }, null, 2),
-        }],
-      };
+    if ((args.get_stats as boolean | undefined) ?? false) {
+      return handleGetStats(modelName, historyPath);
     }
 
-    // Run benchmark comparison
-    const runAnalysis = (code: string, fp: string) => {
-      const result = analyzeCode(
-        code,
-        language as 'typescript' | 'javascript' | 'python' | 'java',
-        fp,
-      );
-      return {
-        score: result.score,
-        smells: result.smells.map(s => s.type),
-      };
-    };
-
-    const entry = compareToBaseline(
+    return handleRunBenchmark({
       modelName,
-      generatedCode,
-      referenceCode,
-      filePath,
-      language,
-      runAnalysis,
-    );
-
-    // Persist to history
-    await appendEntry(entry, historyPath);
-
-    // Load updated aggregates for response
-    const updatedHistory = await loadHistory(historyPath);
-    const stats = aggregateModelStats(updatedHistory.entries, modelName);
-
-    const result = {
-      benchmark_entry: entry,
-      model_stats: stats,
-      history_path: historyPath,
-      summary: buildBenchmarkSummary(entry),
-    };
-
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      generatedCode: args.generated_code as string,
+      referenceCode: args.reference_code as string,
+      filePath: args.file_path as string,
+      language: (args.language as string) ?? 'typescript',
+      historyPath,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return {
@@ -113,9 +116,7 @@ async function handleModelBenchmark(
 
 function buildBenchmarkSummary(entry: BenchmarkEntry): string {
   const sign = entry.delta >= 0 ? '+' : '';
-  const comparison = entry.delta >= 0
-    ? 'meets or exceeds baseline quality'
-    : 'falls below baseline quality';
+  const comparison = entry.delta >= 0 ? 'meets or exceeds baseline quality' : 'falls below baseline quality';
   return `${entry.model_name} ${comparison}. `
     + `Health delta: ${sign}${entry.delta.toFixed(2)} `
     + `(AI: ${entry.health_score_ai.toFixed(1)}, baseline: ${entry.health_score_baseline.toFixed(1)}). `

@@ -18,40 +18,57 @@ function collectMethods(node: SyntaxNode, acc: Smell[], importedNames: Set<strin
   for (const child of node.children) collectMethods(child, acc, importedNames, profile);
 }
 
-function checkMethod(method: SyntaxNode, acc: Smell[], importedNames: Set<string>, profile: LanguageProfile): void {
-  const foreignCallCounts = new Map<string, number>();
-  let ownCalls = 0;
-  countCalls(method, foreignCallCounts, importedNames, profile, () => { ownCalls++; });
-  if (foreignCallCounts.size === 0) return;
-
-  const totalCalls = ownCalls + [...foreignCallCounts.values()].reduce((s, c) => s + c, 0);
-  if (totalCalls === 0) return;
-
+function findDominantForeignType(foreignCallCounts: Map<string, number>): { maxType: string; maxCount: number } {
   let maxType = '';
   let maxCount = 0;
   for (const [type, count] of foreignCallCounts) {
     if (count > maxCount) { maxCount = count; maxType = type; }
   }
+  return { maxType, maxCount };
+}
 
+interface EnvySmellContext {
+  method: SyntaxNode;
+  maxType: string;
+  maxCount: number;
+  totalCalls: number;
+}
+
+function buildFeatureEnvySmell({ method, maxType, maxCount, totalCalls }: EnvySmellContext): Smell {
+  const name = method.childForFieldName?.('name')?.text ?? 'anonymous';
+  return {
+    type: 'FeatureEnvy',
+    severity: 'medium',
+    description: `Method "${name}" makes ${maxCount}/${totalCalls} calls to "${maxType}" — more interested in that type than its own class.`,
+    suggestion: `Move this method closer to "${maxType}" or extract a service that encapsulates this interaction.`,
+    line: method.startPosition.row + 1,
+  };
+}
+
+function checkMethod(method: SyntaxNode, acc: Smell[], importedNames: Set<string>, profile: LanguageProfile): void {
+  const foreignCallCounts = new Map<string, number>();
+  let ownCalls = 0;
+  countCalls(method, { foreign: foreignCallCounts, importedNames, profile, countOwn: () => { ownCalls++; } });
+  if (foreignCallCounts.size === 0) return;
+
+  const totalCalls = ownCalls + [...foreignCallCounts.values()].reduce((s, c) => s + c, 0);
+  if (totalCalls === 0) return;
+
+  const { maxType, maxCount } = findDominantForeignType(foreignCallCounts);
   if (maxCount >= MIN_FOREIGN_CALLS && maxCount / totalCalls >= ENVY_RATIO) {
-    const name = method.childForFieldName?.('name')?.text ?? 'anonymous';
-    acc.push({
-      type: 'FeatureEnvy',
-      severity: 'medium',
-      description: `Method "${name}" makes ${maxCount}/${totalCalls} calls to "${maxType}" — more interested in that type than its own class.`,
-      suggestion: `Move this method closer to "${maxType}" or extract a service that encapsulates this interaction.`,
-      line: method.startPosition.row + 1,
-    });
+    acc.push(buildFeatureEnvySmell({ method, maxType, maxCount, totalCalls }));
   }
 }
 
-function countCalls(
-  node: SyntaxNode,
-  foreign: Map<string, number>,
-  importedNames: Set<string>,
-  profile: LanguageProfile,
-  countOwn: () => void,
-): void {
+interface CallCountContext {
+  foreign: Map<string, number>;
+  importedNames: Set<string>;
+  profile: LanguageProfile;
+  countOwn: () => void;
+}
+
+function countCalls(node: SyntaxNode, ctx: CallCountContext): void {
+  const { foreign, importedNames, profile, countOwn } = ctx;
   if (node.type === profile.memberAccessNodeType) {
     const obj = node.childForFieldName?.(profile.memberObjectField);
     if (obj) {
@@ -61,5 +78,5 @@ function countCalls(
       }
     }
   }
-  for (const child of node.children) countCalls(child, foreign, importedNames, profile, countOwn);
+  for (const child of node.children) countCalls(child, ctx);
 }

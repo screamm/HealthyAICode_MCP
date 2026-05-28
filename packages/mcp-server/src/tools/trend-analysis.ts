@@ -3,6 +3,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeComplexityTrend } from '@healthy-ai-code/core';
 
+// --- Configuration constants ---
+const DEFAULT_LOOKBACK_DAYS = 90;
+const DEFAULT_SAMPLE_POINTS = 5;
+const MIN_LOOKBACK_DAYS = 7;
+const MAX_LOOKBACK_DAYS = 365;
+const MAX_FILE_PATHS = 20;
+const MIN_SAMPLE_POINTS = 3;
+const MAX_SAMPLE_POINTS = 10;
+
 type McpToolRegistrar = (
   name: string,
   desc: string,
@@ -10,18 +19,62 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
 ) => void;
 
+const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
+const filePathsBase = z.array(z.string()).min(1).max(MAX_FILE_PATHS);
+const filePathsSchema = filePathsBase.describe('Lista av filsökvägar att analysera (relativt repoPath)');
+const lookbackInt = z.number().int();
+const lookbackBounded = lookbackInt.min(MIN_LOOKBACK_DAYS).max(MAX_LOOKBACK_DAYS);
+const lookbackDaysWithDefault = lookbackBounded.default(DEFAULT_LOOKBACK_DAYS);
+const lookbackDaysSchema = lookbackDaysWithDefault.describe('Historik-period i dagar (default 90)');
+const sampleInt = z.number().int();
+const sampleBounded = sampleInt.min(MIN_SAMPLE_POINTS).max(MAX_SAMPLE_POINTS);
+const samplePointsWithDefault = sampleBounded.default(DEFAULT_SAMPLE_POINTS);
+const samplePointsSchema = samplePointsWithDefault.describe('Antal samplingspunkter för complexity trend (default 5)');
+
+const TREND_SCHEMA = {
+  repoPath: repoPathSchema,
+  filePaths: filePathsSchema,
+  lookbackDays: lookbackDaysSchema,
+  samplePoints: samplePointsSchema,
+};
+
 export function registerTrendAnalysis(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_trend_analysis',
     'Analyserar hur en fils kodkvalitet förändras över tid. Returnerar complexity trend (slope, rising/stable/declining) och en övergripande health trajectory per fil. Stödjer analys av upp till 20 filer per anrop.',
-    {
-      repoPath: z.string().describe('Absolut sökväg till git-repots rotkatalog'),
-      filePaths: z.array(z.string()).min(1).max(20).describe('Lista av filsökvägar att analysera (relativt repoPath)'),
-      lookbackDays: z.number().int().min(7).max(365).default(90).describe('Historik-period i dagar (default 90)'),
-      samplePoints: z.number().int().min(3).max(10).default(5).describe('Antal samplingspunkter för complexity trend (default 5)'),
-    },
+    TREND_SCHEMA,
     async (args) => handleTrendAnalysis(args),
   );
+}
+
+function toHealthTrajectory(trajectory: string): string {
+  switch (trajectory) {
+    case 'rising': return 'deteriorating';
+    case 'declining': return 'improving';
+    default: return 'stable';
+  }
+}
+
+interface TrendFileResult {
+  filePath: string;
+  slope: number;
+  trajectory: string;
+  healthTrajectory: string;
+  commitsAnalyzed: number;
+  sampledPoints: number;
+}
+
+function buildFileResults(
+  results: Awaited<ReturnType<typeof analyzeComplexityTrend>>[],
+): TrendFileResult[] {
+  return results.map(r => ({
+    filePath: r.filePath,
+    slope: r.slope,
+    trajectory: r.trajectory,
+    healthTrajectory: toHealthTrajectory(r.trajectory),
+    commitsAnalyzed: r.commitsAnalyzed,
+    sampledPoints: r.sampledPoints.length,
+  }));
 }
 
 async function handleTrendAnalysis(args: Record<string, unknown>) {
@@ -30,31 +83,13 @@ async function handleTrendAnalysis(args: Record<string, unknown>) {
     const filePaths = args.filePaths as string[];
     const samplePoints = args.samplePoints as number;
 
-    // Analyze each file's complexity trend
     const results = await Promise.all(
       filePaths.map(filePath =>
         analyzeComplexityTrend(repoPath, filePath, { samplePoints }),
       ),
     );
 
-    // Map trajectory to health trajectory classification
-    function toHealthTrajectory(trajectory: string): string {
-      switch (trajectory) {
-        case 'rising': return 'deteriorating';
-        case 'declining': return 'improving';
-        default: return 'stable';
-      }
-    }
-
-    const fileResults = results.map(r => ({
-      filePath: r.filePath,
-      slope: r.slope,
-      trajectory: r.trajectory,
-      healthTrajectory: toHealthTrajectory(r.trajectory),
-      commitsAnalyzed: r.commitsAnalyzed,
-      sampledPoints: r.sampledPoints.length,
-    }));
-
+    const fileResults = buildFileResults(results);
     const deteriorating = fileResults.filter(r => r.healthTrajectory === 'deteriorating');
     const improving = fileResults.filter(r => r.healthTrajectory === 'improving');
     const stable = fileResults.filter(r => r.healthTrajectory === 'stable');

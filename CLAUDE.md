@@ -4,6 +4,12 @@ Reference documentation for AI assistants working on this codebase.
 
 ---
 
+## Git & Commits
+
+**Committa aldrig kod-ändringar.** Användaren meddelar alltid explicit när en commit ska göras. Kör inte `git add`, `git commit` eller `git push` utan explicit instruktion.
+
+---
+
 ## Project Overview
 
 Local MCP server that gives AI assistants objective code health feedback (28 biomarkers, 41 languages, 27 tools). Enables a self-correcting refactoring loop where the AI refactors until a health score target is reached.
@@ -106,14 +112,15 @@ Enables constrained decoding (output always matches the JSON schema) and caches 
 tool schemas for 24 hours. Reduces both per-call latency and schema-transmission tokens
 when the same tool is called many times in a loop.
 
-### Task budgets — total loop cost cap (beta)
+### Task budgets — advisory loop cost target (beta)
 ```
 anthropic-beta: task-budgets-2026-03-13
 ```
-Attach a `task_budget` object to the first call in a refactoring loop to hard-cap the
-total tokens consumed across all iterations. Reduces loop cost by 40–60 % on long
-sessions. The model returns `budget_exhausted: true` when the cap is hit, which maps
-cleanly to `loopComplete: true`.
+Attach a `task_budget` object to the first call in a refactoring loop to give the model
+an advisory token target for the entire agentic turn (thinking + tool calls + output).
+The model uses the budget to prioritize work and wind down gracefully — it is **not**
+a hard cap, so actual usage may slightly exceed the value. Reduces loop cost by 40–60 %
+on long sessions by prompting the model to plan ahead and avoid unnecessary tool calls.
 
 ### Adaptive thinking effort (`effort`) — Opus 4.x
 The `code_health_auto_refactor` tool already computes and returns the correct effort
@@ -123,18 +130,35 @@ level in `followUpInstruction`. When calling Opus 4.7 directly:
 |---|---|
 | `nearTarget: true` (score ≥ 9.0) | `"low"` |
 | `successLikelihood: "medium"` | `"medium"` |
-| `successLikelihood: "hard"` | `"high"` |
+| `successLikelihood: "hard"` | `"xhigh"` (falls back to `"high"` on Opus 4.5/4.6) |
 | `successLikelihood: "hard"` AND score < 5 | `"max"` |
 | Long-horizon agentic session (Opus 4.7 only) | `"xhigh"` |
 
 `"xhigh"` is Opus 4.7-exclusive; on earlier models it falls back to `"high"`.
 
+### Fine-grained tool streaming — latency for large code blocks
+Set `eager_input_streaming: true` on any tool where `currentCode` or `focusLines` can
+be large. This streams parameter values without buffering or JSON validation, so the
+model can start reading the code block before the full tool result is transmitted.
+Reduces time-to-first-token on refactoring calls with large functions by 200–800 ms.
+
+### Interleaved thinking (non-Opus-4.6 models)
+```
+anthropic-beta: interleaved-thinking-2025-05-14
+```
+Required when using Sonnet 4.6 or other Claude 4 models other than Opus 4.6/4.7 — they
+do not auto-enable interleaved thinking. Allows the model to think between tool calls
+rather than only at the start, improving multi-step refactoring decisions.
+Opus 4.6 and Opus 4.7 enable interleaved thinking automatically.
+
 ### Prompt cache TTL — session-level savings
-The Anthropic prompt cache has a **1-hour TTL** for paid tiers. For a multi-file
-refactoring session, structure the system prompt (tool schemas, project instructions)
-as the first cache-breakpoint message so the same cache block is reused across all
-tool calls within the session. This requires no API changes — just keep the system
-prompt identical across calls.
+The Anthropic prompt cache has a **1-hour TTL** for paid tiers. Cache reads cost
+**0.10× base input price** (90 % off). For a multi-file refactoring session, structure
+the system prompt (tool schemas, project instructions) as the first cache-breakpoint
+message so the same cache block is reused across all tool calls within the session.
+This requires no API changes — just keep the system prompt identical across calls.
+At $5/M input tokens (Opus 4.7), a cached 10K-token system prompt costs $0.005 uncached
+vs. $0.0005 cached — savings compound quickly across 50+ loop iterations.
 
 ---
 

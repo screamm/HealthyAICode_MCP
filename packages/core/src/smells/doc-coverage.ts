@@ -28,8 +28,23 @@ interface ExportInfo {
   hasJsDoc: boolean;
 }
 
+/** Bundles the tree root, source text, and language profile shared by AST traversal functions. */
+interface AstContext {
+  root: Parser.SyntaxNode;
+  source: string;
+  profile: LanguageProfile;
+}
+
+/** Bundles the source lines, 1-based export line, and doc-comment pattern for comment detection. */
+interface CommentCheckArgs {
+  lines: string[];
+  exportLine: number;
+  pattern: RegExp;
+}
+
 export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, profile: LanguageProfile): Smell[] {
-  const exports = collectExports(root, source, profile, profile.docCommentIsLineStyle ?? false);
+  const ctx: AstContext = { root, source, profile };
+  const exports = collectExports(ctx, profile.docCommentIsLineStyle ?? false);
   if (exports.length < MIN_EXPORTS_FOR_CHECK) return [];
 
   const documented = exports.filter(e => e.hasJsDoc).length;
@@ -47,7 +62,7 @@ export function detectLowDocCoverage(root: Parser.SyntaxNode, source: string, pr
   }];
 }
 
-function collectExports(root: Parser.SyntaxNode, source: string, profile: LanguageProfile, isLineStyle: boolean): ExportInfo[] {
+function collectExports({ root, source, profile }: AstContext, isLineStyle: boolean): ExportInfo[] {
   const lines = source.split('\n');
   const exports: ExportInfo[] = [];
   function visit(node: Parser.SyntaxNode): void {
@@ -62,9 +77,10 @@ function collectExports(root: Parser.SyntaxNode, source: string, profile: Langua
       if (lineCount <= TRIVIAL_FUNCTION_LINE_THRESHOLD) return;
 
       const line = node.startPosition.row + 1;
+      const args: CommentCheckArgs = { lines, exportLine: line, pattern: profile.docCommentPattern };
       const hasJsDoc = isLineStyle
-        ? lineAboveMatchesLineComment(lines, line, profile.docCommentPattern)
-        : lineAboveMatchesDocPattern(lines, line, profile.docCommentPattern);
+        ? lineAboveMatchesLineComment(args)
+        : lineAboveMatchesDocPattern(args);
       exports.push({ name, line, hasJsDoc });
     }
     for (const child of node.children) visit(child);
@@ -88,7 +104,7 @@ function getExportedName(node: Parser.SyntaxNode): string | null {
  * check the first non-blank line. If it matches the pattern (i.e. is a doc
  * comment), the symbol is considered documented.
  */
-function lineAboveMatchesLineComment(lines: string[], exportLine: number, pattern: RegExp): boolean {
+function lineAboveMatchesLineComment({ lines, exportLine, pattern }: CommentCheckArgs): boolean {
   // Walk backward from the line immediately above the exported symbol.
   let idx = exportLine - 2; // exportLine is 1-based; idx is 0-based
   // Skip at most one blank line (allow one blank line between comment and symbol).
@@ -97,7 +113,7 @@ function lineAboveMatchesLineComment(lines: string[], exportLine: number, patter
   return pattern.test(lines[idx].trim());
 }
 
-function lineAboveMatchesDocPattern(lines: string[], exportLine: number, pattern: RegExp): boolean {
+function lineAboveMatchesDocPattern({ lines, exportLine, pattern }: CommentCheckArgs): boolean {
   // The line immediately above the export (index exportLine-2) must close a doc comment.
   // Requiring it to end with '*/' prevents false positives when there is no blank line
   // between consecutive exports and an earlier JSDoc would otherwise be collected.

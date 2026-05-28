@@ -32,46 +32,62 @@ export function analyzeHaskell(code: string, filePath = '<inline>'): {
   smells: Smell[];
 } {
   if (!code || code.trim() === '') {
-    return {
-      functions: [],
-      smells: detectSATDFromText(code),
-      metrics: emptyMetrics(0),
-    };
+    return { functions: [], smells: detectSATDFromText(code), metrics: emptyMetrics(0) };
   }
 
   const tree = parser.parse(code);
-  const fns: FunctionResult[] = [];
+  const fnMap = buildFunctionMap(tree.rootNode);
+  const fns = buildFunctionResults(fnMap);
+  const totalLines = code.split('\n').length;
+  const smells: Smell[] = [
+    ...detectSATDFromText(code),
+    ...detectMagicNumbersFromText(code, filePath),
+  ];
+  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
+}
 
-  // Haskell allows multiple clauses per function (pattern matching).
-  // We aggregate clauses that share the same name into one FunctionResult,
-  // combining their line ranges and CC contributions.
-  const fnMap = new Map<string, { startLine: number; endLine: number; cc: number; depth: number }>();
+type FnMeta = { startLine: number; endLine: number; cc: number; depth: number };
+
+/**
+ * Traverses the AST and builds a map of function name -> merged clause metadata.
+ * Haskell allows multiple clauses per function (pattern matching); clauses sharing
+ * the same name are aggregated into one entry with combined line ranges and CC.
+ */
+function buildFunctionMap(rootNode: Parser.SyntaxNode): Map<string, FnMeta> {
+  const fnMap = new Map<string, FnMeta>();
 
   function visit(node: Parser.SyntaxNode): void {
     if (node.type === 'function') {
-      const name = getFunctionName(node);
-      const startLine = node.startPosition.row + 1;
-      const endLine = node.endPosition.row + 1;
-      const cc = computeCC(node);
-      const depth = computeNesting(node);
-
-      const existing = fnMap.get(name);
-      if (existing) {
-        // Merge clauses: extend range, accumulate CC, take max depth
-        existing.startLine = Math.min(existing.startLine, startLine);
-        existing.endLine = Math.max(existing.endLine, endLine);
-        // Each additional clause adds one path (like a case branch)
-        existing.cc += cc - 1; // subtract base-1 to avoid double-counting
-        existing.depth = Math.max(existing.depth, depth);
-      } else {
-        fnMap.set(name, { startLine, endLine, cc, depth });
-      }
+      mergeFunctionClause(fnMap, node);
       return; // don't recurse into nested function definitions
     }
     for (const child of node.children) visit(child);
   }
-  visit(tree.rootNode);
+  visit(rootNode);
+  return fnMap;
+}
 
+/** Merges a single function clause into the map, accumulating CC and extending ranges. */
+function mergeFunctionClause(fnMap: Map<string, FnMeta>, node: Parser.SyntaxNode): void {
+  const name = getFunctionName(node);
+  const startLine = node.startPosition.row + 1;
+  const endLine = node.endPosition.row + 1;
+  const cc = computeCC(node);
+  const depth = computeNesting(node);
+  const existing = fnMap.get(name);
+  if (existing) {
+    existing.startLine = Math.min(existing.startLine, startLine);
+    existing.endLine = Math.max(existing.endLine, endLine);
+    existing.cc += cc - 1; // subtract base-1 to avoid double-counting
+    existing.depth = Math.max(existing.depth, depth);
+  } else {
+    fnMap.set(name, { startLine, endLine, cc, depth });
+  }
+}
+
+/** Converts the accumulated function metadata map into FunctionResult objects. */
+function buildFunctionResults(fnMap: Map<string, FnMeta>): FunctionResult[] {
+  const fns: FunctionResult[] = [];
   for (const [name, meta] of fnMap) {
     fns.push({
       name,
@@ -84,14 +100,7 @@ export function analyzeHaskell(code: string, filePath = '<inline>'): {
       smells: [],
     });
   }
-
-  const totalLines = code.split('\n').length;
-  const smells: Smell[] = [
-    ...detectSATDFromText(code),
-    ...detectMagicNumbersFromText(code, filePath),
-  ];
-
-  return { functions: fns, metrics: buildSimpleMetrics(fns, totalLines), smells };
+  return fns;
 }
 
 function getFunctionName(node: Parser.SyntaxNode): string {

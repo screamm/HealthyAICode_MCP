@@ -1,4 +1,4 @@
-﻿/**
+/**
  * project-file-reader.ts
  * Recursively reads source files from a directory, returning a map of
  * project-relative path -> { content, language }.
@@ -27,6 +27,13 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.php', '.rb', '.swift',
 ]);
 
+/** Shared context for the recursive directory walk. */
+interface WalkContext {
+  root: string;
+  maxFileSizeBytes: number;
+  result: Record<string, { content: string; language: Language }>;
+}
+
 /**
  * Walks a directory tree, reads supported source files, and returns a map
  * of project-relative paths (forward-slash) -> { content, language }.
@@ -36,16 +43,12 @@ export async function readProjectFiles(
   maxFileSizeBytes = 500_000,
 ): Promise<Record<string, { content: string; language: Language }>> {
   const result: Record<string, { content: string; language: Language }> = {};
-  await walkDir(directory, directory, maxFileSizeBytes, result);
+  const ctx: WalkContext = { root: directory, maxFileSizeBytes, result };
+  await walkDir(ctx, directory);
   return result;
 }
 
-async function walkDir(
-  root: string,
-  dir: string,
-  maxFileSizeBytes: number,
-  result: Record<string, { content: string; language: Language }>,
-): Promise<void> {
+async function walkDir(ctx: WalkContext, dir: string): Promise<void> {
   let entries: Dirent[];
   try {
     entries = await fsp.readdir(dir, { withFileTypes: true });
@@ -54,37 +57,74 @@ async function walkDir(
   }
 
   for (const entry of entries) {
-    const name = entry.name as string;
-    const fullPath = path.join(dir, name);
+    await processEntry(ctx, dir, entry);
+  }
+}
 
-    if (entry.isDirectory()) {
-      if (IGNORE_DIRS.has(name) || name.startsWith('.')) continue;
-      await walkDir(root, fullPath, maxFileSizeBytes, result);
-    } else if (entry.isFile()) {
-      const ext = path.extname(name).toLowerCase();
-      if (!SUPPORTED_EXTENSIONS.has(ext)) continue;
+/** Dispatches a single directory entry to the appropriate handler. */
+async function processEntry(ctx: WalkContext, dir: string, entry: Dirent): Promise<void> {
+  const name = entry.name as string;
+  const fullPath = path.join(dir, name);
+  if (entry.isDirectory()) {
+    await processSubdirectory(ctx, name, fullPath);
+  } else if (entry.isFile()) {
+    await processFile(ctx, name, fullPath);
+  }
+}
 
-      const language = detectLanguage(fullPath);
-      if (language === 'unsupported') continue;
+/** Recursively walks into a subdirectory if it is not excluded. */
+async function processSubdirectory(ctx: WalkContext, name: string, fullPath: string): Promise<void> {
+  if (IGNORE_DIRS.has(name) || name.startsWith('.')) return;
+  await walkDir(ctx, fullPath);
+}
 
-      let size: number;
-      try {
-        const stat = await fsp.stat(fullPath);
-        size = stat.size;
-      } catch {
-        continue;
-      }
-      if (size > maxFileSizeBytes) continue;
+/** Reads a file and adds it to the result if it is a supported source file within size limits. */
+async function processFile(
+  ctx: WalkContext,
+  name: string,
+  fullPath: string,
+): Promise<void> {
+  const language = resolveFileLanguage(name, fullPath);
+  if (language === null) return;
 
-      let content: string;
-      try {
-        content = await fsp.readFile(fullPath, 'utf-8');
-      } catch {
-        continue;
-      }
+  const fileData = await readFileIfWithinSizeLimit(fullPath, ctx.maxFileSizeBytes);
+  if (fileData === null) return;
 
-      const relPath = path.relative(root, fullPath).replace(/\\/g, '/');
-      result[relPath] = { content, language };
-    }
+  const relPath = path.relative(ctx.root, fullPath).replace(/\\/g, '/');
+  ctx.result[relPath] = { content: fileData, language };
+}
+
+/** Returns the detected language for a file if the extension is supported, or null otherwise. */
+function resolveFileLanguage(name: string, fullPath: string): Language | null {
+  const ext = path.extname(name).toLowerCase();
+  if (!SUPPORTED_EXTENSIONS.has(ext)) return null;
+  const language = detectLanguage(fullPath);
+  if (language === 'unsupported') return null;
+  return language as Language;
+}
+
+/** Reads the file content if it is within the size limit; returns null if too large or unreadable. */
+async function readFileIfWithinSizeLimit(fullPath: string, maxBytes: number): Promise<string | null> {
+  const size = await readFileSize(fullPath);
+  if (size === null || size > maxBytes) return null;
+  return readFileContent(fullPath);
+}
+
+/** Returns the file size in bytes, or null if the stat fails. */
+async function readFileSize(fullPath: string): Promise<number | null> {
+  try {
+    const stat = await fsp.stat(fullPath);
+    return stat.size;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns file content as a UTF-8 string, or null if reading fails. */
+async function readFileContent(fullPath: string): Promise<string | null> {
+  try {
+    return await fsp.readFile(fullPath, 'utf-8');
+  } catch {
+    return null;
   }
 }

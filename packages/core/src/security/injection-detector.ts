@@ -67,6 +67,76 @@ const FS_CONCAT_RE = /fs\s*\.\s*(?:readFile|writeFile|readFileSync|writeFileSync
 // path.join / path.resolve with user-controlled segment (req.params|query|body).
 const PATH_JOIN_USER_RE = /path\s*\.\s*(?:join|resolve)\s*\([^)]*req\s*\.\s*(?:params|query|body)/g;
 
+// ─── Severity score mapping ───────────────────────────────────────────────────
+
+/** Static risk score assigned to critical-severity injection findings. */
+const SCORE_CRITICAL = 0.9;
+
+/** Static risk score assigned to high-severity injection findings. */
+const SCORE_HIGH = 0.75;
+
+/** Static risk score assigned to medium-severity injection findings. */
+const SCORE_MEDIUM = 0.55;
+
+/** Maximum number of characters from the match evidence to include in a finding. */
+const EVIDENCE_MAX_LENGTH = 120;
+
+/** Maps severity to a static risk score. */
+function severityToScore(severity: InjectionFinding['severity']): number {
+  if (severity === 'critical') return SCORE_CRITICAL;
+  if (severity === 'high') return SCORE_HIGH;
+  return SCORE_MEDIUM;
+}
+
+/** Shared scan context passed to helper functions to avoid repeating content/lines. */
+interface InjectionScanContext {
+  content: string;
+  lines: string[];
+}
+
+/** Describes an injection pattern rule: the regex to match, finding type, and severity. */
+interface InjectionPatternRule {
+  regex: RegExp;
+  type: InjectionFinding['type'];
+  severity: InjectionFinding['severity'];
+}
+
+/** Builds an InjectionFinding from a regex match, rule, and scan context. */
+function buildInjectionFinding(
+  rule: InjectionPatternRule,
+  m: RegExpExecArray,
+  ctx: InjectionScanContext,
+): InjectionFinding {
+  const { content, lines } = ctx;
+  const { type, severity } = rule;
+  const line = lineOf(content, m.index);
+  const col = columnOf(content, m.index);
+  return {
+    type,
+    line,
+    column: col,
+    endLine: line,
+    endColumn: col + m[0].length,
+    filePath: '',
+    codeSnippet: snippetAround(lines, line),
+    static_score: severityToScore(severity),
+    severity,
+    evidence: m[0].slice(0, EVIDENCE_MAX_LENGTH),
+  };
+}
+
+/** Scans `ctx.content` with the rule's regex and appends a finding for each match. */
+function scanPattern(
+  rule: InjectionPatternRule,
+  ctx: InjectionScanContext,
+  findings: InjectionFinding[],
+): void {
+  rule.regex.lastIndex = 0;
+  for (let m = rule.regex.exec(ctx.content); m !== null; m = rule.regex.exec(ctx.content)) {
+    findings.push(buildInjectionFinding(rule, m, ctx));
+  }
+}
+
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 /**
@@ -81,69 +151,20 @@ export function detectInjectionRisks(
   _language: string,
 ): InjectionFinding[] {
   const findings: InjectionFinding[] = [];
-  const lines = content.split('\n');
+  const ctx: InjectionScanContext = { content, lines: content.split('\n') };
 
-  function addFinding(
-    type: InjectionFinding['type'],
-    severity: InjectionFinding['severity'],
-    m: RegExpExecArray,
-  ): void {
-    const line = lineOf(content, m.index);
-    const col = columnOf(content, m.index);
-    findings.push({
-      type,
-      line,
-      column: col,
-      endLine: line,
-      endColumn: col + m[0].length,
-      filePath: '',
-      codeSnippet: snippetAround(lines, line),
-      static_score: severity === 'critical' ? 0.9 : severity === 'high' ? 0.75 : 0.55,
-      severity,
-      evidence: m[0].slice(0, 120),
-    });
-  }
+  const rules: InjectionPatternRule[] = [
+    { regex: SQL_CONCAT_RE, type: 'SqlInjectionRisk', severity: 'critical' },
+    { regex: RES_SEND_CONCAT_RE, type: 'XssRisk', severity: 'high' },
+    { regex: INNER_HTML_RE, type: 'XssRisk', severity: 'high' },
+    { regex: CMD_CONCAT_RE, type: 'CommandInjectionRisk', severity: 'high' },
+    { regex: SPAWN_TEMPLATE_RE, type: 'CommandInjectionRisk', severity: 'critical' },
+    { regex: FS_CONCAT_RE, type: 'PathTraversalRisk', severity: 'high' },
+    { regex: PATH_JOIN_USER_RE, type: 'PathTraversalRisk', severity: 'high' },
+  ];
 
-  // SQL injection
-  SQL_CONCAT_RE.lastIndex = 0;
-  for (let m = SQL_CONCAT_RE.exec(content); m !== null; m = SQL_CONCAT_RE.exec(content)) {
-    addFinding('SqlInjectionRisk', 'critical', m);
-  }
-
-  // XSS — res.send concatenation
-  RES_SEND_CONCAT_RE.lastIndex = 0;
-  for (let m = RES_SEND_CONCAT_RE.exec(content); m !== null; m = RES_SEND_CONCAT_RE.exec(content)) {
-    addFinding('XssRisk', 'high', m);
-  }
-
-  // XSS — innerHTML assignment without literal RHS
-  INNER_HTML_RE.lastIndex = 0;
-  for (let m = INNER_HTML_RE.exec(content); m !== null; m = INNER_HTML_RE.exec(content)) {
-    addFinding('XssRisk', 'high', m);
-  }
-
-  // Command injection — concatenation building argument strings
-  CMD_CONCAT_RE.lastIndex = 0;
-  for (let m = CMD_CONCAT_RE.exec(content); m !== null; m = CMD_CONCAT_RE.exec(content)) {
-    addFinding('CommandInjectionRisk', 'high', m);
-  }
-
-  // Command injection — template literals in spawning function arguments
-  SPAWN_TEMPLATE_RE.lastIndex = 0;
-  for (let m = SPAWN_TEMPLATE_RE.exec(content); m !== null; m = SPAWN_TEMPLATE_RE.exec(content)) {
-    addFinding('CommandInjectionRisk', 'critical', m);
-  }
-
-  // Path traversal — fs file ops with concatenation
-  FS_CONCAT_RE.lastIndex = 0;
-  for (let m = FS_CONCAT_RE.exec(content); m !== null; m = FS_CONCAT_RE.exec(content)) {
-    addFinding('PathTraversalRisk', 'high', m);
-  }
-
-  // Path traversal — path.join with req.*
-  PATH_JOIN_USER_RE.lastIndex = 0;
-  for (let m = PATH_JOIN_USER_RE.exec(content); m !== null; m = PATH_JOIN_USER_RE.exec(content)) {
-    addFinding('PathTraversalRisk', 'high', m);
+  for (const rule of rules) {
+    scanPattern(rule, ctx, findings);
   }
 
   return findings;

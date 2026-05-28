@@ -13,36 +13,60 @@ const WEIGHTS = {
 
 /** Threshold for "high churn": raw (additions + deletions) / lookbackDays */
 const HIGH_CHURN_THRESHOLD = 50;
+const SLOPE_RISING_THRESHOLD = 0.1;
+const SLOPE_DECLINING_THRESHOLD = -0.1;
+const ADI_WARNING_THRESHOLD = 3;
+const ADI_HIGH_RISK_THRESHOLD = 6;
+const ADI_CRITICAL_THRESHOLD = 8;
+const DOC_COVERAGE_CRITICAL_THRESHOLD = 7;
+const DOC_COVERAGE_LOW_THRESHOLD = 4;
+const TEST_COVERAGE_GOOD_THRESHOLD = 7;
+const TEST_COVERAGE_LIMITED_THRESHOLD = 3;
+const COUPLING_POINTS_PER_PAIR = 2;
+const DEFAULT_NEUTRAL_SCORE = 5;
+const DEFAULT_LOOKBACK_DAYS = 90;
+const COMPLEXITY_SLOPE_SCALE = 10;
+const SLOPE_DECIMAL_PLACES = 3;
 
-function clamp(x: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, x));
+interface NumericRange {
+  min: number;
+  max: number;
 }
 
+function clamp(x: number, range: NumericRange): number {
+  return Math.max(range.min, Math.min(range.max, x));
+}
+
+const SCORE_RANGE: NumericRange = { min: 0, max: COMPLEXITY_SLOPE_SCALE };
+
 function classifyAdi(adi: number): ArchitecturalDecayResult['classification'] {
-  if (adi < 3) return 'healthy';
-  if (adi < 6) return 'warning';
-  if (adi < 8) return 'high_risk';
+  if (adi < ADI_WARNING_THRESHOLD) return 'healthy';
+  if (adi < ADI_HIGH_RISK_THRESHOLD) return 'warning';
+  if (adi < ADI_CRITICAL_THRESHOLD) return 'high_risk';
   return 'critical';
+}
+
+function describeComplexitySlope(slope: number): string {
+  const s = slope.toFixed(SLOPE_DECIMAL_PLACES);
+  if (slope > SLOPE_RISING_THRESHOLD) return `Rising complexity (slope=${s}): technical debt is increasing`;
+  if (slope < SLOPE_DECLINING_THRESHOLD) return `Declining complexity (slope=${s}): code is improving`;
+  return `Stable complexity (slope=${s})`;
 }
 
 function complexityTrendDimension(slope: number): DecayDimension {
   // slope: complexity units per commit-index — scale to 0–10
   // A slope of +1.0 per commit-index (very steep) → score 10
-  const rawScore = clamp(slope * 10, 0, 10);
+  const rawScore = clamp(slope * COMPLEXITY_SLOPE_SCALE, SCORE_RANGE);
   return {
     score: parseFloat(rawScore.toFixed(2)),
     weight: WEIGHTS.complexityTrend,
     label: 'Complexity Trend',
-    evidence: slope > 0.1
-      ? `Rising complexity (slope=${slope.toFixed(3)}): technical debt is increasing`
-      : slope < -0.1
-      ? `Declining complexity (slope=${slope.toFixed(3)}): code is improving`
-      : `Stable complexity (slope=${slope.toFixed(3)})`,
+    evidence: describeComplexitySlope(slope),
   };
 }
 
 function churnRateDimension(churnPerDay: number): DecayDimension {
-  const rawScore = clamp((churnPerDay / HIGH_CHURN_THRESHOLD) * 10, 0, 10);
+  const rawScore = clamp((churnPerDay / HIGH_CHURN_THRESHOLD) * COMPLEXITY_SLOPE_SCALE, SCORE_RANGE);
   return {
     score: parseFloat(rawScore.toFixed(2)),
     weight: WEIGHTS.churnRate,
@@ -53,7 +77,7 @@ function churnRateDimension(churnPerDay: number): DecayDimension {
 
 function couplingDensityDimension(strongCouplingCount: number): DecayDimension {
   // Each strongly coupled file pair (>0.5) contributes 2 points, max 10
-  const rawScore = clamp(strongCouplingCount * 2, 0, 10);
+  const rawScore = clamp(strongCouplingCount * COUPLING_POINTS_PER_PAIR, SCORE_RANGE);
   return {
     score: parseFloat(rawScore.toFixed(2)),
     weight: WEIGHTS.couplingDensity,
@@ -62,34 +86,38 @@ function couplingDensityDimension(strongCouplingCount: number): DecayDimension {
   };
 }
 
+function describeDocCoverage(score: number): string {
+  if (score > DOC_COVERAGE_CRITICAL_THRESHOLD) return 'Documentation coverage critically low';
+  if (score > DOC_COVERAGE_LOW_THRESHOLD) return 'Documentation coverage below recommended level';
+  return 'Documentation coverage acceptable';
+}
+
 function docCoverageDimension(lowDocScore: number): DecayDimension {
   // lowDocScore 0–10 (0=good documentation, 10=no documentation)
-  const score = clamp(lowDocScore, 0, 10);
+  const score = clamp(lowDocScore, SCORE_RANGE);
   return {
     score,
     weight: WEIGHTS.docCoverage,
     label: 'Documentation Coverage',
-    evidence: score > 7
-      ? 'Documentation coverage critically low'
-      : score > 4
-      ? 'Documentation coverage below recommended level'
-      : 'Documentation coverage acceptable',
+    evidence: describeDocCoverage(score),
   };
+}
+
+function describeTestProximity(testProximityScore: number): string {
+  if (testProximityScore > TEST_COVERAGE_GOOD_THRESHOLD) return 'Tests found near production code';
+  if (testProximityScore > TEST_COVERAGE_LIMITED_THRESHOLD) return 'Limited test coverage';
+  return 'No tests identified near the module';
 }
 
 function testProximityDimension(testProximityScore: number): DecayDimension {
   // testProximityScore 0–10 (10=good test coverage, 0=no tests)
   // Inverted: high testProximityScore → low ADI contribution
-  const inverted = clamp(10 - testProximityScore, 0, 10);
+  const inverted = clamp(COMPLEXITY_SLOPE_SCALE - testProximityScore, SCORE_RANGE);
   return {
     score: inverted,
     weight: WEIGHTS.testProximity,
     label: 'Test Proximity',
-    evidence: testProximityScore > 7
-      ? 'Tests found near production code'
-      : testProximityScore > 3
-      ? 'Limited test coverage'
-      : 'No tests identified near the module',
+    evidence: describeTestProximity(testProximityScore),
   };
 }
 
@@ -112,55 +140,84 @@ export interface ComputeDecayOptions {
  * Pre-computed dimension values can be injected via options to avoid redundant git calls.
  * When not provided, complexity slope and coupling density are computed from git history.
  */
+interface ModuleContext {
+  repoPath: string;
+  modulePath: string;
+}
+
 export async function computeArchitecturalDecayIndex(
   repoPath: string,
   modulePath: string,
   options: ComputeDecayOptions = {},
 ): Promise<ArchitecturalDecayResult> {
-  const lookbackDays = options.lookbackDays ?? 90;
+  const lookbackDays = options.lookbackDays ?? DEFAULT_LOOKBACK_DAYS;
+  const churnPerDay = options.churnPerDay ?? 0;
+  const docScore = options.docScore ?? DEFAULT_NEUTRAL_SCORE;    // neutral default
+  const testScore = options.testScore ?? DEFAULT_NEUTRAL_SCORE;  // neutral default
+  const ctx: ModuleContext = { repoPath, modulePath };
 
-  let complexitySlope = options.complexitySlope ?? 0;
-  let churnPerDay = options.churnPerDay ?? 0;
-  let strongCouplings = options.strongCouplings ?? 0;
-  const docScore = options.docScore ?? 5;    // neutral default
-  const testScore = options.testScore ?? 5;  // neutral default
+  const complexitySlope = await resolveComplexitySlope(ctx, options);
+  const strongCouplings = await resolveStrongCouplings(ctx, lookbackDays, options);
 
-  // Compute complexity slope if not injected
-  if (options.complexitySlope === undefined) {
-    try {
-      const trend = await analyzeComplexityTrend(repoPath, modulePath, { maxCommits: 100 });
-      // Negative slopes don't contribute to decay — only upward trends matter
-      complexitySlope = Math.max(0, trend.slope);
-    } catch {
-      complexitySlope = 0;
-    }
+  const dimensions = buildDimensions({ complexitySlope, churnPerDay, strongCouplings, docScore, testScore });
+  return buildDecayResult(modulePath, dimensions);
+}
+
+async function resolveComplexitySlope(
+  ctx: ModuleContext,
+  options: ComputeDecayOptions,
+): Promise<number> {
+  if (options.complexitySlope !== undefined) return options.complexitySlope;
+  try {
+    const trend = await analyzeComplexityTrend(ctx.repoPath, ctx.modulePath, { maxCommits: 100 });
+    // Negative slopes don't contribute to decay — only upward trends matter
+    return Math.max(0, trend.slope);
+  } catch {
+    return 0;
   }
+}
 
-  // Compute strong coupling count if not injected
-  if (options.strongCouplings === undefined) {
-    try {
-      const coupling = await analyzeFileCoupling(repoPath, { windowDays: lookbackDays, threshold: 0.5 });
-      strongCouplings = coupling.pairs.filter(p =>
-        p.fileA === modulePath || p.fileB === modulePath,
-      ).length;
-    } catch {
-      strongCouplings = 0;
-    }
+async function resolveStrongCouplings(
+  ctx: ModuleContext,
+  lookbackDays: number,
+  options: ComputeDecayOptions,
+): Promise<number> {
+  if (options.strongCouplings !== undefined) return options.strongCouplings;
+  try {
+    const coupling = await analyzeFileCoupling(ctx.repoPath, { windowDays: lookbackDays, threshold: 0.5 });
+    return coupling.pairs.filter(p => p.fileA === ctx.modulePath || p.fileB === ctx.modulePath).length;
+  } catch {
+    return 0;
   }
+}
 
-  const dimensions: ArchitecturalDecayResult['dimensions'] = {
+interface DecayInputs {
+  complexitySlope: number;
+  churnPerDay: number;
+  strongCouplings: number;
+  docScore: number;
+  testScore: number;
+}
+
+function buildDimensions(inputs: DecayInputs): ArchitecturalDecayResult['dimensions'] {
+  const { complexitySlope, churnPerDay, strongCouplings, docScore, testScore } = inputs;
+  return {
     complexityTrend: complexityTrendDimension(complexitySlope),
     churnRate:       churnRateDimension(churnPerDay),
     couplingDensity: couplingDensityDimension(strongCouplings),
     docCoverage:     docCoverageDimension(docScore),
     testProximity:   testProximityDimension(testScore),
   };
+}
 
+function buildDecayResult(
+  modulePath: string,
+  dimensions: ArchitecturalDecayResult['dimensions'],
+): ArchitecturalDecayResult {
   const adi = Object.values(dimensions).reduce(
     (sum, dim) => sum + dim.score * dim.weight,
     0,
   );
-
   return {
     module: modulePath,
     adi: parseFloat(adi.toFixed(2)),

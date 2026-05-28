@@ -47,13 +47,13 @@ beforeEach(__clearMethodRangesCache);
 
 describe('getMethodRangesAtCommit', () => {
   it('returns function ranges from initial commit', async () => {
-    const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, sharedRepo.filePath, initialSha);
+    const ranges = await getMethodRangesAtCommit({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: initialSha });
     const names = ranges.map(r => r.name);
     expect(names).toEqual(expect.arrayContaining(['validateUser', 'formatError', 'parseToken', 'refreshToken']));
   });
 
   it('each range has positive line and length', async () => {
-    const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, sharedRepo.filePath, initialSha);
+    const ranges = await getMethodRangesAtCommit({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: initialSha });
     for (const r of ranges) {
       expect(r.line).toBeGreaterThan(0);
       expect(r.length).toBeGreaterThan(0);
@@ -61,7 +61,7 @@ describe('getMethodRangesAtCommit', () => {
   }, 30_000);
 
   it('returns empty array for non-existent commit', async () => {
-    const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, sharedRepo.filePath, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef');
+    const ranges = await getMethodRangesAtCommit({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' });
     expect(ranges).toEqual([]);
   });
 
@@ -69,26 +69,26 @@ describe('getMethodRangesAtCommit', () => {
     // 'src/readme.md' was never committed to the fixture repo, so git.show throws →
     // returns [] gracefully. (Note: .md is detected as 'markdown' and would return
     // functions:[] via analyzeStructuralTierC anyway, but this path fails earlier.)
-    const ranges = await getMethodRangesAtCommit(sharedRepo.rootPath, 'src/readme.md', initialSha);
+    const ranges = await getMethodRangesAtCommit({ repoPath: sharedRepo.rootPath, filePath: 'src/readme.md', commitSha: initialSha });
     expect(ranges).toEqual([]);
   });
 });
 
 describe('getChangedLineRanges', () => {
   it('returns ranges for the initial commit (entire file as added)', async () => {
-    const ranges = await getChangedLineRanges(sharedRepo.rootPath, sharedRepo.filePath, initialSha);
+    const ranges = await getChangedLineRanges({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: initialSha });
     // git show on an initial commit shows the entire file as "added"
     expect(ranges.length).toBeGreaterThan(0);
   });
 
   it('returns the line numbers that changed in a coupled-A commit', async () => {
-    const ranges = await getChangedLineRanges(sharedRepo.rootPath, sharedRepo.filePath, coupledA0Sha);
+    const ranges = await getChangedLineRanges({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: coupledA0Sha });
     expect(ranges.length).toBeGreaterThanOrEqual(2);
     expect(ranges.every(([start, end]) => end >= start)).toBe(true);
   });
 
   it('returns empty array for non-existent commit', async () => {
-    const ranges = await getChangedLineRanges(sharedRepo.rootPath, sharedRepo.filePath, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef');
+    const ranges = await getChangedLineRanges({ repoPath: sharedRepo.rootPath, filePath: sharedRepo.filePath, commitSha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' });
     expect(ranges).toEqual([]);
   });
 });

@@ -3,6 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeHotspots } from '@healthy-ai-code/core';
 
+// --- Configuration constants ---
+const DEFAULT_LOOKBACK_DAYS = 90;
+const DEFAULT_TOP_N = 10;
+const DEFAULT_MIN_CHURN_COMMITS = 3;
+const MIN_LOOKBACK_DAYS = 7;
+const MAX_LOOKBACK_DAYS = 365;
+const MAX_TOP_N = 50;
+
 type McpToolRegistrar = (
   name: string,
   desc: string,
@@ -10,17 +18,33 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
 ) => void;
 
+const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
+const lookbackInt = z.number().int();
+const lookbackBounded = lookbackInt.min(MIN_LOOKBACK_DAYS).max(MAX_LOOKBACK_DAYS);
+const lookbackDaysWithDefault = lookbackBounded.default(DEFAULT_LOOKBACK_DAYS);
+const lookbackDaysSchema = lookbackDaysWithDefault.describe('Historik-period i dagar (default 90)');
+const topNInt = z.number().int();
+const topNBounded = topNInt.min(1).max(MAX_TOP_N);
+const topNWithDefault = topNBounded.default(DEFAULT_TOP_N);
+const topNSchema = topNWithDefault.describe('Antal hotspots att returnera (default 10)');
+const packageRootSchema = z.string().optional().describe('Begränsa analys till delsökväg — monorepo-stöd (t.ex. "packages/core")');
+const minChurnNum = z.number().int().min(1);
+const minChurnWithDefault = minChurnNum.default(DEFAULT_MIN_CHURN_COMMITS);
+const minChurnCommitsSchema = minChurnWithDefault.describe('Minsta antal commits för att inkludera en fil (default 3)');
+
+const HOTSPOTS_SCHEMA = {
+  repoPath: repoPathSchema,
+  lookbackDays: lookbackDaysSchema,
+  topN: topNSchema,
+  packageRoot: packageRootSchema,
+  minChurnCommits: minChurnCommitsSchema,
+};
+
 export function registerHotspots(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_hotspots',
     'Identifierar de hetaste koddelarna (hotspots) i ett git-repo: filer med hög komplexitet OCH hög ändringsfrekvens. Kombinerar cyclomatic complexity med churn rate under en konfigurerbar tidsperiod. Top-N hotspots returneras sorterade efter score (0–1).',
-    {
-      repoPath: z.string().describe('Absolut sökväg till git-repots rotkatalog'),
-      lookbackDays: z.number().int().min(7).max(365).default(90).describe('Historik-period i dagar (default 90)'),
-      topN: z.number().int().min(1).max(50).default(10).describe('Antal hotspots att returnera (default 10)'),
-      packageRoot: z.string().optional().describe('Begränsa analys till delsökväg — monorepo-stöd (t.ex. "packages/core")'),
-      minChurnCommits: z.number().int().min(1).default(3).describe('Minsta antal commits för att inkludera en fil (default 3)'),
-    },
+    HOTSPOTS_SCHEMA,
     async (args) => handleHotspots(args),
   );
 }

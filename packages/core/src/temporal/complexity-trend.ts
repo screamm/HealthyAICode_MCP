@@ -3,12 +3,14 @@ import simpleGit from 'simple-git';
 import { analyzeByLanguage } from '../analyzers';
 import { detectLanguage } from '../language-detect';
 
+/** A single sampled data point mapping a commit index to the file's total complexity at that commit. */
 export interface ComplexityPoint {
   x: number;  // commit-index (0 = oldest)
   y: number;  // total complexity at this commit
   sha: string;
 }
 
+/** Result of analyzing complexity trend for a single file over its git history. */
 export interface ComplexityTrendResult {
   filePath: string;
   slope: number;           // positive = rising complexity, negative = declining
@@ -61,7 +63,49 @@ export async function analyzeComplexityTrend(
   const samplePoints = options.samplePoints ?? 5;
   const git = simpleGit(repoPath);
 
-  let shas: string[] = [];
+  const shas = await fetchCommitShas(git, filePath, maxCommits);
+  const shaValidation = validateShas(shas, filePath);
+  if (shaValidation !== null) return shaValidation;
+
+  const language = detectLanguage(filePath);
+  const languageValidation = validateLanguage(language, filePath, (shas as string[]).length);
+  if (languageValidation !== null) return languageValidation;
+
+  const ctx: FileAnalysisContext = { git, filePath, language };
+  const sampledPoints = await collectSampledPoints(ctx, shas as string[], samplePoints);
+  if (sampledPoints.length < 2) return stableResult(filePath, (shas as string[]).length, sampledPoints);
+
+  return buildTrendResult(filePath, (shas as string[]).length, sampledPoints);
+}
+
+function validateShas(shas: string[] | null, filePath: string): ComplexityTrendResult | null {
+  if (shas === null || shas.length === 0) return stableResult(filePath, 0);
+  if (shas.length < 2) return stableResult(filePath, shas.length);
+  return null;
+}
+
+function validateLanguage(
+  language: ReturnType<typeof detectLanguage>,
+  filePath: string,
+  commitsAnalyzed: number,
+): ComplexityTrendResult | null {
+  if (language === 'unsupported') return stableResult(filePath, commitsAnalyzed);
+  return null;
+}
+
+function stableResult(
+  filePath: string,
+  commitsAnalyzed: number,
+  sampledPoints: ComplexityPoint[] = [],
+): ComplexityTrendResult {
+  return { filePath, slope: 0, trajectory: 'stable', sampledPoints, commitsAnalyzed };
+}
+
+async function fetchCommitShas(
+  git: ReturnType<typeof simpleGit>,
+  filePath: string,
+  maxCommits: number,
+): Promise<string[] | null> {
   try {
     const output = await git.raw([
       'log', '--follow',
@@ -71,54 +115,70 @@ export async function analyzeComplexityTrend(
       filePath,
     ]);
     // git log returns newest-first — reverse for oldest-first on x-axis
-    shas = output.trim().split('\n').filter(Boolean).reverse();
+    const trimmed = output.trim();
+    const lines = trimmed.split('\n');
+    const nonEmpty = lines.filter(Boolean);
+    return nonEmpty.reverse();
   } catch {
-    return { filePath, slope: 0, trajectory: 'stable', sampledPoints: [], commitsAnalyzed: 0 };
+    return null;
   }
+}
 
-  if (shas.length === 0) {
-    return { filePath, slope: 0, trajectory: 'stable', sampledPoints: [], commitsAnalyzed: 0 };
-  }
+interface FileAnalysisContext {
+  git: ReturnType<typeof simpleGit>;
+  filePath: string;
+  language: ReturnType<typeof detectLanguage>;
+}
 
-  if (shas.length < 2) {
-    return { filePath, slope: 0, trajectory: 'stable', sampledPoints: [], commitsAnalyzed: shas.length };
-  }
-
-  const language = detectLanguage(filePath);
-  if (language === 'unsupported') {
-    return { filePath, slope: 0, trajectory: 'stable', sampledPoints: [], commitsAnalyzed: shas.length };
-  }
-
+async function collectSampledPoints(
+  ctx: FileAnalysisContext,
+  shas: string[],
+  samplePoints: number,
+): Promise<ComplexityPoint[]> {
   const sampleIndices = sampleComplexityPoints(shas.length, samplePoints);
   const sampledPoints: ComplexityPoint[] = [];
 
   for (const idx of sampleIndices) {
-    const sha = shas[idx];
-    try {
-      const content = await git.show([`${sha}:${filePath}`]);
-      const result = analyzeByLanguage(content, language, filePath);
-      const totalComplexity = result.functions.reduce((s, f) => s + (f.cyclomaticComplexity ?? 1), 0);
-      sampledPoints.push({ x: idx, y: totalComplexity, sha });
-    } catch {
-      // File does not exist at this commit — skip
-    }
+    const point = await fetchComplexityPoint(ctx, shas[idx], idx);
+    if (point !== null) sampledPoints.push(point);
   }
+  return sampledPoints;
+}
 
-  if (sampledPoints.length < 2) {
-    return { filePath, slope: 0, trajectory: 'stable', sampledPoints, commitsAnalyzed: shas.length };
+async function fetchComplexityPoint(
+  ctx: FileAnalysisContext,
+  sha: string,
+  idx: number,
+): Promise<ComplexityPoint | null> {
+  const { git, filePath, language } = ctx;
+  try {
+    const content = await git.show([`${sha}:${filePath}`]);
+    const result = analyzeByLanguage(content, language, filePath);
+    const totalComplexity = result.functions.reduce((s, f) => s + (f.cyclomaticComplexity ?? 1), 0);
+    return { x: idx, y: totalComplexity, sha };
+  } catch {
+    // File does not exist at this commit — skip
+    return null;
   }
+}
 
+function classifyTrajectory(slope: number): ComplexityTrendResult['trajectory'] {
+  if (slope > STABLE_SLOPE_THRESHOLD) return 'rising';
+  if (slope < -STABLE_SLOPE_THRESHOLD) return 'declining';
+  return 'stable';
+}
+
+function buildTrendResult(
+  filePath: string,
+  commitsAnalyzed: number,
+  sampledPoints: ComplexityPoint[],
+): ComplexityTrendResult {
   const slope = linearRegressionSlope(sampledPoints);
-  const trajectory: ComplexityTrendResult['trajectory'] =
-    slope > STABLE_SLOPE_THRESHOLD ? 'rising'
-    : slope < -STABLE_SLOPE_THRESHOLD ? 'declining'
-    : 'stable';
-
   return {
     filePath,
     slope: parseFloat(slope.toFixed(4)),
-    trajectory,
+    trajectory: classifyTrajectory(slope),
     sampledPoints,
-    commitsAnalyzed: shas.length,
+    commitsAnalyzed,
   };
 }

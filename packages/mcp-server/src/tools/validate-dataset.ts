@@ -48,22 +48,7 @@ async function handleValidateDataset(args: Record<string, unknown>) {
   try {
     const records = await buildRecords(args);
     if (records.length === 0) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                error:
-                  'Inga filer att validera. Ange datasetPath, useSyntheticBenchmark: true, eller directory.',
-              },
-              null,
-              2,
-            ),
-          },
-        ],
-        isError: true,
-      };
+      return emptyRecordsError();
     }
 
     const report = runValidation(records);
@@ -79,6 +64,22 @@ async function handleValidateDataset(args: Record<string, unknown>) {
       isError: true,
     };
   }
+}
+
+function emptyRecordsError() {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify(
+          { error: 'Inga filer att validera. Ange datasetPath, useSyntheticBenchmark: true, eller directory.' },
+          null,
+          2,
+        ),
+      },
+    ],
+    isError: true,
+  };
 }
 
 async function buildRecords(args: Record<string, unknown>): Promise<BugRecord[]> {
@@ -98,14 +99,20 @@ async function buildRecords(args: Record<string, unknown>): Promise<BugRecord[]>
 }
 
 /**
- * Heuristic: use `simple-git` to list files that appear in commits whose
- * messages contain "fix" or "bug". These are marked hasBug: true.
- * All other readable source files in the directory are marked hasBug: false.
+ * Heuristic: use git log to find files in commits whose messages contain
+ * defect-indicator keywords. Files matching those commits are flagged hasBug: true.
+ * All other readable source files in the directory are flagged hasBug: false.
  */
 async function buildRecordsFromDirectory(directory: string): Promise<BugRecord[]> {
   const allFiles = await collectSourceFiles(directory);
   if (allFiles.length === 0) return [];
 
+  const buggyPaths = await detectBuggyFiles(directory);
+  return readFileRecords(allFiles, buggyPaths);
+}
+
+/** Run git log to identify files touched in defect-fixing commits. */
+async function detectBuggyFiles(directory: string): Promise<Set<string>> {
   const buggyPaths = new Set<string>();
   try {
     const { stdout: logOutput } = await execFileAsync('git', [
@@ -120,15 +127,19 @@ async function buildRecordsFromDirectory(directory: string): Promise<BugRecord[]
     ]);
     for (const line of logOutput.split('\n')) {
       const trimmed = line.trim();
-      if (trimmed) {
-        const abs = path.resolve(directory, trimmed);
-        buggyPaths.add(abs);
-      }
+      if (trimmed) buggyPaths.add(path.resolve(directory, trimmed));
     }
   } catch {
     // Not a git repo or git not available — all files treated as clean
   }
+  return buggyPaths;
+}
 
+/** Read each source file and build BugRecord entries. */
+async function readFileRecords(
+  allFiles: string[],
+  buggyPaths: Set<string>,
+): Promise<BugRecord[]> {
   const records: BugRecord[] = [];
   for (const filePath of allFiles) {
     try {
@@ -154,47 +165,71 @@ const SOURCE_EXTENSIONS = new Set([
   '.php', '.rb', '.swift',
 ]);
 
+/** Recursively collect all source files in a directory. */
 async function collectSourceFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
+  await walkDirectory(dir, results);
+  return results;
+}
 
-  async function walk(current: string): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let rawEntries: any[];
-    try {
-      rawEntries = await fs.readdir(current, { withFileTypes: true }) as any[];
-    } catch {
-      return;
+/** Process a single directory entry during a walk. */
+async function processDirectoryEntry(
+  entry: { name: string; isDirectory: () => boolean; isFile: () => boolean },
+  current: string,
+  results: string[],
+): Promise<void> {
+  const name = String(entry.name);
+  const full = path.join(current, name);
+  if (entry.isDirectory()) {
+    if (!name.startsWith('.') && name !== 'node_modules') {
+      await walkDirectory(full, results);
     }
-    for (const entry of rawEntries) {
-      const name = String(entry.name);
-      const full = path.join(current, name);
-      if (entry.isDirectory()) {
-        if (!name.startsWith('.') && name !== 'node_modules') {
-          await walk(full);
-        }
-      } else if (entry.isFile()) {
-        const ext = path.extname(name).toLowerCase();
-        if (SOURCE_EXTENSIONS.has(ext)) {
-          results.push(full);
-        }
-      }
-    }
+  } else if (entry.isFile()) {
+    const ext = path.extname(name).toLowerCase();
+    if (SOURCE_EXTENSIONS.has(ext)) results.push(full);
+  }
+}
+
+async function walkDirectory(current: string, results: string[]): Promise<void> {
+  let rawEntries: { name: string; isDirectory: () => boolean; isFile: () => boolean }[];
+  try {
+    rawEntries = await fs.readdir(current, { withFileTypes: true }) as typeof rawEntries;
+  } catch {
+    return;
+  }
+  for (const entry of rawEntries) {
+    await processDirectoryEntry(entry, current, results);
+  }
+}
+
+/** Attach optional statistical fields to the output object if present. */
+function attachOptionalFields(output: Record<string, unknown>, report: ValidationReport): void {
+  if (report.aurocBootstrapCi) {
+    output.aurocBootstrapCi = {
+      lower: round(report.aurocBootstrapCi.lower),
+      upper: round(report.aurocBootstrapCi.upper),
+      mean: round(report.aurocBootstrapCi.mean),
+    };
   }
 
-  await walk(dir);
-  return results;
+  if (report.mannWhitneyPValue !== undefined) {
+    output.mannWhitneyPValue = round(report.mannWhitneyPValue);
+  }
+
+  if (report.perLanguageBreakdown && report.perLanguageBreakdown.length > 0) {
+    output.perLanguageBreakdown = report.perLanguageBreakdown.map(b => ({
+      language: b.language,
+      auroc: round(b.auroc),
+      count: b.count,
+    }));
+  }
 }
 
 function formatReport(
   report: ValidationReport,
   args: Record<string, unknown>,
 ): object {
-  const mode =
-    args.useSyntheticBenchmark === true
-      ? 'synthetic_benchmark'
-      : typeof args.datasetPath === 'string'
-        ? 'defects4j_dataset'
-        : 'directory_heuristic';
+  const mode = detectMode(args);
 
   const output: Record<string, unknown> = {
     mode,
@@ -221,27 +256,15 @@ function formatReport(
     })),
   };
 
-  if (report.aurocBootstrapCi) {
-    output.aurocBootstrapCi = {
-      lower: round(report.aurocBootstrapCi.lower),
-      upper: round(report.aurocBootstrapCi.upper),
-      mean: round(report.aurocBootstrapCi.mean),
-    };
-  }
-
-  if (report.mannWhitneyPValue !== undefined) {
-    output.mannWhitneyPValue = round(report.mannWhitneyPValue);
-  }
-
-  if (report.perLanguageBreakdown && report.perLanguageBreakdown.length > 0) {
-    output.perLanguageBreakdown = report.perLanguageBreakdown.map(b => ({
-      language: b.language,
-      auroc: round(b.auroc),
-      count: b.count,
-    }));
-  }
+  attachOptionalFields(output, report);
 
   return output;
+}
+
+function detectMode(args: Record<string, unknown>): string {
+  if (args.useSyntheticBenchmark === true) return 'synthetic_benchmark';
+  if (typeof args.datasetPath === 'string') return 'defects4j_dataset';
+  return 'directory_heuristic';
 }
 
 function round(n: number): number {

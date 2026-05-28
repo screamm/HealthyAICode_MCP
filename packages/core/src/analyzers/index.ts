@@ -138,106 +138,71 @@ interface AnalyzerOutput {
   smells: Smell[];
 }
 
+type LanguageAnalyzer = (code: string, filePath: string) => AnalyzerOutput;
+
+/**
+ * Dispatch table mapping each supported language to its analyzer function.
+ * Replaces a large switch statement to reduce cyclomatic complexity.
+ */
+const LANGUAGE_DISPATCH: Partial<Record<Language, LanguageAnalyzer>> = {
+  // Tier A — full AST (tree-sitter)
+  typescript: analyzeTypeScript,
+  javascript: analyzeTypeScript,
+  python: analyzePython,
+  java: analyzeJava,
+  kotlin: analyzeKotlin,
+  csharp: analyzeCSharp,
+  go: analyzeGo,
+  rust: analyzeRust,
+  php: analyzePhp,
+  ruby: analyzeRuby,
+  swift: analyzeSwift,
+  elixir: analyzeElixir,
+  scala: analyzeScala,
+  haskell: analyzeHaskell,
+  julia: analyzeJulia,
+  ocaml: analyzeOCaml,
+  // Tier B — regex-based
+  bash: analyzeBash,
+  lua: analyzeLua,
+  r: analyzeR,
+  clojure: analyzeClojure,
+  dart: analyzeDart,
+  c: analyzeCLang,
+  cpp: analyzeCpp,
+  cobol: analyzeCobol,
+  apex: analyzeApex,
+  fsharp: analyzeFSharp,
+  vbnet: analyzeVbNet,
+  perl: analyzePerl,
+  groovy: analyzeGroovy,
+  objc: analyzeObjC,
+  powershell: analyzePowerShell,
+  erlang: analyzeErlang,
+  zig: analyzeZig,
+  nim: analyzeNim,
+  crystal: analyzeCrystal,
+  vue: analyzeVue,
+  // Tier C — structural
+  yaml: analyzeYaml,
+  json: analyzeJson,
+  dockerfile: analyzeDockerfile,
+  hcl: analyzeHcl,
+  makefile: analyzeMakefile,
+  sql: analyzeStructuralTierC,
+  html: analyzeStructuralTierC,
+  css: analyzeStructuralTierC,
+  markdown: analyzeStructuralTierC,
+  toml: analyzeStructuralTierC,
+};
+
 /** Dispatches analysis to the appropriate language analyzer and returns functions, metrics, and smells. */
 export function analyzeByLanguage(code: string, language: Language, filePath = '<inline>'): AnalyzerOutput {
-  switch (language) {
-    case 'typescript':
-    case 'javascript':
-      return analyzeTypeScript(code, filePath);
-    case 'python':
-      return analyzePython(code, filePath);
-    case 'java':
-      return analyzeJava(code, filePath);
-    case 'kotlin':
-      return analyzeKotlin(code, filePath);
-    case 'csharp':
-      return analyzeCSharp(code, filePath);
-    case 'go':
-      return analyzeGo(code, filePath);
-    case 'rust':
-      return analyzeRust(code, filePath);
-    case 'php':
-      return analyzePhp(code, filePath);
-    case 'ruby':
-      return analyzeRuby(code, filePath);
-    case 'swift':
-      return analyzeSwift(code, filePath);
-    // Tier A — promoted languages (tree-sitter AST)
-    case 'elixir':
-      return analyzeElixir(code, filePath);
-    case 'scala':
-      return analyzeScala(code, filePath);
-    // Tier B languages
-    case 'bash':
-      return analyzeBash(code, filePath);
-    case 'lua':
-      return analyzeLua(code, filePath);
-    case 'r':
-      return analyzeR(code, filePath);
-    case 'clojure':
-      return analyzeClojure(code, filePath);
-    // Tier B — Sprint 25 gap languages
-    case 'dart':
-      return analyzeDart(code, filePath);
-    case 'c':
-      return analyzeCLang(code, filePath);
-    case 'cpp':
-      return analyzeCpp(code, filePath);
-    // Tier B — Sprint 30 niche languages
-    case 'cobol':
-      return analyzeCobol(code, filePath);
-    case 'apex':
-      return analyzeApex(code, filePath);
-    case 'fsharp':
-      return analyzeFSharp(code, filePath);
-    case 'vbnet':
-      return analyzeVbNet(code, filePath);
-    case 'perl':
-      return analyzePerl(code, filePath);
-    case 'groovy':
-      return analyzeGroovy(code, filePath);
-    case 'objc':
-      return analyzeObjC(code, filePath);
-    case 'powershell':
-      return analyzePowerShell(code, filePath);
-    case 'erlang':
-      return analyzeErlang(code, filePath);
-    // Tier A — new languages (tree-sitter AST)
-    case 'haskell':
-      return analyzeHaskell(code, filePath);
-    case 'julia':
-      return analyzeJulia(code, filePath);
-    case 'ocaml':
-      return analyzeOCaml(code, filePath);
-    // Tier B — new languages
-    case 'zig':
-      return analyzeZig(code, filePath);
-    case 'nim':
-      return analyzeNim(code, filePath);
-    case 'crystal':
-      return analyzeCrystal(code, filePath);
-    case 'vue':
-      return analyzeVue(code, filePath);
-    // Tier C languages
-    case 'yaml':
-      return analyzeYaml(code, filePath);
-    case 'json':
-      return analyzeJson(code, filePath);
-    case 'dockerfile':
-      return analyzeDockerfile(code, filePath);
-    case 'hcl':
-      return analyzeHcl(code, filePath);
-    case 'makefile':
-      return analyzeMakefile(code, filePath);
-    case 'sql':
-    case 'html':
-    case 'css':
-    case 'markdown':
-    case 'toml':
-      return analyzeStructuralTierC(code, filePath);
-    default:
-      return unsupportedOutput(code);
+  const analyzer = LANGUAGE_DISPATCH[language];
+  if (analyzer) {
+    return analyzer(code, filePath);
   }
+  return unsupportedOutput(code);
 }
 
 function unsupportedOutput(code: string): AnalyzerOutput {

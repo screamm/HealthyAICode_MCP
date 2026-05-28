@@ -47,6 +47,33 @@ export function buildAssessmentPrompt(
   ].join('\n');
 }
 
+/** Valid severity levels for LLM assessment responses. */
+const VALID_SEVERITIES: LlmAssessment['severity'][] = ['critical', 'high', 'medium', 'low'];
+
+/** Valid exploitability levels for LLM assessment responses. */
+const VALID_EXPLOITABILITIES: LlmAssessment['exploitability'][] = ['trivial', 'moderate', 'complex', 'theoretical'];
+
+/** Default float value used for confidence and false_positive_likelihood on parse errors. */
+const DEFAULT_CONFIDENCE = 0.5;
+
+/** Extracts a validated severity from a parsed JSON object, falling back to 'medium'. */
+function extractSeverity(parsed: Record<string, unknown>): LlmAssessment['severity'] {
+  const v = parsed.severity;
+  if (typeof v === 'string' && VALID_SEVERITIES.includes(v as LlmAssessment['severity'])) {
+    return v as LlmAssessment['severity'];
+  }
+  return 'medium';
+}
+
+/** Extracts a validated exploitability from a parsed JSON object, falling back to 'moderate'. */
+function extractExploitability(parsed: Record<string, unknown>): LlmAssessment['exploitability'] {
+  const v = parsed.exploitability;
+  if (typeof v === 'string' && VALID_EXPLOITABILITIES.includes(v as LlmAssessment['exploitability'])) {
+    return v as LlmAssessment['exploitability'];
+  }
+  return 'moderate';
+}
+
 /**
  * Parse a JSON response from the LLM into an LlmAssessment.
  *
@@ -59,9 +86,9 @@ export function parseAssessmentResponse(
   cost: number,
 ): LlmAssessment {
   const fallback: LlmAssessment = {
-    confidence: 0.5,
+    confidence: DEFAULT_CONFIDENCE,
     severity: 'medium',
-    false_positive_likelihood: 0.5,
+    false_positive_likelihood: DEFAULT_CONFIDENCE,
     exploitability: 'moderate',
     remediation_code: '',
     explanation: 'Assessment unavailable — parse error.',
@@ -76,27 +103,13 @@ export function parseAssessmentResponse(
 
     const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
-    const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0.5;
-    const severity =
-      typeof parsed.severity === 'string' &&
-      ['critical', 'high', 'medium', 'low'].includes(parsed.severity)
-        ? (parsed.severity as LlmAssessment['severity'])
-        : 'medium';
-    const fpl =
-      typeof parsed.false_positive_likelihood === 'number'
-        ? parsed.false_positive_likelihood
-        : 0.5;
-    const exploitability =
-      typeof parsed.exploitability === 'string' &&
-      ['trivial', 'moderate', 'complex', 'theoretical'].includes(parsed.exploitability)
-        ? (parsed.exploitability as LlmAssessment['exploitability'])
-        : 'moderate';
-
     return {
-      confidence,
-      severity,
-      false_positive_likelihood: fpl,
-      exploitability,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : DEFAULT_CONFIDENCE,
+      severity: extractSeverity(parsed),
+      false_positive_likelihood: typeof parsed.false_positive_likelihood === 'number'
+        ? parsed.false_positive_likelihood
+        : DEFAULT_CONFIDENCE,
+      exploitability: extractExploitability(parsed),
       remediation_code: typeof parsed.remediation_code === 'string' ? parsed.remediation_code : '',
       explanation: typeof parsed.explanation === 'string' ? parsed.explanation : '',
       model_used: model,

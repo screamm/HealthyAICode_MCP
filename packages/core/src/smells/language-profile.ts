@@ -91,6 +91,7 @@ const csharpCollectFieldName = (member: import('tree-sitter').SyntaxNode): strin
   return declarator?.childForFieldName('name')?.text ?? declarator?.namedChildren[0]?.text ?? null;
 };
 
+/** Language profile for Python — class_definition + function_definition with triple-quote docstrings. */
 export const pythonProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_definition']),
   methodNodeTypes: new Set(['function_definition']),
@@ -121,6 +122,7 @@ export const pythonProfile: LanguageProfile = {
   callFunctionField: 'function',
 };
 
+/** Language profile for Java — class_declaration + method_declaration with Javadoc block comments. */
 export const javaProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_declaration', 'interface_declaration', 'enum_declaration']),
   methodNodeTypes: new Set(['method_declaration', 'constructor_declaration']),
@@ -149,6 +151,7 @@ export const javaProfile: LanguageProfile = {
   callFunctionField: null, // Java method_invocation uses object/name fields, not 'function'
 };
 
+/** Language profile for C# — class_declaration + method_declaration with XML doc comments (///). */
 export const csharpProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_declaration', 'interface_declaration', 'record_declaration', 'struct_declaration']),
   methodNodeTypes: new Set(['method_declaration', 'constructor_declaration', 'local_function_statement']),
@@ -177,6 +180,7 @@ export const csharpProfile: LanguageProfile = {
   callFunctionField: 'expression', // C# invocation_expression uses 'expression' field for the callee
 };
 
+/** Language profile for TypeScript/JavaScript — class + method_definition with JSDoc block comments. */
 export const typescriptProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_declaration', 'class']),
   methodNodeTypes: new Set(['method_definition', 'function_declaration', 'arrow_function', 'function_expression']),
@@ -212,36 +216,16 @@ export const typescriptProfile: LanguageProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Go
-// ---------------------------------------------------------------------------
-// Go has no class keyword. The closest OO analog is a struct plus a set of
-// methods whose receiver has the same type. In tree-sitter-go:
-//   - struct_type       represents the struct body (fields)
-//   - method_declaration represents a function with a named receiver (func (r T) Name(...))
-//   - function_declaration represents a top-level function
-//
-// Thresholds rationale:
-//   LongMethod   >50 lines — Go idiomatic style favours flat, short funcs; 50 is generous
-//   LargeClass   >200 lines — matches the effective size a struct+methods can grow to
-//   God Class    via WMC>=20 + ATFD>5 + LCOM4>1 (same thresholds as Java baseline)
-//
-// Member access: Go uses selector_expression (a.b) with the object in the
-// "operand" field. Call expressions are call_expression.
+// Go — struct+method pattern; selector_expression for member access.
+/** Language profile for Go — type_declaration + function_declaration with plain // doc comments. */
 export const goProfile: LanguageProfile = {
-  // struct_type is the "class body" node in Go; method_declaration nodes are
-  // top-level siblings rather than children, so god-class traversal is limited,
-  // but the profile must be structurally correct for future detector improvements.
   classNodeTypes: new Set(['type_declaration']),
   methodNodeTypes: new Set(['method_declaration', 'function_declaration', 'func_literal']),
   parameterListNodeTypes: new Set(['parameter_list']),
-  // Go groups params: "a, b int" → parameter_declaration with multiple identifiers.
-  // variadic_parameter_declaration handles "args ...T".
   parameterNodeTypes: new Set(['parameter_declaration', 'variadic_parameter_declaration']),
   implicitParameters: new Set(),
-  // Go member access: a.b → selector_expression; field name in "field" child
   memberAccessNodeType: 'selector_expression',
   callExpressionNodeType: 'call_expression',
-  // tree-sitter-go uses "operand" for the receiver of a selector_expression
   memberObjectField: 'operand',
   binaryExpressionNodeType: 'binary_expression',
   binaryOperatorField: 'operator',
@@ -250,52 +234,29 @@ export const goProfile: LanguageProfile = {
     'if_statement', 'for_statement', 'expression_switch_statement',
     'type_switch_statement', 'select_statement', 'communication_case',
   ]),
-  catchNodeType: 'go_statement', // Go has no catch; closest is goroutine panic recover
-  // Go primitive types — only the language-built-in set (no string aliases)
+  catchNodeType: 'go_statement',
   primitiveTypeNames: new Set([
     'int', 'int8', 'int16', 'int32', 'int64',
     'uint', 'uint8', 'uint16', 'uint32', 'uint64',
     'float32', 'float64', 'complex64', 'complex128',
     'bool', 'string', 'byte', 'rune',
   ]),
-  // Go functions are not individually typed in parameter lists the same way;
-  // parameter_declaration has multiple identifiers with one type at the end.
-  // Returning null here falls back to no-type detection (conservative).
   extractParamTypeName: (_param) => null,
-  // Go struct fields are field_declaration nodes inside a struct_type body.
-  // collectFieldName returns the first identifier text if the member is a
-  // field_declaration, enabling LCOM4 computation via self.<field> references.
   collectFieldName: (member) => {
     if (member.type !== 'field_declaration') return null;
     const nameNode = member.namedChildren.find(c => c.type === 'field_identifier' || c.type === 'identifier');
     return nameNode?.text ?? null;
   },
-  // Go method receivers use explicit receiver variable (e.g. "s" in "func (s *Svc) Method()").
-  // selfKeyword is set to the conventional single-letter receiver placeholder.
-  // Feature Envy detection via "receiver.field" patterns still works because
-  // the detector compares against importedTypeNames, not selfKeyword.
-  selfKeyword: 'self', // placeholder — Go receivers are arbitrary identifiers
+  selfKeyword: 'self',
   exportableNodeTypes: new Set(['function_declaration', 'method_declaration', 'type_declaration']),
-  docCommentPattern: /^\/\/\s*\w/, // Go doc comments are plain // lines above exported symbols
-  docCommentIsLineStyle: true, // Go uses line comments: // FuncName does ...
+  docCommentPattern: /^\/\/\s*\w/,
+  docCommentIsLineStyle: true,
   callFunctionField: 'function',
 };
 
 // ---------------------------------------------------------------------------
-// Ruby
-// ---------------------------------------------------------------------------
-// Ruby has full OO with class keyword. In tree-sitter-ruby:
-//   - class node contains a body_statement with method nodes
-//   - instance methods use 'method'; class-level methods use 'singleton_method'
-//   - instance variables are @name (instance_variable nodes)
-//   - method calls with receiver: call node, receiver in "receiver" field
-//
-// Thresholds rationale:
-//   LongMethod   >20 lines — Ruby style is concise; community norm is 10–15, we use 20
-//   LargeClass   >200 lines — consistent with Python/Java baseline
-//   God Class    WMC>=20 + ATFD>5 + LCOM4>1
-//
-// Ruby is dynamically typed so extractParamTypeName always returns null.
+// Ruby — class+method nodes; dynamically typed (extractParamTypeName returns null).
+/** Language profile for Ruby — class + method nodes with RDoc/YARD line comments (#). */
 export const rubyProfile: LanguageProfile = {
   classNodeTypes: new Set(['class', 'singleton_class']),
   methodNodeTypes: new Set(['method', 'singleton_method']),
@@ -336,34 +297,14 @@ export const rubyProfile: LanguageProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Rust
-// ---------------------------------------------------------------------------
-// Rust has no classes; the OO analog is a struct plus an impl block.
-// In tree-sitter-rust:
-//   - impl_item represents an impl block (class analog)
-//   - struct_item represents struct declarations
-//   - function_item inside impl_item represents methods
-//   - field_expression (a.b) represents member access, with "value" = receiver
-//
-// Thresholds rationale:
-//   LongMethod   >50 lines — Rust code tends toward flat; 50 is generous
-//   LargeClass   >200 lines — impl blocks beyond 200 lines suggest too many responsibilities
-//   God Class    WMC>=20 + ATFD>5 + LCOM4>1
-//
-// Rust ownership semantics mean Feature Envy is less straightforward — a method
-// operating on borrowed external types is normal. The ATFD threshold of >5 is
-// intentionally conservative to avoid false positives from idiomatic ownership patterns.
+// Rust — impl_item + function_item; field_expression for member access.
+/** Language profile for Rust — impl_item + function_item with /// line doc comments. */
 export const rustProfile: LanguageProfile = {
-  // impl_item is the closest class analog — it groups methods for a type.
-  // struct_item is also included so that LCOM4 can find field declarations.
   classNodeTypes: new Set(['impl_item']),
   methodNodeTypes: new Set(['function_item']),
   parameterListNodeTypes: new Set(['parameters']),
-  // Rust parameters: self_parameter for &self/&mut self, parameter for named params
   parameterNodeTypes: new Set(['parameter', 'self_parameter']),
-  // &self and self are implicit "this" equivalents
   implicitParameters: new Set(['self', '&self', '&mut self']),
-  // Rust member/field access: field_expression with "value" = receiver, "field" = member
   memberAccessNodeType: 'field_expression',
   callExpressionNodeType: 'call_expression',
   memberObjectField: 'value',
@@ -374,13 +315,12 @@ export const rustProfile: LanguageProfile = {
     'if_expression', 'else_clause', 'for_expression', 'while_expression',
     'loop_expression', 'match_arm', 'while_let_expression',
   ]),
-  catchNodeType: 'match_arm', // Rust error handling is via match/Result, no catch
+  catchNodeType: 'match_arm',
   primitiveTypeNames: new Set([
     'i8', 'i16', 'i32', 'i64', 'i128', 'isize',
     'u8', 'u16', 'u32', 'u64', 'u128', 'usize',
     'f32', 'f64', 'bool', 'char', 'str', 'String',
   ]),
-  // Rust parameters have explicit type annotations via ':' separator
   extractParamTypeName: (param) => {
     if (param.type !== 'parameter') return null;
     const typeNode = param.childForFieldName?.('type');
@@ -400,35 +340,14 @@ export const rustProfile: LanguageProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Kotlin
-// ---------------------------------------------------------------------------
-// Kotlin is JVM-based and shares many structural similarities with Java.
-// However Kotlin uses shorter idiomatic style — functions replace many patterns
-// that Java uses classes for. Thresholds are tighter than Java:
-//   LongMethod   >30 lines — Kotlin idiomatic functions are concise
-//   LargeClass   >200 lines — same as Java baseline
-//   God Class    WMC>=15 + ATFD>5 + LCOM4>1 (lower WMC than Java due to conciseness)
-//
-// NOTE: Kotlin currently uses a Tier B text-based analyzer (no tree-sitter-kotlin
-// package in this project). This profile is provided for forward-compatibility
-// when a Kotlin tree-sitter grammar becomes available. The profile structure
-// mirrors what tree-sitter-kotlin would expose.
-//
-// Key Kotlin-specific considerations:
-//   - data classes: should not be flagged as God Class (ATFD threshold guards this)
-//   - extension functions: treated as regular methods for WMC purposes
-//   - object declarations: treated as class analogs
+// Kotlin — JVM-based; navigation_expression for member access; KDoc comments.
+/** Language profile for Kotlin — class_declaration + function_declaration with KDoc block comments. */
 export const kotlinProfile: LanguageProfile = {
-  // Kotlin class types as they would appear in tree-sitter-kotlin grammar
   classNodeTypes: new Set(['class_declaration', 'object_declaration', 'companion_object']),
-  methodNodeTypes: new Set([
-    'function_declaration', 'anonymous_function',
-    'secondary_constructor',
-  ]),
+  methodNodeTypes: new Set(['function_declaration', 'anonymous_function', 'secondary_constructor']),
   parameterListNodeTypes: new Set(['function_value_parameters']),
   parameterNodeTypes: new Set(['function_value_parameter', 'parameter']),
   implicitParameters: new Set(),
-  // Kotlin member access: navigation_expression with "navigationSuffix" field
   memberAccessNodeType: 'navigation_expression',
   callExpressionNodeType: 'call_expression',
   memberObjectField: 'expression',
@@ -440,17 +359,12 @@ export const kotlinProfile: LanguageProfile = {
     'while_statement', 'do_while_statement', 'try_expression',
   ]),
   catchNodeType: 'catch_block',
-  primitiveTypeNames: new Set([
-    'Int', 'Long', 'Short', 'Byte', 'Float', 'Double',
-    'Boolean', 'Char', 'String', 'Unit',
-  ]),
-  // Kotlin has typed parameters: "name: Type" syntax
+  primitiveTypeNames: new Set(['Int', 'Long', 'Short', 'Byte', 'Float', 'Double', 'Boolean', 'Char', 'String', 'Unit']),
   extractParamTypeName: (param) => {
     if (param.type !== 'function_value_parameter' && param.type !== 'parameter') return null;
     const typeNode = param.childForFieldName?.('type');
     return typeNode?.text ?? null;
   },
-  // Kotlin class fields are property_declaration nodes
   collectFieldName: (member) => {
     if (member.type !== 'property_declaration') return null;
     return member.childForFieldName?.('variableDeclaration')?.childForFieldName?.('simpleIdentifier')?.text
@@ -459,30 +373,14 @@ export const kotlinProfile: LanguageProfile = {
   },
   selfKeyword: 'this',
   exportableNodeTypes: new Set(['function_declaration', 'class_declaration', 'property_declaration']),
-  docCommentPattern: /\/\*\*[\s\S]*?\*\//, // Kotlin uses KDoc (/** ... */)
-  docCommentIsLineStyle: false, // Kotlin uses /** ... */ KDoc block comments
-  callFunctionField: 'callSuffix', // Kotlin call_expression uses callSuffix for args
+  docCommentPattern: /\/\*\*[\s\S]*?\*\//,
+  docCommentIsLineStyle: false,
+  callFunctionField: 'callSuffix',
 };
 
 // ---------------------------------------------------------------------------
-// PHP
-// ---------------------------------------------------------------------------
-// PHP has class-based OO similar to Java/C#. In tree-sitter-php (php_only mode):
-//   - class_declaration: regular class
-//   - interface_declaration: interface
-//   - method_declaration: instance/static methods inside class body
-//   - member_call_expression: $obj->method() — object in "object" field
-//   - property_declaration: class property fields
-//
-// Thresholds rationale:
-//   LongMethod   >40 lines — PHP has more ceremony than Python/Ruby but less than Java
-//   LargeClass   >200 lines — consistent with Java/C# baseline
-//   God Class    WMC>=20 + ATFD>5 + LCOM4>1
-//
-// PHP variables are prefixed with $, which the tree-sitter grammar parses as
-// variable_name nodes (containing a '$' token + 'name' identifier). The profile
-// cannot use plain identifiers for parameter names, so extractParamTypeName
-// navigates the simple_parameter structure.
+// PHP — class_declaration + method_declaration; $this; member_call_expression.
+/** Language profile for PHP — class_declaration + method_declaration with phpDoc block comments. */
 export const phpProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_declaration', 'interface_declaration', 'trait_declaration']),
   methodNodeTypes: new Set(['method_declaration', 'function_definition']),
@@ -491,8 +389,6 @@ export const phpProfile: LanguageProfile = {
     'simple_parameter', 'variadic_parameter', 'property_promotion_parameter',
   ]),
   implicitParameters: new Set(),
-  // PHP member access: member_call_expression for method calls ($obj->method())
-  // and member_access_expression for property access ($obj->prop)
   memberAccessNodeType: 'member_call_expression',
   callExpressionNodeType: 'function_call_expression',
   memberObjectField: 'object',
@@ -508,17 +404,14 @@ export const phpProfile: LanguageProfile = {
   primitiveTypeNames: new Set([
     'int', 'float', 'string', 'bool', 'array', 'callable', 'void', 'null', 'mixed',
   ]),
-  // PHP parameter type hints: simple_parameter has 'type' field
   extractParamTypeName: (param) => {
     if (param.type !== 'simple_parameter') return null;
     const typeNode = param.childForFieldName?.('type');
     return typeNode?.text ?? null;
   },
-  // PHP class properties: property_declaration contains property_element with name
   collectFieldName: (member) => {
     if (member.type !== 'property_declaration') return null;
     const element = member.namedChildren.find(c => c.type === 'property_element');
-    // variable_name node: first named child after $ is the 'name' identifier
     const varName = element?.namedChildren.find(c => c.type === 'variable_name');
     return varName?.childForFieldName?.('name')?.text
       ?? varName?.namedChildren.find(c => c.type !== '$')?.text
@@ -526,41 +419,23 @@ export const phpProfile: LanguageProfile = {
   },
   selfKeyword: '$this',
   exportableNodeTypes: new Set(['method_declaration', 'class_declaration', 'function_definition']),
-  docCommentPattern: /\/\*\*[\s\S]*?\*\//, // PHP uses phpDoc (/** ... */)
-  docCommentIsLineStyle: false, // PHP uses /** ... */ block comments (phpDoc)
+  docCommentPattern: /\/\*\*[\s\S]*?\*\//,
+  docCommentIsLineStyle: false,
   callFunctionField: 'function',
 };
 
 // ---------------------------------------------------------------------------
-// Scala
-// ---------------------------------------------------------------------------
-// Scala has class-based OO with both FP and OOP idioms. In tree-sitter-scala:
-//   - class_definition: regular class
-//   - object_definition: singleton object (companion or standalone)
-//   - trait_definition: trait (interface + default methods)
-//   - function_definition: def blocks (methods and top-level functions)
-//   - function_declaration: abstract def in traits
-//   - field_expression: a.b member access
-//   - call_expression: function/method calls
-//   - val_definition / var_definition: class fields
-//
-// Thresholds rationale:
-//   LongMethod   >40 lines — Scala style favours concise FP but class methods can be verbose
-//   LargeClass   >200 lines — consistent with Java/C# baseline
-//   God Class    WMC>=20 + ATFD>5 + LCOM4>1
-//
-// Scala's match expressions count as CC contributors (one per case_clause).
-// infix_expression handles logical operators (&&, ||) for ComplexConditional.
+// Scala — class/object/trait_definition; infix_expression for boolean logic.
+/** Language profile for Scala — class/object/trait_definition + function_definition with Scaladoc. */
 export const scalaProfile: LanguageProfile = {
   classNodeTypes: new Set(['class_definition', 'object_definition', 'trait_definition']),
   methodNodeTypes: new Set(['function_definition', 'function_declaration']),
   parameterListNodeTypes: new Set(['parameters']),
   parameterNodeTypes: new Set(['parameter']),
   implicitParameters: new Set(),
-  // Scala member access: field_expression with "." separator (a.b)
   memberAccessNodeType: 'field_expression',
   callExpressionNodeType: 'call_expression',
-  memberObjectField: 'value', // field_expression: left side is 'value' in tree-sitter-scala
+  memberObjectField: 'value',
   binaryExpressionNodeType: 'infix_expression',
   binaryOperatorField: 'operator',
   logicalOperators: new Set(['&&', '||']),
@@ -574,7 +449,6 @@ export const scalaProfile: LanguageProfile = {
     'Int', 'Long', 'Short', 'Byte', 'Float', 'Double',
     'Boolean', 'Char', 'String', 'Unit', 'Any', 'AnyRef',
   ]),
-  // Scala parameters: parameter has identifier + type_identifier children
   extractParamTypeName: (param) => {
     if (param.type !== 'parameter') return null;
     const typeNode = param.namedChildren.find(
@@ -582,7 +456,6 @@ export const scalaProfile: LanguageProfile = {
     );
     return typeNode?.text ?? null;
   },
-  // Scala class fields are val_definition / var_definition nodes
   collectFieldName: (member) => {
     if (member.type !== 'val_definition' && member.type !== 'var_definition') return null;
     const nameNode = member.namedChildren.find(c => c.type === 'identifier');
@@ -590,61 +463,34 @@ export const scalaProfile: LanguageProfile = {
   },
   selfKeyword: 'this',
   exportableNodeTypes: new Set(['function_definition', 'class_definition', 'object_definition', 'trait_definition']),
-  docCommentPattern: /\/\*\*[\s\S]*?\*\//, // Scala uses Scaladoc (/** ... */)
-  docCommentIsLineStyle: false, // Scala uses /** ... */ Scaladoc block comments
+  docCommentPattern: /\/\*\*[\s\S]*?\*\//,
+  docCommentIsLineStyle: false,
   callFunctionField: 'function',
 };
 
 // ---------------------------------------------------------------------------
-// Elixir
-// ---------------------------------------------------------------------------
-// Elixir is a functional language with module-based organisation. In tree-sitter-elixir:
-//   - call with identifier "defmodule": module definition
-//   - call with identifier "def": public function
-//   - call with identifier "defp": private function
-//   - Elixir has no classes; the closest OO analog is a module with state via GenServer
-//   - call node: function call, with "dot" as receiver for module calls (Foo.bar)
-//   - dot node: Foo.bar — object in "left" child, member in "right" child
-//
-// Thresholds rationale:
-//   LongMethod   >30 lines — Elixir functions are idiomatic short; 30 is generous
-//   LargeClass   >200 lines — treating defmodule as the class analog
-//   God Class    WMC>=15 + ATFD>5 + LCOM4>1 (lower WMC; Elixir is concise)
-//
-// Note: Elixir's multi-clause functions (multiple def with same name) are each
-// treated as a separate function entity, consistent with the Tier B behavior.
-// Pattern matching in case/cond contributes to CC.
+// Elixir — module-based (def/defp); dot node for member access; @doc attributes.
+/** Language profile for Elixir — module-based functions (def/defp) with @doc block attributes. */
 export const elixirProfile: LanguageProfile = {
-  // Elixir has no class keyword; we model defmodule call nodes as class analogs.
-  // The god-class detector will look for nodes whose type is in classNodeTypes.
-  // Since defmodule is a 'call' node in tree-sitter-elixir, we cannot directly
-  // distinguish it by type alone — use an empty set and rely on module-level analysis.
-  classNodeTypes: new Set<string>(), // Handled specially in the analyzer
-  methodNodeTypes: new Set<string>(), // Handled specially in the analyzer
+  classNodeTypes: new Set<string>(),
+  methodNodeTypes: new Set<string>(),
   parameterListNodeTypes: new Set(['arguments']),
   parameterNodeTypes: new Set(['identifier', 'binary_operator']),
   implicitParameters: new Set(),
-  // Elixir: Foo.bar is a "dot" node; for call expressions it's a "call" node
   memberAccessNodeType: 'dot',
   callExpressionNodeType: 'call',
-  memberObjectField: 'object', // dot node: left child is the module/object
+  memberObjectField: 'object',
   binaryExpressionNodeType: 'binary_operator',
   binaryOperatorField: 'operator',
   logicalOperators: new Set(['&&', '||', 'and', 'or']),
-  controlFlowNodeTypes: new Set([
-    'if', 'unless', 'cond', 'case', 'receive', 'with',
-  ]),
+  controlFlowNodeTypes: new Set(['if', 'unless', 'cond', 'case', 'receive', 'with']),
   catchNodeType: 'rescue_block',
-  primitiveTypeNames: new Set([
-    'integer', 'float', 'binary', 'atom', 'boolean', 'list', 'map', 'tuple',
-  ]),
-  // Elixir is dynamically typed — no static type annotations
+  primitiveTypeNames: new Set(['integer', 'float', 'binary', 'atom', 'boolean', 'list', 'map', 'tuple']),
   extractParamTypeName: (_param) => null,
-  // Elixir has no class fields in the OOP sense
   collectFieldName: (_member) => null,
-  selfKeyword: 'self', // placeholder — Elixir has no self
-  exportableNodeTypes: new Set<string>(), // Handled specially
+  selfKeyword: 'self',
+  exportableNodeTypes: new Set<string>(),
   docCommentPattern: /^\s*@doc\s+"""/,
-  docCommentIsLineStyle: false, // Elixir uses @doc """ ... """ block attributes
+  docCommentIsLineStyle: false,
   callFunctionField: 'function',
 };

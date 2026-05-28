@@ -82,22 +82,23 @@ function hasJsDocAbove(lines: string[], lineIdx: number): boolean {
   return false;
 }
 
-function extractSig(lines: string[], startIdx: number): string | null {
+function collectSigText(lines: string[], startIdx: number): string {
   let sig = '';
   for (let i = startIdx; i < Math.min(startIdx + 5, lines.length); i++) {
     sig += lines[i];
     if (sig.includes('{')) break;
   }
+  return sig;
+}
+
+function extractSig(lines: string[], startIdx: number): string | null {
+  const sig = collectSigText(lines, startIdx);
   const fnMatch = sig.match(/(?:function\s+\w+|=>)\s*\([^)]*\)/);
   if (fnMatch) return fnMatch[0];
-
   const hasFn = sig.includes('function') || sig.includes('=>') || sig.includes('(');
   if (!hasFn) return null;
-
   const parenMatch = sig.match(/\([^)]*\)/);
-  if (parenMatch) return parenMatch[0];
-
-  return null;
+  return parenMatch ? parenMatch[0] : null;
 }
 
 function extractParamNames(sig: string): string[] {

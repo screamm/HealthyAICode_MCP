@@ -2,11 +2,27 @@
 import { simpleGit } from 'simple-git';
 import { analyzeByLanguage } from '../analyzers';
 import { detectLanguage } from '../language-detect';
+import type { Language } from '../types';
 
+/** The name and source location of a function or method within a file. */
 export interface MethodRange {
   name: string;
   line: number;     // 1-based start line
   length: number;   // number of lines
+}
+
+/** Identifies a specific file at a specific commit. */
+interface CommitFileRef {
+  repoPath: string;
+  filePath: string;
+  commitSha: string;
+}
+
+/** Content and its resolved language for analysis. */
+interface AnalysisTarget {
+  content: string;
+  language: Language;
+  normalizedPath: string;
 }
 
 // Blocker 5: Simple LRU-style cache bounded to MAX_CACHE_SIZE entries.
@@ -23,59 +39,72 @@ function setCacheBounded(key: string, value: MethodRange[]): void {
   rangesCache.set(key, value);
 }
 
+/** Returns file content at a specific commit, or null if the git command fails. */
+async function fetchFileAtCommit(ref: CommitFileRef): Promise<string | null> {
+  const { repoPath, filePath, commitSha } = ref;
+  const git = simpleGit(repoPath);
+  try {
+    return await git.show([`${commitSha}:${filePath}`]);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Detects the analysis language for a file, normalising TSX/JSX to TS/JS.
+ * Returns null for unsupported languages.
+ *
+ * Blocker 4: normalising .tsx/.jsx → .ts/.js lets the TypeScript/JavaScript
+ * analyzer extract function ranges correctly from historical commits.
+ */
+function resolveAnalysisLanguage(filePath: string): Language | null {
+  const normalizedPath = filePath.replace(/\.tsx$/, '.ts').replace(/\.jsx$/, '.js');
+  const language = detectLanguage(normalizedPath);
+  if (language === 'unsupported') return null;
+  return language as Language;
+}
+
+/**
+ * Extracts method ranges from file content using the appropriate language analyzer.
+ * Returns an empty array if the analyzer throws (e.g. legacy syntax in old commits).
+ * C3: wraps analyzeByLanguage in try/catch to handle pre-release syntax gracefully.
+ */
+function extractMethodRanges(target: AnalysisTarget): MethodRange[] {
+  const { content, language, normalizedPath } = target;
+  try {
+    const result = analyzeByLanguage(content, language, normalizedPath);
+    return result.functions.map(f => ({ name: f.name, line: f.line, length: f.length }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Returns the method/function line ranges of `filePath` as they were at `commitSha`.
  *
  * Uses `git.raw()` convention consistent with all other temporal helpers in this directory
  * (see hotspot-helpers.ts:33 as reference, C1-fix from sprint review).
- *
- * Blocker 4: TSX/JSX files are normalised to .ts/.js for language detection so that the
- * TypeScript/JavaScript analyzer (which uses plain TS/JS grammar) can extract function
- * ranges correctly from historical commits instead of yielding sparse results.
  */
-export async function getMethodRangesAtCommit(
-  repoPath: string,
-  filePath: string,
-  commitSha: string,
-): Promise<MethodRange[]> {
+export async function getMethodRangesAtCommit(ref: CommitFileRef): Promise<MethodRange[]> {
+  const { repoPath, filePath, commitSha } = ref;
   const cacheKey = `${repoPath}::${filePath}::${commitSha}`;
   const cached = rangesCache.get(cacheKey);
   if (cached) return cached;
 
-  const git = simpleGit(repoPath);
-  let content: string;
-  try {
-    content = await git.show([`${commitSha}:${filePath}`]);
-  } catch {
+  const content = await fetchFileAtCommit({ repoPath, filePath, commitSha });
+  if (content === null) {
     setCacheBounded(cacheKey, []);
     return [];
   }
 
-  // Blocker 4: normalise .tsx/.jsx → .ts/.js so detectLanguage returns typescript/javascript,
-  // enabling the analyzer to extract function ranges reliably from historical commits.
   const normalizedPath = filePath.replace(/\.tsx$/, '.ts').replace(/\.jsx$/, '.js');
-  const language = detectLanguage(normalizedPath);
-  if (language === 'unsupported') {
+  const language = resolveAnalysisLanguage(filePath);
+  if (language === null) {
     setCacheBounded(cacheKey, []);
     return [];
   }
 
-  // C3: wrap analyzeByLanguage in try/catch to gracefully handle old syntax versions
-  // (e.g. pre-release TypeScript syntax that today's parser rejects)
-  let functions: Array<{ name: string; line: number; length: number }>;
-  try {
-    const result = analyzeByLanguage(content, language, normalizedPath);
-    functions = result.functions;
-  } catch {
-    setCacheBounded(cacheKey, []);
-    return [];
-  }
-
-  const ranges = functions.map(f => ({
-    name: f.name,
-    line: f.line,
-    length: f.length,
-  }));
+  const ranges = extractMethodRanges({ content, language, normalizedPath });
   setCacheBounded(cacheKey, ranges);
   return ranges;
 }
@@ -84,11 +113,8 @@ export async function getMethodRangesAtCommit(
  * Returns [start, end] inclusive line ranges that were changed in `filePath` at `commitSha`.
  * Parses `@@ -old +new @@` diff hunk headers from `git show --unified=0`.
  */
-export async function getChangedLineRanges(
-  repoPath: string,
-  filePath: string,
-  commitSha: string,
-): Promise<Array<[number, number]>> {
+export async function getChangedLineRanges(ref: CommitFileRef): Promise<Array<[number, number]>> {
+  const { repoPath, filePath, commitSha } = ref;
   const git = simpleGit(repoPath);
   let diff: string;
   try {
@@ -126,19 +152,29 @@ export function intersectChangedMethods(
   const seen = new Set<string>();
   const result: Array<{ name: string; line: number }> = [];
   for (const m of methodRanges) {
-    const methodEnd = m.line + m.length - 1;
-    for (const [start, end] of changedRanges) {
-      if (end >= m.line && start <= methodEnd) {
-        const qualifiedKey = `${m.name}@${m.line}`;
-        if (!seen.has(qualifiedKey)) {
-          seen.add(qualifiedKey);
-          result.push({ name: m.name, line: m.line });
-        }
-        break;
-      }
+    if (isMethodTouched(m, changedRanges)) {
+      recordIfUnseen(m, seen, result);
     }
   }
   return result;
+}
+
+/** Returns true if any changed range overlaps with the given method's line span. */
+function isMethodTouched(method: MethodRange, changedRanges: Array<[number, number]>): boolean {
+  const methodEnd = method.line + method.length - 1;
+  return changedRanges.some(([start, end]) => end >= method.line && start <= methodEnd);
+}
+
+/** Adds a method to the result if it has not been recorded yet (dedup by qualified key). */
+function recordIfUnseen(
+  method: MethodRange,
+  seen: Set<string>,
+  result: Array<{ name: string; line: number }>,
+): void {
+  const qualifiedKey = `${method.name}@${method.line}`;
+  if (seen.has(qualifiedKey)) return;
+  seen.add(qualifiedKey);
+  result.push({ name: method.name, line: method.line });
 }
 
 /**

@@ -25,6 +25,19 @@ export interface HotspotOptions {
   minChurnCommits?: number;    // minimum commits to include a file (default 3)
 }
 
+interface HotspotConfig {
+  lookbackDays: number;
+  topN: number;
+  minChurnCommits: number;
+  sinceIso: string;
+  packageRoot?: string;
+}
+
+interface ChurnEntry {
+  additions: number;
+  deletions: number;
+}
+
 /**
  * Identifies hotspots in a git repository: files with high complexity AND high churn rate.
  *
@@ -38,59 +51,100 @@ export async function analyzeHotspots(
   repoPath: string,
   options: HotspotOptions = {},
 ): Promise<HotspotResult[]> {
-  const lookbackDays = options.lookbackDays ?? 90;
-  const topN = options.topN ?? 10;
-  const minChurnCommits = options.minChurnCommits ?? 3;
+  const config = resolveHotspotConfig(options);
   const git = simpleGit(repoPath);
 
+  const churnMap = await fetchChurnMap(git, config);
+  if (!churnMap) return [];
+
+  const commitCountMap = await fetchCommitCountMap(git, config);
+  const eligibleFiles = filterEligibleFiles(churnMap, commitCountMap, config.minChurnCommits);
+  if (eligibleFiles.length === 0) return [];
+
+  const complexityMap = await computeComplexityMap(git, eligibleFiles);
+  const scores = scoreHotspots(eligibleFiles, churnMap, commitCountMap, complexityMap);
+
+  return scores
+    .filter(s => s.classification !== 'healthy')
+    .sort((a, b) => b.score - a.score)
+    .slice(0, config.topN);
+}
+
+function resolveHotspotConfig(options: HotspotOptions): HotspotConfig {
+  const lookbackDays = options.lookbackDays ?? 90;
   const since = new Date();
   since.setDate(since.getDate() - lookbackDays);
-  const sinceIso = since.toISOString().split('T')[0];
+  return {
+    lookbackDays,
+    topN: options.topN ?? 10,
+    minChurnCommits: options.minChurnCommits ?? 3,
+    sinceIso: since.toISOString().split('T')[0],
+    packageRoot: options.packageRoot,
+  };
+}
 
-  // Collect churn per file using --numstat
-  const logArgs = [
-    'log',
-    '--since', sinceIso,
-    '--no-merges',
-    '--format=',
-    '--numstat',
-  ];
-  if (options.packageRoot) {
-    logArgs.push('--', options.packageRoot);
-  }
-
+async function fetchChurnMap(
+  git: ReturnType<typeof simpleGit>,
+  config: HotspotConfig,
+): Promise<Map<string, ChurnEntry> | null> {
+  const logArgs = buildNumstatArgs(config);
   let numstatRaw: string;
   try {
     numstatRaw = await git.raw(logArgs);
   } catch {
-    return [];
+    return null;
   }
+  if (!numstatRaw.trim()) return null;
+  return parseNumstat(numstatRaw);
+}
 
-  if (!numstatRaw.trim()) return [];
+function buildNumstatArgs(config: HotspotConfig): string[] {
+  const args = ['log', '--since', config.sinceIso, '--no-merges', '--format=', '--numstat'];
+  if (config.packageRoot) args.push('--', config.packageRoot);
+  return args;
+}
 
-  // Count commit touches per file separately (needed for minChurnCommits filter)
-  const commitCountArgs = [
-    'log',
-    '--since', sinceIso,
-    '--no-merges',
-    '--format=%H',
-    '--name-only',
-  ];
-  if (options.packageRoot) {
-    commitCountArgs.push('--', options.packageRoot);
+function parseNumstat(raw: string): Map<string, ChurnEntry> {
+  const churnMap = new Map<string, ChurnEntry>();
+  for (const line of raw.split('\n')) {
+    const parts = line.split('\t');
+    if (parts.length !== 3) continue;
+    const [addStr, delStr, filePath] = parts;
+    if (addStr === '-' || !filePath?.trim()) continue; // binary file
+    const additions = parseInt(addStr, 10);
+    const deletions = parseInt(delStr, 10);
+    if (isNaN(additions) || isNaN(deletions)) continue;
+    const fp = filePath.trim();
+    const existing = churnMap.get(fp) ?? { additions: 0, deletions: 0 };
+    churnMap.set(fp, { additions: existing.additions + additions, deletions: existing.deletions + deletions });
   }
+  return churnMap;
+}
 
+async function fetchCommitCountMap(
+  git: ReturnType<typeof simpleGit>,
+  config: HotspotConfig,
+): Promise<Map<string, number>> {
+  const commitCountArgs = buildCommitCountArgs(config);
   let commitRaw: string;
   try {
     commitRaw = await git.raw(commitCountArgs);
   } catch {
     commitRaw = '';
   }
+  return parseCommitCounts(commitRaw);
+}
 
-  // Parse commit counts per file
+function buildCommitCountArgs(config: HotspotConfig): string[] {
+  const args = ['log', '--since', config.sinceIso, '--no-merges', '--format=%H', '--name-only'];
+  if (config.packageRoot) args.push('--', config.packageRoot);
+  return args;
+}
+
+function parseCommitCounts(raw: string): Map<string, number> {
   const commitCountMap = new Map<string, number>();
   let inCommit = false;
-  for (const line of commitRaw.split('\n')) {
+  for (const line of raw.split('\n')) {
     const trimmed = line.trim();
     if (/^[0-9a-f]{40}$/i.test(trimmed)) {
       inCommit = true;
@@ -98,74 +152,96 @@ export async function analyzeHotspots(
       commitCountMap.set(trimmed, (commitCountMap.get(trimmed) ?? 0) + 1);
     }
   }
+  return commitCountMap;
+}
 
-  // Parse numstat output: "<additions>\t<deletions>\t<filePath>"
-  const churnMap = new Map<string, { additions: number; deletions: number }>();
-  for (const line of numstatRaw.split('\n')) {
-    const parts = line.split('\t');
-    if (parts.length !== 3) continue;
-    const [addStr, delStr, filePath] = parts;
-    if (addStr === '-' || !filePath || !filePath.trim()) continue; // binary file
-    const additions = parseInt(addStr, 10);
-    const deletions = parseInt(delStr, 10);
-    if (isNaN(additions) || isNaN(deletions)) continue;
-    const fp = filePath.trim();
-    const existing = churnMap.get(fp) ?? { additions: 0, deletions: 0 };
-    churnMap.set(fp, {
-      additions: existing.additions + additions,
-      deletions: existing.deletions + deletions,
-    });
-  }
-
-  // Filter files with sufficient commit history
-  const eligibleFiles = [...churnMap.entries()].filter(([filePath]) => {
+function filterEligibleFiles(
+  churnMap: Map<string, ChurnEntry>,
+  commitCountMap: Map<string, number>,
+  minChurnCommits: number,
+): [string, ChurnEntry][] {
+  return [...churnMap.entries()].filter(([filePath]) => {
     const count = commitCountMap.get(filePath) ?? 0;
     return count >= minChurnCommits;
   });
+}
 
-  if (eligibleFiles.length === 0) return [];
-
-  // Compute complexity at HEAD for each eligible file
+async function computeComplexityMap(
+  git: ReturnType<typeof simpleGit>,
+  eligibleFiles: [string, ChurnEntry][],
+): Promise<Map<string, number>> {
   const complexityMap = new Map<string, number>();
   for (const [filePath] of eligibleFiles) {
-    const lang = detectLanguage(filePath);
-    if (lang === 'unsupported') {
-      complexityMap.set(filePath, 0);
-      continue;
-    }
-    try {
-      const content = await git.show([`HEAD:${filePath}`]);
-      const result = analyzeByLanguage(content, lang, filePath);
-      const totalComplexity = result.functions.reduce((s, f) => s + (f.cyclomaticComplexity ?? 1), 0);
-      complexityMap.set(filePath, totalComplexity);
-    } catch {
-      complexityMap.set(filePath, 0);
-    }
+    const complexity = await fetchFileComplexity(git, filePath);
+    complexityMap.set(filePath, complexity);
   }
+  return complexityMap;
+}
 
-  // Normalize and compute hotspot scores
+async function fetchFileComplexity(
+  git: ReturnType<typeof simpleGit>,
+  filePath: string,
+): Promise<number> {
+  const lang = detectLanguage(filePath);
+  if (lang === 'unsupported') return 0;
+  try {
+    const content = await git.show([`HEAD:${filePath}`]);
+    const result = analyzeByLanguage(content, lang, filePath);
+    return result.functions.reduce((s, f) => s + (f.cyclomaticComplexity ?? 1), 0);
+  } catch {
+    return 0;
+  }
+}
+
+function scoreHotspots(
+  eligibleFiles: [string, ChurnEntry][],
+  churnMap: Map<string, ChurnEntry>,
+  commitCountMap: Map<string, number>,
+  complexityMap: Map<string, number>,
+): HotspotResult[] {
   const maxChurn = Math.max(...eligibleFiles.map(([, v]) => v.additions + v.deletions), 1);
   const maxComplexity = Math.max(...[...complexityMap.values()], 1);
 
-  const scores: HotspotResult[] = eligibleFiles.map(([filePath, churn]) => {
-    const totalChurn = churn.additions + churn.deletions;
-    const normalizedChurn = totalChurn / maxChurn;
-    const normalizedComplexity = (complexityMap.get(filePath) ?? 0) / maxComplexity;
-    const score = normalizedChurn * normalizedComplexity;
-    const classification: HotspotResult['classification'] =
-      score > 0.7 ? 'critical' : score > 0.4 ? 'warning' : 'healthy';
-    return {
-      filePath,
-      score: parseFloat(score.toFixed(4)),
-      churn: totalChurn,
-      commitCount: commitCountMap.get(filePath) ?? 0,
-      complexity: complexityMap.get(filePath) ?? 0,
-      classification,
-    };
-  });
+  return eligibleFiles.map(([filePath]) => buildHotspotResult({
+    filePath,
+    churnMap,
+    commitCountMap,
+    complexityMap,
+    maxChurn,
+    maxComplexity,
+  }));
+}
 
-  return scores
-    .filter(s => s.classification !== 'healthy')
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topN);
+interface BuildHotspotResultOptions {
+  filePath: string;
+  churnMap: Map<string, ChurnEntry>;
+  commitCountMap: Map<string, number>;
+  complexityMap: Map<string, number>;
+  maxChurn: number;
+  maxComplexity: number;
+}
+
+function classifyHotspot(score: number): HotspotResult['classification'] {
+  if (score > 0.7) return 'critical';
+  if (score > 0.4) return 'warning';
+  return 'healthy';
+}
+
+function buildHotspotResult(opts: BuildHotspotResultOptions): HotspotResult {
+  const { filePath, churnMap, commitCountMap, complexityMap, maxChurn, maxComplexity } = opts;
+  const churn = churnMap.get(filePath) ?? { additions: 0, deletions: 0 };
+  const totalChurn = churn.additions + churn.deletions;
+  const normalizedChurn = totalChurn / maxChurn;
+  const normalizedComplexity = (complexityMap.get(filePath) ?? 0) / maxComplexity;
+  const score = normalizedChurn * normalizedComplexity;
+  const classification = classifyHotspot(score);
+
+  return {
+    filePath,
+    score: parseFloat(score.toFixed(4)),
+    churn: totalChurn,
+    commitCount: commitCountMap.get(filePath) ?? 0,
+    complexity: complexityMap.get(filePath) ?? 0,
+    classification,
+  };
 }

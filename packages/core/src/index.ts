@@ -66,6 +66,7 @@ export {
   listGoals,
   updateGoalStatus,
 } from './debt-goals';
+/** Types for the debt goals tracking system (Sprint 34). */
 export type {
   GoalType,
   GoalStatus,
@@ -159,22 +160,22 @@ export type { ContextWindowFitInput, ContextWindowFitResult } from './ai-readine
 export { analyzeAIReadiness } from './ai-readiness/ai-readiness-analyzer';
 export type { AIReadinessResult, AIReadinessFile, AIBlocker } from './ai-readiness/ai-readiness-analyzer';
 
-/** Sprint 32: Auto-refactor analysis — returns structured refactoring instructions for the worst smell. */
+/** Sprint 32: Automated smell analysis — returns structured improvement instructions for the worst smell. */
 export { analyzeForAutoRefactor } from './refactor/auto-refactor-analyzer';
 export type { AutoRefactorResult, RefactoringStrategy } from './refactor/index';
-/** Sprint 33: Auto-refactor applier — mechanically transforms source code based on analysis. */
+/** Sprint 33: Automated code transformer — mechanically applies smell fixes based on analysis. */
 export { applyAutoRefactor } from './refactor/auto-refactor-applier';
 export type { ApplyResult } from './refactor/auto-refactor-applier';
 /** Sprint 34: JSDoc generator — adds JSDoc to exported functions missing documentation. */
 export { generateMissingJsDoc } from './refactor/jsdoc-generator';
 export type { JsDocResult } from './refactor/jsdoc-generator';
-/** Sprint 34: Refactoring loop — iterates auto-refactor + JSDoc until code health target is reached. */
+/** Sprint 34: Iterative improvement loop — applies smell fixes and JSDoc until the health target is reached. */
 export { runRefactoringLoop } from './refactor/refactoring-loop';
 export type { RefactoringStep, RefactoringLoopResult } from './refactor/refactoring-loop';
 /** Detects the source language from a file path extension (Sprint 32: exposed for MCP tool use). */
 export { detectLanguage } from './language-detect';
 
-/** Sprint 32: Validation pipeline — Pearson/Spearman/AUROC correlation against bug datasets. */
+/** Sprint 32: Validation pipeline — Pearson/Spearman/AUROC correlation against defect datasets. */
 export {
   runValidation,
   buildRecordsFromDirectory,

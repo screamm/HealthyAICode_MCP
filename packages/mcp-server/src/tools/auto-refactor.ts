@@ -13,6 +13,34 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
 ) => void;
 
+interface AutoRefactorOptions {
+  filePath: string;
+  languageOverride?: string;
+  targetSmellArg?: string;
+}
+
+/** Returns a healthy-file response with the current score and category. */
+async function buildHealthyResponse(filePath: string) {
+  const healthResult = await analyzeFile(filePath);
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            message: 'No refactoring needed — file is healthy',
+            filePath,
+            score: healthResult.score,
+            category: healthResult.category,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
 export function registerAutoRefactor(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_auto_refactor',
@@ -32,59 +60,28 @@ export function registerAutoRefactor(server: McpServer): void {
         .describe('Optional SmellType to filter on (e.g. ComplexMethod, DeepNesting, BumpyRoad)'),
     },
     async ({ filePath, language, targetSmell }) =>
-      handleAutoRefactor(
-        filePath as string,
-        language as string | undefined,
-        targetSmell as string | undefined
-      )
+      handleAutoRefactor({
+        filePath: filePath as string,
+        languageOverride: language as string | undefined,
+        targetSmellArg: targetSmell as string | undefined,
+      })
   );
 }
 
-async function handleAutoRefactor(
-  filePath: string,
-  languageOverride?: string,
-  targetSmellArg?: string
-) {
+async function handleAutoRefactor(opts: AutoRefactorOptions) {
   try {
+    const { filePath, languageOverride, targetSmellArg } = opts;
     const code = await fs.readFile(filePath, 'utf-8');
-
-    const language: Language = languageOverride
-      ? (languageOverride as Language)
-      : detectLanguage(filePath);
-
+    const language: Language = languageOverride ? (languageOverride as Language) : detectLanguage(filePath);
     const targetSmell = targetSmellArg as SmellType | undefined;
-
     const refactorResult = analyzeForAutoRefactor(code, language, filePath, targetSmell);
 
     if (!refactorResult) {
-      // File is healthy — no refactoring needed.
-      const healthResult = await analyzeFile(filePath);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              {
-                message: 'No refactoring needed — file is healthy',
-                filePath,
-                score: healthResult.score,
-                category: healthResult.category,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
+      return buildHealthyResponse(filePath);
     }
 
     return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(refactorResult, null, 2),
-        },
-      ],
+      content: [{ type: 'text' as const, text: JSON.stringify(refactorResult, null, 2) }],
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

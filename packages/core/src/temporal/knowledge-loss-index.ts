@@ -53,6 +53,85 @@ function buildKliSmell(
   };
 }
 
+interface GitBlameData {
+  linesByEmail: Map<string, number>;
+  totalLines: number;
+  activeEmails: Set<string>;
+}
+
+/**
+ * Fetches per-line author attribution via git blame and the set of recently
+ * active contributor emails. Returns null when blame is unavailable or the
+ * file has no tracked lines.
+ */
+async function fetchGitBlameData(
+  repoPath: string,
+  filePath: string,
+): Promise<GitBlameData | null> {
+  const git = simpleGit(repoPath);
+
+  // Step 1: get per-line author attribution via blame
+  let blameRaw: string;
+  try {
+    blameRaw = await git.raw(['blame', '--line-porcelain', '--', filePath]);
+  } catch {
+    return null;
+  }
+
+  const linesByEmail = parseBlameOutput(blameRaw);
+  const totalLines = Math.min([...linesByEmail.values()].reduce((s, v) => s + v, 0), MAX_BLAME_LINES);
+  if (totalLines === 0) return null;
+
+  // Step 2: get the set of active contributors (any commit in the last INACTIVITY_MONTHS months)
+  let activeRaw: string;
+  try {
+    activeRaw = await git.raw([
+      'log',
+      `--since=${INACTIVITY_MONTHS} months ago`,
+      '--format=%ae',
+    ]);
+  } catch {
+    activeRaw = '';
+  }
+  const activeEmails = new Set(
+    activeRaw.split('\n').map(l => l.trim()).filter(Boolean),
+  );
+
+  return { linesByEmail, totalLines, activeEmails };
+}
+
+/**
+ * Computes the KLI ratio and builds the final result from pre-fetched blame data.
+ */
+function computeKnowledgeLossResult(
+  filePath: string,
+  data: GitBlameData,
+): KnowledgeLossIndexResult {
+  // Step 3: count lines by inactive authors
+  let inactiveLines = 0;
+  for (const [email, count] of data.linesByEmail) {
+    if (!data.activeEmails.has(email)) {
+      inactiveLines += count;
+    }
+  }
+  // Cap to MAX_BLAME_LINES proportionally if needed
+  const effectiveInactive = Math.min(inactiveLines, MAX_BLAME_LINES);
+  const effectiveTotal = data.totalLines;
+
+  const knowledgeLossRatio = effectiveTotal === 0 ? 0 : effectiveInactive / effectiveTotal;
+  const isOrphaned = knowledgeLossRatio > ORPHANED_THRESHOLD;
+  const smell = buildKliSmell(filePath, knowledgeLossRatio, effectiveInactive, effectiveTotal);
+
+  return {
+    filePath,
+    knowledgeLossRatio: parseFloat(knowledgeLossRatio.toFixed(4)),
+    totalLines: effectiveTotal,
+    inactiveLines: effectiveInactive,
+    isOrphaned,
+    smell,
+  };
+}
+
 /**
  * Computes the Knowledge Loss Index for a single file via git blame.
  *
@@ -75,58 +154,9 @@ export async function analyzeKnowledgeLossIndex(
   };
 
   try {
-    const git = simpleGit(repoPath);
-
-    // Step 1: get per-line author attribution via blame
-    let blameRaw: string;
-    try {
-      blameRaw = await git.raw(['blame', '--line-porcelain', '--', filePath]);
-    } catch {
-      return empty;
-    }
-
-    const linesByEmail = parseBlameOutput(blameRaw);
-    const totalLines = Math.min([...linesByEmail.values()].reduce((s, v) => s + v, 0), MAX_BLAME_LINES);
-    if (totalLines === 0) return empty;
-
-    // Step 2: get the set of active contributors (any commit in the last INACTIVITY_MONTHS months)
-    let activeRaw: string;
-    try {
-      activeRaw = await git.raw([
-        'log',
-        `--since=${INACTIVITY_MONTHS} months ago`,
-        '--format=%ae',
-      ]);
-    } catch {
-      activeRaw = '';
-    }
-    const activeEmails = new Set(
-      activeRaw.split('\n').map(l => l.trim()).filter(Boolean),
-    );
-
-    // Step 3: count lines by inactive authors
-    let inactiveLines = 0;
-    for (const [email, count] of linesByEmail) {
-      if (!activeEmails.has(email)) {
-        inactiveLines += count;
-      }
-    }
-    // Cap to MAX_BLAME_LINES proportionally if needed
-    const effectiveInactive = Math.min(inactiveLines, MAX_BLAME_LINES);
-    const effectiveTotal = totalLines;
-
-    const knowledgeLossRatio = effectiveTotal === 0 ? 0 : effectiveInactive / effectiveTotal;
-    const isOrphaned = knowledgeLossRatio > ORPHANED_THRESHOLD;
-    const smell = buildKliSmell(filePath, knowledgeLossRatio, effectiveInactive, effectiveTotal);
-
-    return {
-      filePath,
-      knowledgeLossRatio: parseFloat(knowledgeLossRatio.toFixed(4)),
-      totalLines: effectiveTotal,
-      inactiveLines: effectiveInactive,
-      isOrphaned,
-      smell,
-    };
+    const data = await fetchGitBlameData(repoPath, filePath);
+    if (!data) return empty;
+    return computeKnowledgeLossResult(filePath, data);
   } catch {
     return empty;
   }

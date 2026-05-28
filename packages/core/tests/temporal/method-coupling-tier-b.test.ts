@@ -42,7 +42,7 @@ describe('MethodTemporalCoupling — Tier B (Bash) language-neutral fallback', (
     const log = await git.log({ file: bashRepo.filePath });
     const initialSha = log.all[log.all.length - 1].hash;
 
-    const ranges = await getMethodRangesAtCommit(bashRepo.rootPath, bashRepo.filePath, initialSha);
+    const ranges = await getMethodRangesAtCommit({ repoPath: bashRepo.rootPath, filePath: bashRepo.filePath, commitSha: initialSha });
     const names = ranges.map(r => r.name);
 
     expect(names).toEqual(

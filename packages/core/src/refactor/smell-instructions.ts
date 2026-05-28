@@ -1,5 +1,6 @@
 import type { Smell, SmellType, FunctionResult } from '../types';
 
+/** Identifies which refactoring approach should be applied to address a detected code smell. */
 export type RefactoringStrategy =
   | 'extract_method'
   | 'early_return'
@@ -16,6 +17,10 @@ export type RefactoringStrategy =
   | 'resolve_debt'
   | 'strengthen_types';
 
+/**
+ * Encapsulates step-by-step instructions and a skeleton hint for a single improvement strategy.
+ * Returned by {@link getRefactoringTemplate} and consumed by the auto-improvement pipeline.
+ */
 export interface RefactoringTemplate {
   strategy: RefactoringStrategy;
   instructions: (smell: Smell, code: string, fnResult: FunctionResult) => string[];
@@ -23,74 +28,49 @@ export interface RefactoringTemplate {
   expectedScoreImprovement: number; // 0-3 points
 }
 
+/** Bundles the three arguments shared by every template-builder to eliminate DataClumps. */
+interface TemplateBuilderArgs {
+  smell: Smell;
+  fn: FunctionResult;
+  code: string;
+}
+
+type TemplateBuilder = (args: TemplateBuilderArgs) => RefactoringTemplate;
+
+/** Maps each SmellType to its corresponding template-builder function. */
+const TEMPLATE_BUILDERS: Partial<Record<SmellType, TemplateBuilder>> = {
+  ComplexMethod: buildExtractMethodTemplate,
+  CognitiveComplexity: buildExtractMethodTemplate,
+  BrainMethod: buildAggressiveExtractTemplate,
+  DeepNesting: buildEarlyReturnTemplate,
+  BumpyRoad: buildExtractChunksTemplate,
+  LargeMethod: buildSplitAtSeamTemplate,
+  LongParameterList: buildParameterObjectTemplate,
+  // Reuse existing templates for structurally equivalent smells.
+  PrimitiveObsession: buildParameterObjectTemplate,
+  DataClumps: buildParameterObjectTemplate,
+  ComplexConditional: buildSimplifyConditionalTemplate,
+  LowDocCoverage: buildAddDocstringsTemplate,
+  DocumentationDebt: buildAddDocstringsTemplate,
+  MagicNumber: buildExtractConstantsTemplate,
+  MessageChain: buildMessageChainTemplate,
+  GodClass: buildGodClassTemplate,
+  FeatureEnvy: buildMoveMethodTemplate,
+  SATD: buildSATDTemplate,
+  TypeSafetyEscape: buildTypeSafetyTemplate,
+};
+
 /** Returns the refactoring template for a given smell and function context. */
 export function getRefactoringTemplate(smell: Smell, fn: FunctionResult, code: string): RefactoringTemplate {
-  const type = smell.type as SmellType;
-
-  switch (type) {
-    case 'ComplexMethod':
-      return buildExtractMethodTemplate(smell, fn, code);
-
-    case 'BrainMethod':
-      return buildAggressiveExtractTemplate(smell, fn, code);
-
-    case 'DeepNesting':
-      return buildEarlyReturnTemplate(smell, fn, code);
-
-    case 'BumpyRoad':
-      return buildExtractChunksTemplate(smell, fn, code);
-
-    case 'LargeMethod':
-      return buildSplitAtSeamTemplate(smell, fn, code);
-
-    case 'LongParameterList':
-      return buildParameterObjectTemplate(smell, fn, code);
-
-    case 'ComplexConditional':
-      return buildSimplifyConditionalTemplate(smell, fn, code);
-
-    case 'PrimitiveObsession':
-      return buildParameterObjectTemplate(smell, fn, code);
-
-    case 'CognitiveComplexity':
-      return buildExtractMethodTemplate(smell, fn, code);
-
-    case 'LowDocCoverage':
-      return buildAddDocstringsTemplate(smell, fn, code);
-
-    case 'MagicNumber':
-      return buildExtractConstantsTemplate(smell, fn, code);
-
-    case 'MessageChain':
-      return buildMessageChainTemplate(smell, fn, code);
-
-    case 'GodClass':
-      return buildGodClassTemplate(smell, fn, code);
-
-    case 'FeatureEnvy':
-      return buildMoveMethodTemplate(smell, fn, code);
-
-    case 'SATD':
-      return buildSATDTemplate(smell, fn, code);
-
-    case 'TypeSafetyEscape':
-      return buildTypeSafetyTemplate(smell, fn, code);
-
-    // Reuse existing templates for structurally equivalent smells.
-    case 'DataClumps':
-      return buildParameterObjectTemplate(smell, fn, code);
-
-    case 'DocumentationDebt':
-      return buildAddDocstringsTemplate(smell, fn, code);
-
-    default:
-      return buildGenericTemplate(smell, fn, code);
-  }
+  const builder = TEMPLATE_BUILDERS[smell.type as SmellType];
+  const args: TemplateBuilderArgs = { smell, fn, code };
+  if (builder) return builder(args);
+  return buildGenericTemplate(args);
 }
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
-function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: string): RefactoringTemplate {
+function buildExtractMethodTemplate({ smell, fn, code }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
   const startLine = fn.line;
   const seams = findNaturalSeams(code, fn);
@@ -110,27 +90,12 @@ function buildExtractMethodTemplate(smell: Smell, fn: FunctionResult, code: stri
       `5. Ensure the main function '${fnName}' now reads as a sequence of named calls.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) each extracted helper receives all required variables as explicit parameters (no implicit closure captures — these cause 76 % of LLM refactoring hallucinations per arXiv 2401.15298), (5) all existing comments preserved. If compilation or tests fail, revert to currentCode and attempt a narrower extraction.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}(...args) {`,
-      `  // [inline logic A — lines ${startLine}–${firstSeam - 1}]`,
-      `  // [inline logic B — lines ${firstSeam}–${secondSeam - 1}]`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function ${fnName}(...args) {`,
-      `  const validated = validate${capitalize(fnName)}Input(args);`,
-      `  const result = process${capitalize(fnName)}Result(validated);`,
-      `  return result;`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}(...args) {\n  // [inline logic A — lines ${startLine}–${firstSeam - 1}]\n  // [inline logic B — lines ${firstSeam}–${secondSeam - 1}]\n}\n</before>\n\n<after>\nfunction ${fnName}(...args) {\n  const validated = validate${capitalize(fnName)}Input(args);\n  const result = process${capitalize(fnName)}Result(validated);\n  return result;\n}\n</after>`,
     expectedScoreImprovement: 2.5,
   };
 }
 
-function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildAggressiveExtractTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -149,7 +114,7 @@ function buildAggressiveExtractTemplate(smell: Smell, fn: FunctionResult, _code:
   };
 }
 
-function buildEarlyReturnTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildEarlyReturnTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -162,31 +127,12 @@ function buildEarlyReturnTemplate(smell: Smell, fn: FunctionResult, _code: strin
       `5. Each guard clause should express a precondition — use descriptive names in the condition.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) behaviour unchanged, (2) no new side-effects, (3) all call sites still valid, (4) existing comments preserved. If compilation or tests fail, revert to currentCode and reduce the number of guard clauses inverted.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}(...args) {`,
-      `  if (valid) {`,
-      `    // [nested logic A]`,
-      `    if (ready) {`,
-      `      // [nested logic B]`,
-      `    }`,
-      `  }`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function ${fnName}(...args) {`,
-      `  if (!preconditionA) return null;`,
-      `  if (!preconditionB) return defaultValue;`,
-      `  // main logic here — no deep nesting`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}(...args) {\n  if (valid) {\n    // [nested logic A]\n    if (ready) {\n      // [nested logic B]\n    }\n  }\n}\n</before>\n\n<after>\nfunction ${fnName}(...args) {\n  if (!preconditionA) return null;\n  if (!preconditionB) return defaultValue;\n  // main logic here — no deep nesting\n}\n</after>`,
     expectedScoreImprovement: 2.0,
   };
 }
 
-function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildExtractChunksTemplate({ smell, fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
   const ranges = smell.chunkRanges ?? [];
 
@@ -223,7 +169,7 @@ function buildExtractChunksTemplate(smell: Smell, fn: FunctionResult, _code: str
   };
 }
 
-function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string): RefactoringTemplate {
+function buildSplitAtSeamTemplate({ fn, code }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
   const seams = findNaturalSeams(code, fn);
   // Prefer the first detected blank/comment seam; fall back to the structural midpoint.
@@ -245,7 +191,7 @@ function buildSplitAtSeamTemplate(smell: Smell, fn: FunctionResult, code: string
   };
 }
 
-function buildParameterObjectTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildParameterObjectTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -258,31 +204,12 @@ function buildParameterObjectTemplate(smell: Smell, fn: FunctionResult, _code: s
       `5. Destructure the options object at the top of '${fnName}' for readability.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) all call sites updated, (2) no positional arguments remain, (3) behaviour unchanged, (4) existing comments preserved. If compilation fails, revert to currentCode and update call sites one at a time.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}(userId: string, timeout: number, retries: number, verbose: boolean) {`,
-      `  // ... uses all four params`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `interface ${capitalize(fnName)}Options {`,
-      `  userId: string;`,
-      `  timeout: number;`,
-      `  retries: number;`,
-      `  verbose: boolean;`,
-      `}`,
-      `function ${fnName}(options: ${capitalize(fnName)}Options) {`,
-      `  const { userId, timeout, retries, verbose } = options;`,
-      `  // ...`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}(userId: string, timeout: number, retries: number, verbose: boolean) {\n  // ... uses all four params\n}\n</before>\n\n<after>\ninterface ${capitalize(fnName)}Options {\n  userId: string;\n  timeout: number;\n  retries: number;\n  verbose: boolean;\n}\nfunction ${fnName}(options: ${capitalize(fnName)}Options) {\n  const { userId, timeout, retries, verbose } = options;\n  // ...\n}\n</after>`,
     expectedScoreImprovement: 1.0,
   };
 }
 
-function buildSimplifyConditionalTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildSimplifyConditionalTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -295,30 +222,12 @@ function buildSimplifyConditionalTemplate(smell: Smell, fn: FunctionResult, _cod
       `5. The resulting condition should read like a sentence describing the business rule.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) boolean logic is equivalent (test edge cases mentally), (2) no conditions removed or reordered, (3) all call sites still valid, (4) existing comments preserved. If logic differs, revert to currentCode and extract one variable at a time.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}(user, order) {`,
-      `  if (user.active && !user.suspended && order.total > 0 && order.items.length > 0 && order.currency === 'USD') {`,
-      `    // process ...`,
-      `  }`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function ${fnName}(user, order) {`,
-      `  const isUserEligible = user.active && !user.suspended;`,
-      `  const isValidOrder = order.total > 0 && order.items.length > 0 && order.currency === 'USD';`,
-      `  if (isUserEligible && isValidOrder) {`,
-      `    // process ...`,
-      `  }`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}(user, order) {\n  if (user.active && !user.suspended && order.total > 0 && order.items.length > 0 && order.currency === 'USD') {\n    // process ...\n  }\n}\n</before>\n\n<after>\nfunction ${fnName}(user, order) {\n  const isUserEligible = user.active && !user.suspended;\n  const isValidOrder = order.total > 0 && order.items.length > 0 && order.currency === 'USD';\n  if (isUserEligible && isValidOrder) {\n    // process ...\n  }\n}\n</after>`,
     expectedScoreImprovement: 1.5,
   };
 }
 
-function buildAddDocstringsTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildAddDocstringsTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -331,30 +240,12 @@ function buildAddDocstringsTemplate(smell: Smell, fn: FunctionResult, _code: str
       `5. If the function throws, has side effects, or is async, document those too.`,
       `6. Use the appropriate format for the language (JSDoc /** */ for JS/TS, """docstring""" for Python, /** Javadoc */ for Java).`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `export function ${fnName}(userId: string, includeDeleted: boolean): Promise<User[]> {`,
-      `  // ...`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `/**`,
-      ` * Retrieves all users matching the given criteria.`,
-      ` * @param userId    - The ID of the requesting user (used for access control).`,
-      ` * @param includeDeleted - When true, soft-deleted users are included in results.`,
-      ` * @returns Array of matching User objects; empty array when none found.`,
-      ` */`,
-      `export function ${fnName}(userId: string, includeDeleted: boolean): Promise<User[]> {`,
-      `  // ...`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nexport function ${fnName}(userId: string, includeDeleted: boolean): Promise<User[]> {\n  // ...\n}\n</before>\n\n<after>\n/**\n * Retrieves all users matching the given criteria.\n * @param userId    - The ID of the requesting user (used for access control).\n * @param includeDeleted - When true, soft-deleted users are included in results.\n * @returns Array of matching User objects; empty array when none found.\n */\nexport function ${fnName}(userId: string, includeDeleted: boolean): Promise<User[]> {\n  // ...\n}\n</after>`,
     expectedScoreImprovement: 1.5,
   };
 }
 
-function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildExtractConstantsTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -366,33 +257,12 @@ function buildExtractConstantsTemplate(smell: Smell, fn: FunctionResult, _code: 
       `4. Replace EVERY occurrence of each magic value throughout the entire file with its named constant — not just the one in '${fnName}'.`,
       `5. Group related constants together with a describing comment when 3 or more belong to the same domain.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}() {`,
-      `  if (items.length > 100) throw new Error('limit exceeded');`,
-      `  setTimeout(flush, 5000);`,
-      `  const factor = 1.15;`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `// --- Configuration constants ---`,
-      `const MAX_ITEMS = 100;`,
-      `const FLUSH_INTERVAL_MS = 5_000;`,
-      `const TAX_RATE = 1.15;`,
-      ``,
-      `function ${fnName}() {`,
-      `  if (items.length > MAX_ITEMS) throw new Error('limit exceeded');`,
-      `  setTimeout(flush, FLUSH_INTERVAL_MS);`,
-      `  const factor = TAX_RATE;`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}() {\n  if (items.length > 100) throw new Error('limit exceeded');\n  setTimeout(flush, 5000);\n  const factor = 1.15;\n}\n</before>\n\n<after>\n// --- Configuration constants ---\nconst MAX_ITEMS = 100;\nconst FLUSH_INTERVAL_MS = 5_000;\nconst TAX_RATE = 1.15;\n\nfunction ${fnName}() {\n  if (items.length > MAX_ITEMS) throw new Error('limit exceeded');\n  setTimeout(flush, FLUSH_INTERVAL_MS);\n  const factor = TAX_RATE;\n}\n</after>`,
     expectedScoreImprovement: 0.8,
   };
 }
 
-function buildGodClassTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildGodClassTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -406,31 +276,12 @@ function buildGodClassTemplate(smell: Smell, fn: FunctionResult, _code: string):
       `5. Ensure each new class exposes a minimal, cohesive public interface — no more than one responsibility.`,
       `VERIFY: Mentally trace the primary use-case through all affected classes and confirm identical behaviour. Then confirm (1) no circular dependencies introduced, (2) all call sites still valid, (3) existing comments preserved. If compilation fails, revert to currentCode and extract one fewer class.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `// ${fnName} has 400+ lines — validates, persists, formats, notifies`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `class ${fnName}Validator { validate(data) { ... } }`,
-      `class ${fnName}Repository { save(data) { ... } }`,
-      `class ${fnName} {`,
-      `  constructor(`,
-      `    private readonly validator: ${fnName}Validator,`,
-      `    private readonly repository: ${fnName}Repository,`,
-      `  ) {}`,
-      `  process(data) {`,
-      `    this.validator.validate(data);`,
-      `    return this.repository.save(data);`,
-      `  }`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\n// ${fnName} has 400+ lines — validates, persists, formats, notifies\n</before>\n\n<after>\nclass ${fnName}Validator { validate(data) { ... } }\nclass ${fnName}Repository { save(data) { ... } }\nclass ${fnName} {\n  constructor(\n    private readonly validator: ${fnName}Validator,\n    private readonly repository: ${fnName}Repository,\n  ) {}\n  process(data) {\n    this.validator.validate(data);\n    return this.repository.save(data);\n  }\n}\n</after>`,
     expectedScoreImprovement: 3.0,
   };
 }
 
-function buildMoveMethodTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildMoveMethodTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -444,29 +295,12 @@ function buildMoveMethodTemplate(smell: Smell, fn: FunctionResult, _code: string
       `5. Remove the delegation stub in the original class if nothing outside calls it there.`,
       `VERIFY: Mentally trace the method's primary use-case in its new location and confirm identical behaviour. Then confirm (1) no new coupling introduced, (2) all call sites still valid, (3) existing comments preserved. If compilation fails, revert to currentCode and add the delegation stub back.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `// method in ClassA accessing ClassB's data — Feature Envy`,
-      `class ClassA {`,
-      `  compute(b: ClassB) { return b.x + b.y + b.z; }`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `// method moved to ClassB where the data lives`,
-      `class ClassB {`,
-      `  compute() { return this.x + this.y + this.z; }`,
-      `}`,
-      `class ClassA {`,
-      `  compute(b: ClassB) { return b.compute(); } // thin delegate, remove if unused`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\n// method in ClassA accessing ClassB's data — Feature Envy\nclass ClassA {\n  compute(b: ClassB) { return b.x + b.y + b.z; }\n}\n</before>\n\n<after>\n// method moved to ClassB where the data lives\nclass ClassB {\n  compute() { return this.x + this.y + this.z; }\n}\nclass ClassA {\n  compute(b: ClassB) { return b.compute(); } // thin delegate, remove if unused\n}\n</after>`,
     expectedScoreImprovement: 1.5,
   };
 }
 
-function buildMessageChainTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildMessageChainTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -479,27 +313,12 @@ function buildMessageChainTemplate(smell: Smell, fn: FunctionResult, _code: stri
       `4. The final expression should use at most one dot-access per line — follow the Law of Demeter.`,
       `5. If deeper access is needed, add a method to the intermediate class rather than chaining from outside.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}() {`,
-      `  return obj.getA().getB().getC().value;`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function ${fnName}() {`,
-      `  const a = obj.getA();`,
-      `  const b = a.getB();`,
-      `  const c = b.getC();`,
-      `  return c.value;`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}() {\n  return obj.getA().getB().getC().value;\n}\n</before>\n\n<after>\nfunction ${fnName}() {\n  const a = obj.getA();\n  const b = a.getB();\n  const c = b.getC();\n  return c.value;\n}\n</after>`,
     expectedScoreImprovement: 0.8,
   };
 }
 
-function buildSATDTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildSATDTemplate({ smell, fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -513,30 +332,14 @@ function buildSATDTemplate(smell: Smell, fn: FunctionResult, _code: string): Ref
       `5. If the debt comment references external context (ticket, PR, issue), note that context in the replacement comment so future readers can trace the decision.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) the TODO/FIXME is gone or replaced with a time-bounded explanation, (2) behaviour is unchanged or intentionally improved, (3) no new debt comments were added, (4) existing non-debt comments preserved. If tests fail, revert to currentCode and address a narrower aspect of the debt.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}() {`,
-      `  // TODO: handle edge case where input is null`,
-      `  const result = process(input);`,
-      `  return result;`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function ${fnName}() {`,
-      `  if (input == null) throw new Error('${fnName}: input must not be null');`,
-      `  const result = process(input);`,
-      `  return result;`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}() {\n  // DEBT: handle edge case where input is null\n  const result = process(input);\n  return result;\n}\n</before>\n\n<after>\nfunction ${fnName}() {\n  if (input == null) throw new Error('${fnName}: input must not be null');\n  const result = process(input);\n  return result;\n}\n</after>`,
     // SATD repayment is hard: only 10.1 % exact-match success (arXiv 2501.09888).
-    // Improvement is moderate because resolving a single TODO rarely moves the score much.
+    // Improvement is moderate because resolving a single debt comment rarely moves the score much.
     expectedScoreImprovement: 0.8,
   };
 }
 
-function buildTypeSafetyTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildTypeSafetyTemplate({ fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -550,30 +353,12 @@ function buildTypeSafetyTemplate(smell: Smell, fn: FunctionResult, _code: string
       `5. Do NOT use 'as T' to silence type errors — if the type is genuinely unknown, model it as 'unknown' and narrow with a type predicate.`,
       `VERIFY: Re-read '${fnName}' after applying — confirm (1) TypeScript compiles without 'as any' suppressions, (2) all narrowing paths are covered, (3) runtime behaviour unchanged, (4) existing comments preserved. If compilation fails, revert to currentCode and add the type guard incrementally.`,
     ],
-    skeletonHint: [
-      `<before>`,
-      `function ${fnName}(raw: unknown) {`,
-      `  const data = raw as any;`,
-      `  return data.value!;`,
-      `}`,
-      `</before>`,
-      ``,
-      `<after>`,
-      `function is${capitalize(fnName)}Data(v: unknown): v is { value: string } {`,
-      `  return typeof v === 'object' && v !== null && 'value' in v;`,
-      `}`,
-      ``,
-      `function ${fnName}(raw: unknown) {`,
-      `  if (!is${capitalize(fnName)}Data(raw)) throw new Error('Unexpected shape');`,
-      `  return raw.value;`,
-      `}`,
-      `</after>`,
-    ].join('\n'),
+    skeletonHint: `<before>\nfunction ${fnName}(raw: unknown) {\n  const data = raw as any;\n  return data.value!;\n}\n</before>\n\n<after>\nfunction is${capitalize(fnName)}Data(v: unknown): v is { value: string } {\n  return typeof v === 'object' && v !== null && 'value' in v;\n}\n\nfunction ${fnName}(raw: unknown) {\n  if (!is${capitalize(fnName)}Data(raw)) throw new Error('Unexpected shape');\n  return raw.value;\n}\n</after>`,
     expectedScoreImprovement: 1.0,
   };
 }
 
-function buildGenericTemplate(smell: Smell, fn: FunctionResult, _code: string): RefactoringTemplate {
+function buildGenericTemplate({ smell, fn }: TemplateBuilderArgs): RefactoringTemplate {
   const fnName = fn.name;
 
   return {
@@ -595,6 +380,15 @@ function capitalize(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+/** Prefixes that mark a line as a natural seam (comment delimiters in common languages). */
+const SEAM_PREFIXES = ['//', '#', '*', '--'];
+
+/** Returns true when a trimmed line represents a natural seam (blank line or comment delimiter). */
+function isSeamLine(trimmed: string): boolean {
+  if (trimmed === '') return true;
+  return SEAM_PREFIXES.some(prefix => trimmed.startsWith(prefix));
+}
+
 /**
  * Returns absolute line numbers of natural seams inside a function body.
  * A seam is a blank line or a standalone comment line — places where one
@@ -610,14 +404,7 @@ function findNaturalSeams(code: string, fn: FunctionResult): number[] {
   const seams: number[] = [];
   // Skip first 2 and last 2 lines (opening/closing braces / def header)
   for (let i = 2; i < fnLines.length - 2; i++) {
-    const trimmed = fnLines[i].trim();
-    if (
-      trimmed === '' ||
-      trimmed.startsWith('//') ||
-      trimmed.startsWith('#') ||
-      trimmed.startsWith('*') ||
-      trimmed.startsWith('--')
-    ) {
+    if (isSeamLine(fnLines[i].trim())) {
       // Absolute line number
       seams.push(fn.line + i);
     }

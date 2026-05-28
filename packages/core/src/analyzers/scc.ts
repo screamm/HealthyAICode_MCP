@@ -1,4 +1,4 @@
-﻿/**
+/**
  * scc.ts
  * Iterative Tarjan's Strongly Connected Components algorithm.
  * Returns all SCCs as arrays of node identifiers.
@@ -13,6 +13,23 @@ type Frame = {
   phase: 'enter' | 'next';
 };
 
+/** Shared traversal state passed through helper functions to avoid closure captures. */
+interface TarjanState {
+  index: Map<string, number>;
+  lowlink: Map<string, number>;
+  onStack: Map<string, boolean>;
+  sccStack: string[];
+  sccs: string[][];
+  counter: number;
+}
+
+/** Full DFS execution context: combines graph edges, the iterative call stack, and Tarjan state. */
+interface DfsContext {
+  edges: Map<string, Set<string>>;
+  callStack: Frame[];
+  state: TarjanState;
+}
+
 /**
  * Finds all strongly connected components in the given directed graph.
  * Only the graph edges are needed — nodes without outgoing edges are
@@ -24,85 +41,106 @@ type Frame = {
 export function findStronglyConnectedComponents(
   edges: Map<string, Set<string>>,
 ): string[][] {
-  const index = new Map<string, number>();
-  const lowlink = new Map<string, number>();
-  const onStack = new Map<string, boolean>();
-  const sccStack: string[] = [];
-  const sccs: string[][] = [];
-  let counter = 0;
+  const state: TarjanState = {
+    index: new Map(),
+    lowlink: new Map(),
+    onStack: new Map(),
+    sccStack: [],
+    sccs: [],
+    counter: 0,
+  };
 
-  // Collect all nodes (sources + any referenced targets)
+  const allNodes = collectAllNodes(edges);
+
+  for (const startNode of allNodes) {
+    if (!state.index.has(startNode)) {
+      runIterativeDfs(startNode, edges, state);
+    }
+  }
+
+  return state.sccs;
+}
+
+/** Collects every node referenced as a source or target in the edge map. */
+function collectAllNodes(edges: Map<string, Set<string>>): Set<string> {
   const allNodes = new Set<string>();
   for (const [from, tos] of edges) {
     allNodes.add(from);
     for (const to of tos) allNodes.add(to);
   }
+  return allNodes;
+}
 
-  for (const startNode of allNodes) {
-    if (index.has(startNode)) continue;
+/** Pushes an "enter" frame onto the call stack and initialises Tarjan bookkeeping for the node. */
+function pushEnterFrame(node: string, ctx: DfsContext): void {
+  ctx.state.index.set(node, ctx.state.counter);
+  ctx.state.lowlink.set(node, ctx.state.counter);
+  ctx.state.counter++;
+  ctx.state.onStack.set(node, true);
+  ctx.state.sccStack.push(node);
+  const neighbours = ctx.edges.get(node) ?? new Set<string>();
+  ctx.callStack.push({ node, iter: neighbours.values(), phase: 'next' });
+}
 
-    // Iterative DFS using an explicit frame stack
-    const callStack: Frame[] = [];
-
-    // Helper to push an "enter" frame
-    const pushEnter = (node: string) => {
-      index.set(node, counter);
-      lowlink.set(node, counter);
-      counter++;
-      onStack.set(node, true);
-      sccStack.push(node);
-      const neighbours = edges.get(node) ?? new Set<string>();
-      callStack.push({ node, iter: neighbours.values(), phase: 'next' });
-    };
-
-    pushEnter(startNode);
-
-    while (callStack.length > 0) {
-      const frame = callStack[callStack.length - 1];
-      const { node, iter } = frame;
-
-      const next = iter.next();
-      if (!next.done) {
-        const neighbour = next.value;
-        if (!index.has(neighbour)) {
-          // Unvisited — recurse
-          pushEnter(neighbour);
-        } else if (onStack.get(neighbour)) {
-          // Neighbour is on the DFS stack — update lowlink
-          const current = lowlink.get(node)!;
-          const neighbourIdx = index.get(neighbour)!;
-          if (neighbourIdx < current) {
-            lowlink.set(node, neighbourIdx);
-          }
-        }
-        // Already visited and not on stack: cross/forward edge, ignore
-      } else {
-        // Done iterating neighbours — pop frame
-        callStack.pop();
-
-        if (callStack.length > 0) {
-          const parent = callStack[callStack.length - 1];
-          const parentLow = lowlink.get(parent.node)!;
-          const nodeLow = lowlink.get(node)!;
-          if (nodeLow < parentLow) {
-            lowlink.set(parent.node, nodeLow);
-          }
-        }
-
-        // Check if this node is an SCC root
-        if (lowlink.get(node) === index.get(node)) {
-          const scc: string[] = [];
-          let w: string;
-          do {
-            w = sccStack.pop()!;
-            onStack.set(w, false);
-            scc.push(w);
-          } while (w !== node);
-          sccs.push(scc);
-        }
-      }
+/** Processes one neighbour during DFS iteration: recurse if unvisited, update lowlink if on stack. */
+function processNeighbour(neighbour: string, currentNode: string, ctx: DfsContext): void {
+  if (!ctx.state.index.has(neighbour)) {
+    pushEnterFrame(neighbour, ctx);
+  } else if (ctx.state.onStack.get(neighbour)) {
+    const current = ctx.state.lowlink.get(currentNode)!;
+    const neighbourIdx = ctx.state.index.get(neighbour)!;
+    if (neighbourIdx < current) {
+      ctx.state.lowlink.set(currentNode, neighbourIdx);
     }
   }
+  // Already visited and not on stack: cross/forward edge, ignore
+}
 
-  return sccs;
+/** Propagates lowlink upward to the parent frame after a node finishes its neighbour iteration. */
+function propagateLowlinkToParent(node: string, ctx: DfsContext): void {
+  if (ctx.callStack.length === 0) return;
+  const parent = ctx.callStack[ctx.callStack.length - 1];
+  const parentLow = ctx.state.lowlink.get(parent.node)!;
+  const nodeLow = ctx.state.lowlink.get(node)!;
+  if (nodeLow < parentLow) {
+    ctx.state.lowlink.set(parent.node, nodeLow);
+  }
+}
+
+/** Pops all nodes in the current SCC off the stack and records it when an SCC root is detected. */
+function popSccIfRoot(node: string, state: TarjanState): void {
+  if (state.lowlink.get(node) !== state.index.get(node)) return;
+
+  const scc: string[] = [];
+  let w: string;
+  do {
+    w = state.sccStack.pop()!;
+    state.onStack.set(w, false);
+    scc.push(w);
+  } while (w !== node);
+  state.sccs.push(scc);
+}
+
+/** Runs the iterative DFS from a single start node, recording SCCs as they are completed. */
+function runIterativeDfs(
+  startNode: string,
+  edges: Map<string, Set<string>>,
+  state: TarjanState,
+): void {
+  const ctx: DfsContext = { edges, callStack: [], state };
+  pushEnterFrame(startNode, ctx);
+
+  while (ctx.callStack.length > 0) {
+    const frame = ctx.callStack[ctx.callStack.length - 1];
+    const { node, iter } = frame;
+
+    const next = iter.next();
+    if (!next.done) {
+      processNeighbour(next.value, node, ctx);
+    } else {
+      ctx.callStack.pop();
+      propagateLowlinkToParent(node, ctx);
+      popSccIfRoot(node, state);
+    }
+  }
 }

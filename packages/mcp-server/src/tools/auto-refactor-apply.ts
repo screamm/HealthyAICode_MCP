@@ -13,50 +13,162 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
 ) => void;
 
+interface HandleAutoRefactorApplyOptions {
+  filePath: string;
+  languageOverride?: string;
+  targetSmellArg?: string;
+  _strategyOverride?: string;
+  preserveBackup?: boolean;
+}
+
+interface RefactorContext {
+  resolvedPath: string;
+  originalCode: string;
+  transformedCode: string;
+  language: Language;
+  preserveBackup?: boolean;
+  refactorResult: AutoRefactorResult;
+  applyResult: ReturnType<typeof applyAutoRefactor>;
+}
+
+const filePathSchema = z.string().describe('Absolute or relative path to the file to refactor');
+const languageSchema = z.string().optional().describe('Source language override (auto-detected from extension if omitted)');
+const targetSmellSchema = z.string().optional().describe('Optional SmellType to target (e.g. ComplexMethod, DeepNesting, BumpyRoad)');
+const strategySchema = z.string().optional().describe('Optional strategy override (e.g. early_return, simplify_conditional)');
+const backupBase = z.boolean().optional().default(true);
+const preserveBackupSchema = backupBase.describe('If true (default), preserve the original as a .bak file');
+
+const AUTO_REFACTOR_SCHEMA = {
+  filePath: filePathSchema,
+  language: languageSchema,
+  targetSmell: targetSmellSchema,
+  strategy: strategySchema,
+  preserveBackup: preserveBackupSchema,
+};
+
 export function registerAutoRefactorApply(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  const registerTool = server.tool.bind(server) as unknown as McpToolRegistrar;
+  registerTool(
     'code_health_auto_refactor_apply',
     'Analyzes a source file, applies an automatic mechanical refactoring for the worst smell, ' +
       'and writes the transformed code back to disk. Returns original score, new score, ' +
       'what was changed, and a diff. Optionally preserves a .bak backup.',
-    {
-      filePath: z.string().describe('Absolute or relative path to the file to refactor'),
-      language: z
-        .string()
-        .optional()
-        .describe('Source language override (auto-detected from extension if omitted)'),
-      targetSmell: z
-        .string()
-        .optional()
-        .describe('Optional SmellType to target (e.g. ComplexMethod, DeepNesting, BumpyRoad)'),
-      strategy: z
-        .string()
-        .optional()
-        .describe('Optional strategy override (e.g. early_return, simplify_conditional)'),
-      preserveBackup: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('If true (default), preserve the original as a .bak file'),
-    },
+    AUTO_REFACTOR_SCHEMA,
     async ({ filePath, language, targetSmell, strategy, preserveBackup }) =>
-      handleAutoRefactorApply(
-        filePath as string,
-        language as string | undefined,
-        targetSmell as string | undefined,
-        strategy as string | undefined,
-        preserveBackup as boolean | undefined
-      )
+      handleAutoRefactorApply({
+        filePath: filePath as string,
+        languageOverride: language as string | undefined,
+        targetSmellArg: targetSmell as string | undefined,
+        _strategyOverride: strategy as string | undefined,
+        preserveBackup: preserveBackup as boolean | undefined,
+      })
   );
 }
 
-async function handleAutoRefactorApply(
-  filePath: string,
-  languageOverride?: string,
-  targetSmellArg?: string,
-  _strategyOverride?: string,
-  preserveBackup?: boolean
-) {
+async function resolveRefactorAnalysis(
+  resolvedPath: string,
+  code: string,
+  language: Language,
+  targetSmell: SmellType | undefined,
+): Promise<AutoRefactorResult | null> {
+  return analyzeForAutoRefactor(code, language, resolvedPath, targetSmell);
+}
+
+async function handleNoRefactorNeeded(resolvedPath: string) {
+  const healthResult = await analyzeFile(resolvedPath);
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            message: 'No refactoring needed — file is healthy',
+            filePath: resolvedPath,
+            score: healthResult.score,
+            category: healthResult.category,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+function handleNoTransformation(resolvedPath: string, refactorResult: AutoRefactorResult) {
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            message: 'No mechanical transformation could be applied',
+            filePath: resolvedPath,
+            strategy: refactorResult.refactoringStrategy,
+            smell: {
+              type: refactorResult.smell.type,
+              severity: refactorResult.smell.severity,
+              description: refactorResult.smell.description,
+            },
+            refactoringInstructions: refactorResult.refactoringInstructions,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function writeRefactoredFile(ctx: RefactorContext): Promise<void> {
+  const { resolvedPath, originalCode, transformedCode, preserveBackup } = ctx;
+  if (preserveBackup !== false) {
+    await fs.writeFile(resolvedPath + '.bak', originalCode, 'utf-8');
+  }
+  await fs.writeFile(resolvedPath, transformedCode, 'utf-8');
+}
+
+async function buildRefactorSuccessResponse(ctx: RefactorContext) {
+  const { resolvedPath, originalCode, language, refactorResult, applyResult } = ctx;
+  const originalHealth = analyzeCode(originalCode, language, resolvedPath);
+  const newHealth = await analyzeFile(resolvedPath);
+  const scoreDelta = parseFloat((newHealth.score - originalHealth.score).toFixed(1));
+  const diff = computeSimpleDiff(originalCode, applyResult.transformedCode);
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            filePath: resolvedPath,
+            strategy: applyResult.strategy,
+            originalScore: originalHealth.score,
+            newScore: newHealth.score,
+            scoreDelta,
+            category: newHealth.category,
+            changes: applyResult.changes,
+            diff,
+            targetFunction: refactorResult.targetFunction,
+            smell: {
+              type: refactorResult.smell.type,
+              severity: refactorResult.smell.severity,
+              description: refactorResult.smell.description,
+            },
+            predictedScoreDelta: refactorResult.predictedScoreDelta,
+            followUpInstruction:
+              'Run code_health_review on the file to verify the improvement and check for any new smells.',
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleAutoRefactorApply(options: HandleAutoRefactorApplyOptions) {
+  const { filePath, languageOverride, targetSmellArg, preserveBackup } = options;
   try {
     const resolvedPath = path.resolve(filePath);
     const code = await fs.readFile(resolvedPath, 'utf-8');
@@ -66,112 +178,29 @@ async function handleAutoRefactorApply(
       : detectLanguage(resolvedPath);
 
     const targetSmell = targetSmellArg as SmellType | undefined;
-
-    // 1. Run the auto-refactor analysis
-    const refactorResult: AutoRefactorResult | null = analyzeForAutoRefactor(
-      code,
-      language,
-      resolvedPath,
-      targetSmell
-    );
+    const refactorResult = await resolveRefactorAnalysis(resolvedPath, code, language, targetSmell);
 
     if (!refactorResult) {
-      const healthResult = await analyzeFile(resolvedPath);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              {
-                message: 'No refactoring needed — file is healthy',
-                filePath: resolvedPath,
-                score: healthResult.score,
-                category: healthResult.category,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
+      return handleNoRefactorNeeded(resolvedPath);
     }
 
-    // 2. Apply the mechanical refactoring
     const applyResult = applyAutoRefactor(code, refactorResult);
 
     if (applyResult.changes.length === 0 || code === applyResult.transformedCode) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              {
-                message: 'No mechanical transformation could be applied',
-                filePath: resolvedPath,
-                strategy: refactorResult.refactoringStrategy,
-                smell: {
-                  type: refactorResult.smell.type,
-                  severity: refactorResult.smell.severity,
-                  description: refactorResult.smell.description,
-                },
-                refactoringInstructions: refactorResult.refactoringInstructions,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
+      return handleNoTransformation(resolvedPath, refactorResult);
     }
 
-    // 3. Preserve backup if requested
-    if (preserveBackup !== false) {
-      const backupPath = resolvedPath + '.bak';
-      await fs.writeFile(backupPath, code, 'utf-8');
-    }
-
-    // 4. Write the transformed code back to disk
-    await fs.writeFile(resolvedPath, applyResult.transformedCode, 'utf-8');
-
-    // 5. Re-run code health review to verify improvement
-    const originalHealth = analyzeCode(code, language, resolvedPath);
-    const newHealth = await analyzeFile(resolvedPath);
-
-    const scoreDelta = parseFloat((newHealth.score - originalHealth.score).toFixed(1));
-
-    // 6. Compute diff
-    const diff = computeSimpleDiff(code, applyResult.transformedCode);
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(
-            {
-              filePath: resolvedPath,
-              strategy: applyResult.strategy,
-              originalScore: originalHealth.score,
-              newScore: newHealth.score,
-              scoreDelta,
-              category: newHealth.category,
-              changes: applyResult.changes,
-              diff,
-              targetFunction: refactorResult.targetFunction,
-              smell: {
-                type: refactorResult.smell.type,
-                severity: refactorResult.smell.severity,
-                description: refactorResult.smell.description,
-              },
-              predictedScoreDelta: refactorResult.predictedScoreDelta,
-              followUpInstruction:
-                'Run code_health_review on the file to verify the improvement and check for any new smells.',
-            },
-            null,
-            2
-          ),
-        },
-      ],
+    const ctx: RefactorContext = {
+      resolvedPath,
+      originalCode: code,
+      transformedCode: applyResult.transformedCode,
+      language,
+      preserveBackup,
+      refactorResult,
+      applyResult,
     };
+    await writeRefactoredFile(ctx);
+    return buildRefactorSuccessResponse(ctx);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return {

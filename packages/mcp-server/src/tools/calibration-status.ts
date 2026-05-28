@@ -40,59 +40,82 @@ interface CalibrationEntry {
   fileSizeKb?: number;
 }
 
+/** Resolve the calibration directory path. */
+function resolveCalibrationDir(calibrationDir?: string): string {
+  return calibrationDir
+    ? resolve(calibrationDir)
+    : resolve(process.cwd(), 'packages', 'core', 'calibration');
+}
+
+/** Determine whether a parsed calibration file is a placeholder. */
+function detectIsPlaceholder(raw: Record<string, unknown>): boolean {
+  const metrics = raw.metrics as Record<string, unknown> | undefined;
+  return (
+    (typeof raw.datasetVersion === 'string' && raw.datasetVersion.toLowerCase().includes('placeholder')) ||
+    (typeof metrics?.note === 'string' && (metrics.note as string).toLowerCase().includes('placeholder')) ||
+    (metrics?.f1Score === null && metrics?.aucScore === null && !metrics?.trainSize)
+  );
+}
+
+/** Parse a calibration JSON file into a CalibrationEntry. */
+function parseCalibrationFile(lang: string, filePath: string): CalibrationEntry {
+  try {
+    const raw = JSON.parse(readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
+    const fileSize = statSync(filePath).size;
+    const isPlaceholder = detectIsPlaceholder(raw);
+    const metrics = raw.metrics as Record<string, unknown> | undefined;
+
+    return {
+      language: lang,
+      hasCalibration: true,
+      version: raw.version as string | undefined,
+      generatedAt: raw.generatedAt as string | undefined,
+      datasetVersion: raw.datasetVersion as string | undefined,
+      thresholdCount: raw.thresholds ? Object.keys(raw.thresholds as object).length : 0,
+      weightCount: raw.weights ? Object.keys(raw.weights as object).length : 0,
+      f1Score: metrics?.f1Score as number | null ?? null,
+      aucScore: metrics?.aucScore as number | null ?? null,
+      isPlaceholder,
+      fileSizeKb: Math.round((fileSize / 1024) * 10) / 10,
+    };
+  } catch {
+    // Malformed JSON — report as present but treat as placeholder
+    return { language: lang, hasCalibration: true, isPlaceholder: true };
+  }
+}
+
+/** Load calibration entries for all supported languages from a directory. */
+function loadCalibrationEntries(dir: string): CalibrationEntry[] {
+  return SUPPORTED_LANGUAGES.map(lang => {
+    const filePath = join(dir, `${lang}.json`);
+    if (!existsSync(filePath)) {
+      return { language: lang, hasCalibration: false, isPlaceholder: false };
+    }
+    return parseCalibrationFile(lang, filePath);
+  });
+}
+
+/** Build summary counts from entries. */
+interface CalibrationCounts {
+  empiricalCount: number;
+  placeholderCount: number;
+  missingCount: number;
+}
+
+function countCalibrationEntries(entries: CalibrationEntry[]): CalibrationCounts {
+  return {
+    empiricalCount: entries.filter(e => e.hasCalibration && !e.isPlaceholder).length,
+    placeholderCount: entries.filter(e => e.hasCalibration && e.isPlaceholder).length,
+    missingCount: entries.filter(e => !e.hasCalibration).length,
+  };
+}
+
 export async function handleCalibrationStatus(
   calibrationDir?: string,
 ): Promise<{ content: { type: string; text: string }[] }> {
-  const dir = calibrationDir
-    ? resolve(calibrationDir)
-    : resolve(process.cwd(), 'packages', 'core', 'calibration');
-
-  const entries: CalibrationEntry[] = [];
-
-  for (const lang of SUPPORTED_LANGUAGES) {
-    const filePath = join(dir, `${lang}.json`);
-
-    if (!existsSync(filePath)) {
-      entries.push({ language: lang, hasCalibration: false, isPlaceholder: false });
-      continue;
-    }
-
-    try {
-      const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-      const fileSize = statSync(filePath).size;
-
-      // Detect placeholder: either explicit note contains 'placeholder', datasetVersion mentions it,
-      // or metrics have null f1Score and null aucScore.
-      const isPlaceholder =
-        (typeof raw.datasetVersion === 'string' && raw.datasetVersion.toLowerCase().includes('placeholder')) ||
-        (typeof raw.metrics?.note === 'string' && raw.metrics.note.toLowerCase().includes('placeholder')) ||
-        (raw.metrics?.f1Score === null && raw.metrics?.aucScore === null && !raw.metrics?.trainSize);
-
-      const thresholdCount = raw.thresholds ? Object.keys(raw.thresholds).length : 0;
-      const weightCount = raw.weights ? Object.keys(raw.weights).length : 0;
-
-      entries.push({
-        language: lang,
-        hasCalibration: true,
-        version: raw.version,
-        generatedAt: raw.generatedAt,
-        datasetVersion: raw.datasetVersion,
-        thresholdCount,
-        weightCount,
-        f1Score: raw.metrics?.f1Score ?? null,
-        aucScore: raw.metrics?.aucScore ?? null,
-        isPlaceholder,
-        fileSizeKb: Math.round((fileSize / 1024) * 10) / 10,
-      });
-    } catch {
-      // Malformed JSON — report as present but treat as placeholder
-      entries.push({ language: lang, hasCalibration: true, isPlaceholder: true });
-    }
-  }
-
-  const empiricalCount = entries.filter(e => e.hasCalibration && !e.isPlaceholder).length;
-  const placeholderCount = entries.filter(e => e.hasCalibration && e.isPlaceholder).length;
-  const missingCount = entries.filter(e => !e.hasCalibration).length;
+  const dir = resolveCalibrationDir(calibrationDir);
+  const entries = loadCalibrationEntries(dir);
+  const { empiricalCount, placeholderCount, missingCount } = countCalibrationEntries(entries);
 
   const summary = {
     calibrationDir: dir,

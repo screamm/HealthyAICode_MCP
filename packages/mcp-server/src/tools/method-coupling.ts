@@ -10,31 +10,49 @@ type McpToolRegistrar = (
   handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
 ) => void;
 
+// --- Configuration constants ---
+const DEFAULT_COUPLING_THRESHOLD = 0.5;
+const DEFAULT_MAX_COMMITS = 200;
+const MAX_COMMITS_LIMIT = 2000;
+const PERCENT_MULTIPLIER = 100;
+
+interface HandleMethodCouplingOptions {
+  repoPath: string;
+  filePath: string;
+  threshold: number;
+  maxCommits: number;
+}
+
+const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
+const filePathSchema = z.string().describe('Sökväg till filen, relativt repoPath');
+const thresholdNum = z.number().min(0).max(1);
+const thresholdWithDefault = thresholdNum.default(DEFAULT_COUPLING_THRESHOLD);
+const thresholdSchema = thresholdWithDefault.describe('Minsta co-change-styrka för att rapportera ett par (default 0.5)');
+const maxCommitsNum = z.number().int().min(1).max(MAX_COMMITS_LIMIT);
+const maxCommitsWithDefault = maxCommitsNum.default(DEFAULT_MAX_COMMITS);
+const maxCommitsSchema = maxCommitsWithDefault.describe('Maxantal commits att analysera (default 200)');
+
 export function registerMethodCoupling(server: McpServer): void {
   (server.tool as unknown as McpToolRegistrar)(
     'code_health_method_coupling',
     'Analyserar metodnivå temporal coupling i en fil — visar par av metoder som tenderar att ändras tillsammans över git-historiken (X-Ray-light).',
     {
-      repoPath: z.string().describe('Absolut sökväg till git-repots rotkatalog'),
-      filePath: z.string().describe('Sökväg till filen, relativt repoPath'),
-      threshold: z.number().min(0).max(1).default(0.5).describe('Minsta co-change-styrka för att rapportera ett par (default 0.5)'),
-      maxCommits: z.number().int().min(1).max(2000).default(200).describe('Maxantal commits att analysera (default 200)'),
+      repoPath: repoPathSchema,
+      filePath: filePathSchema,
+      threshold: thresholdSchema,
+      maxCommits: maxCommitsSchema,
     },
-    async (args) => handleMethodCoupling(
-      args.repoPath as string,
-      args.filePath as string,
-      args.threshold as number,
-      args.maxCommits as number,
-    ),
+    async (args) => handleMethodCoupling({
+      repoPath: args.repoPath as string,
+      filePath: args.filePath as string,
+      threshold: args.threshold as number,
+      maxCommits: args.maxCommits as number,
+    }),
   );
 }
 
-async function handleMethodCoupling(
-  repoPath: string,
-  filePath: string,
-  threshold: number,
-  maxCommits: number,
-) {
+async function handleMethodCoupling(options: HandleMethodCouplingOptions) {
+  const { repoPath, filePath, threshold, maxCommits } = options;
   try {
     const result = await analyzeMethodCoupling(repoPath, filePath, { threshold, maxCommits });
     const body = {
@@ -45,7 +63,7 @@ async function handleMethodCoupling(
       pairs: result.pairs.map(p => ({
         methodA: p.methodA,
         methodB: p.methodB,
-        coChange: `${(p.couplingStrength * 100).toFixed(0)}%`,
+        coChange: `${(p.couplingStrength * PERCENT_MULTIPLIER).toFixed(0)}%`,
         couplings: `${p.coChangeCount} of ${p.combinedTouches}`,
         severity: p.severity,
       })),

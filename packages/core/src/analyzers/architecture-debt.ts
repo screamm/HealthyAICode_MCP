@@ -1,4 +1,4 @@
-﻿/**
+/**
  * architecture-debt.ts
  * Orchestrates the full architecture debt analysis pipeline:
  *   1. Build dependency graph from file contents
@@ -36,12 +36,24 @@ const BATCH_SIZE = 50;
 // FAN-IN / FAN-OUT
 // ---------------------------------------------------------------------------
 
+/**
+ * Fan-in / fan-out metrics for a single graph node.
+ * - fanIn:       number of other modules that import this module.
+ * - fanOut:      number of modules this module imports.
+ * - instability: fanOut / (fanIn + fanOut); 0 = maximally stable, 1 = maximally unstable.
+ */
 export interface FanMetrics {
   fanIn: number;
   fanOut: number;
   instability: number;
 }
 
+/**
+ * Computes fan-in, fan-out, and instability for every node in the dependency graph.
+ *
+ * @param graph - The directed dependency graph to analyse.
+ * @returns A map from node identifier to its {@link FanMetrics}.
+ */
 export function computeFanInFanOut(graph: DependencyGraph): Map<string, FanMetrics> {
   const result = new Map<string, FanMetrics>();
 
@@ -96,6 +108,27 @@ function buildTransposedEdges(graph: DependencyGraph): Map<string, Set<string>> 
 }
 
 /**
+ * BFS from a single start node on the transposed graph.
+ * Returns the set of all nodes reachable from startNode (including startNode itself).
+ */
+function bfsReachable(startNode: string, transposed: Map<string, Set<string>>): Set<string> {
+  const visited = new Set<string>([startNode]);
+  const queue: string[] = [startNode];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const neighbour of transposed.get(current) ?? []) {
+      if (!visited.has(neighbour)) {
+        visited.add(neighbour);
+        queue.push(neighbour);
+      }
+    }
+  }
+
+  return visited;
+}
+
+/**
  * For each node M, computes the fraction of the codebase that transitively depends on M.
  * Uses BFS on the transposed graph starting from M.
  */
@@ -107,20 +140,7 @@ export function computePropagationCost(graph: DependencyGraph): Map<string, numb
   const transposed = buildTransposedEdges(graph);
 
   for (const startNode of graph.nodes) {
-    const visited = new Set<string>();
-    const queue: string[] = [startNode];
-    visited.add(startNode);
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      for (const neighbour of transposed.get(current) ?? []) {
-        if (!visited.has(neighbour)) {
-          visited.add(neighbour);
-          queue.push(neighbour);
-        }
-      }
-    }
-
+    const visited = bfsReachable(startNode, transposed);
     // Exclude the node itself from the count
     const affected = visited.size - 1;
     result.set(startNode, affected / Math.max(total, 1));
@@ -133,12 +153,18 @@ export function computePropagationCost(graph: DependencyGraph): Map<string, numb
 // Batched change frequency fetching
 // ---------------------------------------------------------------------------
 
+/** Options controlling batched git log queries for change frequency. */
+interface ChangeFrequencyOptions {
+  repoPath: string;
+  windowMonths: number;
+  batchSize: number;
+}
+
 async function fetchChangeFrequenciesBatched(
-  repoPath: string,
+  options: ChangeFrequencyOptions,
   filePaths: string[],
-  windowMonths: number,
-  batchSize: number,
 ): Promise<Map<string, number>> {
+  const { repoPath, windowMonths, batchSize } = options;
   const resultMap = new Map<string, number>();
 
   for (let i = 0; i < filePaths.length; i += batchSize) {
@@ -165,6 +191,141 @@ function classifySeverity(score: number): 'high' | 'medium' | 'low' {
 }
 
 // ---------------------------------------------------------------------------
+// Internal pipeline helpers
+// ---------------------------------------------------------------------------
+
+/** Validates inputs and throws on invalid arguments. */
+function validateAnalysisInputs(
+  repoPath: string,
+  files: Record<string, { content: string; language: string }>,
+): void {
+  if (typeof repoPath !== 'string' || repoPath.trim() === '') {
+    throw new Error('repoPath must be a non-empty string');
+  }
+  if (typeof files !== 'object' || files === null) {
+    throw new Error('files must be an object');
+  }
+}
+
+/** Returns the empty result shape when no files are provided. */
+function buildEmptyResult(repoPath: string): ArchitectureDebtResult {
+  return {
+    directory: repoPath,
+    depth: 'file',
+    totalModules: 0,
+    modules: [],
+    cycles: [],
+    topCostlyModules: [],
+    summary: {
+      avgFanIn: 0, avgFanOut: 0, avgPropagationCost: 0, avgCostOfChange: 0,
+      cycleCount: 0, modulesInCycles: 0, highSeverityModules: 0,
+    },
+  };
+}
+
+/** Computed metrics derived from graph analysis, grouped to eliminate DataClumps. */
+interface GraphMetrics {
+  fanMetrics: Map<string, FanMetrics>;
+  propCosts: Map<string, number>;
+  changeFreqMap: Map<string, number>;
+  inCycleNodes: Set<string>;
+  /** Maximum fan-in value for normalisation, computed once per analysis pass. */
+  maxFanIn: number;
+  /** Maximum change frequency value for normalisation, computed once per analysis pass. */
+  maxChangeFreq: number;
+}
+
+/** Computes normalisation denominators and returns an enriched GraphMetrics object. */
+function enrichMetricsWithDenominators(metrics: Omit<GraphMetrics, 'maxFanIn' | 'maxChangeFreq'>): GraphMetrics {
+  let maxFanIn = 1;
+  let maxChangeFreq = 1;
+  for (const m of metrics.fanMetrics.values()) {
+    if (m.fanIn > maxFanIn) maxFanIn = m.fanIn;
+  }
+  for (const v of metrics.changeFreqMap.values()) {
+    if (v > maxChangeFreq) maxChangeFreq = v;
+  }
+  return { ...metrics, maxFanIn, maxChangeFreq };
+}
+
+/** Builds a ModuleDebtProfile for a single graph node. */
+function buildModuleProfile(node: string, metrics: GraphMetrics): ModuleDebtProfile {
+  const fan = metrics.fanMetrics.get(node) ?? { fanIn: 0, fanOut: 0, instability: 0 };
+  const propCost = metrics.propCosts.get(node) ?? 0;
+  const churn = metrics.changeFreqMap.get(node) ?? 0;
+  const inCycle = metrics.inCycleNodes.has(node);
+
+  const fanInNorm = fan.fanIn / metrics.maxFanIn;
+  const churnNorm = churn / metrics.maxChangeFreq;
+  const cyclePenalty = inCycle ? 1.0 : 0.0;
+
+  const rawScore =
+    fanInNorm * WEIGHT_FAN_IN +
+    propCost * WEIGHT_PROPAGATION +
+    cyclePenalty * WEIGHT_CYCLE +
+    churnNorm * WEIGHT_CHURN;
+
+  const costOfChange = Math.min(1, Math.max(0, rawScore));
+
+  return {
+    filePath: node,
+    fanIn: fan.fanIn,
+    fanOut: fan.fanOut,
+    instability: fan.instability,
+    propagationCost: propCost,
+    inCycle,
+    changeFrequency: churn,
+    costOfChange,
+    costOfChangeSeverity: classifySeverity(costOfChange),
+  };
+}
+
+/** Builds all ModuleDebtProfiles for the graph, sorted by costOfChange descending. */
+function buildSortedModuleProfiles(
+  graph: DependencyGraph,
+  rawMetrics: Omit<GraphMetrics, 'maxFanIn' | 'maxChangeFreq'>,
+): ModuleDebtProfile[] {
+  const metrics = enrichMetricsWithDenominators(rawMetrics);
+
+  const modules: ModuleDebtProfile[] = [];
+  for (const node of graph.nodes) {
+    modules.push(buildModuleProfile(node, metrics));
+  }
+
+  modules.sort((a, b) => b.costOfChange - a.costOfChange);
+  return modules;
+}
+
+/** Converts raw cycle SCCs into typed DependencyCycle records, sorted by size descending. */
+function buildCycleList(cycleSccs: string[][]): DependencyCycle[] {
+  return cycleSccs
+    .map(scc => ({
+      members: scc,
+      size: scc.length,
+      severity: (scc.length > 5 ? 'high' : 'medium') as 'high' | 'medium',
+    }))
+    .sort((a, b) => b.size - a.size);
+}
+
+/** Computes aggregate summary statistics across all module profiles. */
+function computeSummaryStats(
+  modules: ModuleDebtProfile[],
+  cycles: DependencyCycle[],
+  inCycleNodes: Set<string>,
+): ArchitectureDebtResult['summary'] {
+  const n = modules.length || 1;
+  return {
+    avgFanIn: modules.reduce((s, m) => s + m.fanIn, 0) / n,
+    avgFanOut: modules.reduce((s, m) => s + m.fanOut, 0) / n,
+    avgPropagationCost: modules.reduce((s, m) => s + m.propagationCost, 0) / n,
+    avgCostOfChange: modules.reduce((s, m) => s + m.costOfChange, 0) / n,
+    cycleCount: cycles.length,
+    modulesInCycles: inCycleNodes.size,
+    highSeverityModules: modules.filter(m => m.costOfChangeSeverity === 'high').length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -179,116 +340,31 @@ export async function analyzeArchitectureDebt(
   repoPath: string,
   files: Record<string, { content: string; language: string }>,
 ): Promise<ArchitectureDebtResult> {
-  // Runtime input validation
-  if (typeof repoPath !== 'string' || repoPath.trim() === '') {
-    throw new Error('repoPath must be a non-empty string');
-  }
-  if (typeof files !== 'object' || files === null) {
-    throw new Error('files must be an object');
+  validateAnalysisInputs(repoPath, files);
+
+  if (Object.keys(files).length === 0) {
+    return buildEmptyResult(repoPath);
   }
 
-  const fileKeys = Object.keys(files);
-
-  // Handle empty input
-  if (fileKeys.length === 0) {
-    return {
-      directory: repoPath,
-      depth: 'file',
-      totalModules: 0,
-      modules: [],
-      cycles: [],
-      topCostlyModules: [],
-      summary: {
-        avgFanIn: 0, avgFanOut: 0, avgPropagationCost: 0, avgCostOfChange: 0,
-        cycleCount: 0, modulesInCycles: 0, highSeverityModules: 0,
-      },
-    };
-  }
-
-  // Step 1: Build dependency graph
   const graph = buildDependencyGraph(files);
-
-  // Step 2: Structural metrics (synchronous)
   const fanMetrics = computeFanInFanOut(graph);
   const propCosts = computePropagationCost(graph);
 
-  // Step 3: Detect cycles via Tarjan's SCC
   const allSccs = findStronglyConnectedComponents(graph.edges);
   const cycleSccs = allSccs.filter(scc => scc.length > 1);
   const inCycleNodes = new Set(cycleSccs.flat());
 
-  // Step 4: Fetch change frequencies (batched git calls)
   const changeFreqMap = await fetchChangeFrequenciesBatched(
-    repoPath,
+    { repoPath, windowMonths: 12, batchSize: BATCH_SIZE },
     [...graph.nodes],
-    12,
-    BATCH_SIZE,
   );
 
-  // Step 5: Compute normalisation denominators
-  let maxFanIn = 1;
-  let maxChangeFreq = 1;
-  for (const m of fanMetrics.values()) {
-    if (m.fanIn > maxFanIn) maxFanIn = m.fanIn;
-  }
-  for (const v of changeFreqMap.values()) {
-    if (v > maxChangeFreq) maxChangeFreq = v;
-  }
-
-  // Step 6: Build ModuleDebtProfile per node
-  const modules: ModuleDebtProfile[] = [];
-
-  for (const node of graph.nodes) {
-    const fan = fanMetrics.get(node) ?? { fanIn: 0, fanOut: 0, instability: 0 };
-    const propCost = propCosts.get(node) ?? 0;
-    const churn = changeFreqMap.get(node) ?? 0;
-    const inCycle = inCycleNodes.has(node);
-
-    const fanInNorm = fan.fanIn / maxFanIn;
-    const churnNorm = churn / maxChangeFreq;
-    const cyclePenalty = inCycle ? 1.0 : 0.0;
-
-    const rawScore =
-      fanInNorm * WEIGHT_FAN_IN +
-      propCost * WEIGHT_PROPAGATION +
-      cyclePenalty * WEIGHT_CYCLE +
-      churnNorm * WEIGHT_CHURN;
-
-    const costOfChange = Math.min(1, Math.max(0, rawScore));
-
-    modules.push({
-      filePath: node,
-      fanIn: fan.fanIn,
-      fanOut: fan.fanOut,
-      instability: fan.instability,
-      propagationCost: propCost,
-      inCycle,
-      changeFrequency: churn,
-      costOfChange,
-      costOfChangeSeverity: classifySeverity(costOfChange),
-    });
-  }
-
-  // Sort by costOfChange descending
-  modules.sort((a, b) => b.costOfChange - a.costOfChange);
-
-  // Step 7: Build DependencyCycle list
-  const cycles: DependencyCycle[] = cycleSccs
-    .map(scc => ({
-      members: scc,
-      size: scc.length,
-      severity: (scc.length > 5 ? 'high' : 'medium') as 'high' | 'medium',
-    }))
-    .sort((a, b) => b.size - a.size);
-
-  // Step 8: Summary statistics
-  const n = modules.length || 1;
-  const avgFanIn = modules.reduce((s, m) => s + m.fanIn, 0) / n;
-  const avgFanOut = modules.reduce((s, m) => s + m.fanOut, 0) / n;
-  const avgPropagationCost = modules.reduce((s, m) => s + m.propagationCost, 0) / n;
-  const avgCostOfChange = modules.reduce((s, m) => s + m.costOfChange, 0) / n;
-  const modulesInCycles = inCycleNodes.size;
-  const highSeverityModules = modules.filter(m => m.costOfChangeSeverity === 'high').length;
+  const maxFanIn = Math.max(0, ...[...fanMetrics.values()].map(m => m.fanIn));
+  const maxChangeFreq = Math.max(0, ...changeFreqMap.values());
+  const metrics: GraphMetrics = { fanMetrics, propCosts, changeFreqMap, inCycleNodes, maxFanIn, maxChangeFreq };
+  const modules = buildSortedModuleProfiles(graph, metrics);
+  const cycles = buildCycleList(cycleSccs);
+  const summary = computeSummaryStats(modules, cycles, inCycleNodes);
 
   return {
     directory: repoPath,
@@ -297,14 +373,6 @@ export async function analyzeArchitectureDebt(
     modules,
     cycles,
     topCostlyModules: modules.slice(0, 10),
-    summary: {
-      avgFanIn,
-      avgFanOut,
-      avgPropagationCost,
-      avgCostOfChange,
-      cycleCount: cycles.length,
-      modulesInCycles,
-      highSeverityModules,
-    },
+    summary,
   };
 }

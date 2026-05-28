@@ -29,10 +29,25 @@ export interface TierBConfig {
   commentPrefix: string;
 }
 
+/** Output shape returned by the generic Tier B analyzer. */
 export interface TierBAnalyzerOutput {
   functions: FunctionResult[];
   metrics: MetricBreakdown;
   smells: Smell[];
+}
+
+/** A detected function's start line index (0-based) and name. */
+interface FunctionStart {
+  lineIdx: number;
+  name: string;
+}
+
+/** Context required to build a FunctionResult for a single detected function. */
+interface FunctionBuildContext {
+  start: FunctionStart;
+  nextLineIdx: number;
+  lines: string[];
+  controlFlowPattern: RegExp;
 }
 
 /**
@@ -74,62 +89,62 @@ export function analyzeGenericTierB(
 }
 
 /**
- * Scans lines for function definitions and estimates their boundaries.
- * For each found function, counts control-flow keyword occurrences
- * within the function body to compute cyclomatic complexity.
+ * Scans lines for function definitions, estimates their boundaries, and
+ * computes cyclomatic complexity for each function body.
  */
-function extractFunctionsTierB(
-  lines: string[],
-  config: TierBConfig,
-): FunctionResult[] {
-  const functions: FunctionResult[] = [];
+function extractFunctionsTierB(lines: string[], config: TierBConfig): FunctionResult[] {
+  const starts = collectFunctionStarts(lines, config.functionPatterns);
+  return starts.map((start, fi) => {
+    const nextLineIdx = fi + 1 < starts.length ? starts[fi + 1].lineIdx : lines.length;
+    return buildFunctionResult({ start, nextLineIdx, lines, controlFlowPattern: config.controlFlowKeywords });
+  });
+}
 
-  // Collect function start positions and names
-  const functionStarts: Array<{ lineIdx: number; name: string }> = [];
-
+/**
+ * Scans source lines against all configured patterns and returns ordered
+ * function start positions with their names.
+ */
+function collectFunctionStarts(lines: string[], patterns: RegExp[]): FunctionStart[] {
+  const starts: FunctionStart[] = [];
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    for (const pattern of config.functionPatterns) {
-      // Strip global flag to avoid stateful lastIndex issues
-      const freshPattern = new RegExp(pattern.source, pattern.flags.replace('g', ''));
-      const match = freshPattern.exec(line);
-      if (match) {
-        const name = match[1] ?? '<anonymous>';
-        functionStarts.push({ lineIdx: i, name });
-        break; // Only match one pattern per line
-      }
-    }
+    const name = matchFunctionLine(lines[i], patterns);
+    if (name !== null) starts.push({ lineIdx: i, name });
   }
+  return starts;
+}
 
-  for (let fi = 0; fi < functionStarts.length; fi++) {
-    const { lineIdx, name } = functionStarts[fi];
-    const startLine = lineIdx + 1; // 1-indexed
-
-    // Function ends just before the next function starts, or at EOF
-    const nextFuncIdx = fi + 1 < functionStarts.length
-      ? functionStarts[fi + 1].lineIdx
-      : lines.length;
-
-    const bodyLines = lines.slice(lineIdx, nextFuncIdx);
-    const bodyText = bodyLines.join('\n');
-    const length = nextFuncIdx - lineIdx;
-
-    // Count control-flow keywords in function body (base CC = 1)
-    const cyclomaticComplexity = countControlFlow(bodyText, config.controlFlowKeywords);
-
-    functions.push({
-      name,
-      line: startLine,
-      length: Math.max(length, 1),
-      cyclomaticComplexity,
-      cognitiveComplexity: 0,
-      nestingDepth: 0,
-      parameterCount: 0,
-      smells: [],
-    });
+/**
+ * Tests a single source line against each pattern in order.
+ * Returns the captured function name on the first match, or null if none match.
+ */
+function matchFunctionLine(line: string, patterns: RegExp[]): string | null {
+  for (const pattern of patterns) {
+    // Strip global flag to avoid stateful lastIndex issues
+    const freshPattern = new RegExp(pattern.source, pattern.flags.replace('g', ''));
+    const match = freshPattern.exec(line);
+    if (match) return match[1] ?? '<anonymous>';
   }
+  return null;
+}
 
-  return functions;
+/**
+ * Builds a FunctionResult for one detected function.
+ * The body extends from this function's start line up to (but not including)
+ * the next function's start line, or end-of-file.
+ */
+function buildFunctionResult(ctx: FunctionBuildContext): FunctionResult {
+  const { start, nextLineIdx, lines, controlFlowPattern } = ctx;
+  const bodyText = lines.slice(start.lineIdx, nextLineIdx).join('\n');
+  return {
+    name: start.name,
+    line: start.lineIdx + 1,
+    length: Math.max(nextLineIdx - start.lineIdx, 1),
+    cyclomaticComplexity: countControlFlow(bodyText, controlFlowPattern),
+    cognitiveComplexity: 0,
+    nestingDepth: 0,
+    parameterCount: 0,
+    smells: [],
+  };
 }
 
 /**
@@ -137,7 +152,6 @@ function extractFunctionsTierB(
  * Returns 1 (base CC) + count of matches.
  */
 function countControlFlow(bodyText: string, pattern: RegExp): number {
-  // Re-create with global flag to enable matchAll
   const globalPattern = new RegExp(pattern.source, 'g');
   const matches = [...bodyText.matchAll(globalPattern)];
   return 1 + matches.length;

@@ -66,23 +66,20 @@ const TYPED_CONSTANT_DECL = /\b(?:final|const)\b[^=\n]*\b[A-Z_][A-Z0-9_]+\b[^=\n
  * Reports all magic numbers per line using matchAll with the global regex.
  * All findings are severity "low" for text-based detection.
  */
+/** Returns true when the trimmed line should be excluded from magic number scanning. */
+function isMagicNumberSkipLine(trimmed: string): boolean {
+  if (!trimmed) return true;
+  if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('*')) return true;
+  if (SKIP_LINE_PREFIXES.some(p => trimmed.startsWith(p))) return true;
+  return CONSTANT_ASSIGNMENT.test(trimmed) || TYPED_CONSTANT_DECL.test(trimmed);
+}
+
 export function detectMagicNumbersFromText(code: string, filePath: string): Smell[] {
   if (SKIP_EXTENSIONS.some(ext => filePath.endsWith(ext))) return [];
 
   return code.split('\n').flatMap((line, idx) => {
     const trimmed = line.trim();
-    if (!trimmed) return [];
-    // Skip pure comment lines
-    if (
-      trimmed.startsWith('//') ||
-      trimmed.startsWith('#') ||
-      trimmed.startsWith('*')
-    ) return [];
-    // Skip import / using / package lines
-    if (SKIP_LINE_PREFIXES.some(p => trimmed.startsWith(p))) return [];
-    // Skip ALL_CAPS constant assignments and typed constant declarations
-    if (CONSTANT_ASSIGNMENT.test(trimmed) || TYPED_CONSTANT_DECL.test(trimmed)) return [];
-
+    if (isMagicNumberSkipLine(trimmed)) return [];
     const matches = [...trimmed.matchAll(MAGIC_PATTERN)];
     return matches.map(match => ({
       type: 'MagicNumber' as const,
