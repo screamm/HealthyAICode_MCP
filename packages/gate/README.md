@@ -30,6 +30,17 @@ The gate evaluates every proposed file write before it lands:
 
 4. **Deny `score_regression`** — edit lowers the score by more than the allowed
    delta tolerance (default −0.05, a small negative to absorb scoring noise).
+   The regression delta is computed over the **non-advisory** smell set:
+   documentation / intent / style findings (`LowDocCoverage`, `DocumentationDebt`,
+   `IntentClarity`, `MagicNumber`, `StyleInconsistency`, `LowMaintainability`) are
+   excluded so that adding a healthy pure function — which dilutes the doc-coverage
+   ratio and would otherwise register a `−0.3` `LowDocCoverage` dip — is **not**
+   blocked. Only a *structural* regression (complexity, nesting, duplication, …)
+   trips this rule. This keeps the measured false-positive rate on benign edits at
+   **0%** (29-edit corpus across TS/JS/Python/Java/Go; see
+   `tests/false-positive-rate.test.ts`), well under the 5% target — the
+   "hook off on day one" failure mode is what kills guardrails, so benign edits
+   must pass. The absolute `below_floor` check still uses the full score.
 
 5. **Allow** — all other edits, including those that improve the score.
 
@@ -138,8 +149,13 @@ Example — more permissive (legacy codebase):
 
 Run after installation to verify the gate actually blocks a known-bad edit on
 the installed harness version. This guards against the version-fragility risk:
-if a future Claude Code update changes how hook output is interpreted, the
-self-test catches it before any real code is gated.
+if a future Claude Code / Copilot update changes how hook output is interpreted,
+the self-test catches it before any real code is gated.
+
+The self-test does **not** just check the gate's verdict — it serialises the
+known-bad decision into **every supported hook-output schema shape** and asserts
+the JSON the harness reads encodes a block in each. Asserting across more than
+one shape means a single schema change cannot silently turn the gate off.
 
 ```bash
 # After pnpm build:
@@ -160,9 +176,17 @@ pnpm --filter @healthy-ai-code/gate selftest
   Harness    : claude-code
   Expected   : verdict="deny"
   Observed   : verdict="deny"
+
+  Hook-output schema conformance (known-bad edit must encode a block in each):
+    [BLOCK] preToolUse.permissionDecision  (hookSpecificOutput.permissionDecision="deny", needs "deny")
+    [BLOCK] preToolUse.legacyDecision  (decision="block", needs "block")
+    [BLOCK] postToolUse.decision  (decision="block", needs "block")
+
   Result     : PASS
 
-  Known-bad edit (SHA-256 → MD5, CryptographicMisuseRisk) was correctly DENIED.
+  Known-bad edit (insecure MD5 crypto misuse) was correctly DENIED and encodes
+  a block in every supported hook-output schema shape (modern PreToolUse
+  permissionDecision, legacy PreToolUse decision, and the PostToolUse fallback).
   Gate is wired correctly on this installed harness version.
 ```
 
@@ -172,12 +196,20 @@ This introduces a `CryptographicMisuseRisk` smell — one that flows through
 `analyzeCode`'s smell pipeline and that the gate's `new_security_smell` rule is
 designed to catch. The fixture is deterministic and reproducible.
 
+**Schema shapes covered** (verified against current contracts, June 2026):
+
+| Shape | Field asserted | Block value |
+|---|---|---|
+| Modern PreToolUse (Claude Code, VS Code Copilot) | `hookSpecificOutput.permissionDecision` | `"deny"` |
+| Legacy PreToolUse (older Claude Code, still accepted) | top-level `decision` | `"block"` |
+| PostToolUse graceful fallback (block could not be enforced pre-edit) | top-level `decision` | `"block"` |
+
 **Exit codes:**
 
 | Code | Meaning |
 |---|---|
-| 0 | Self-test passed — gate is wired correctly |
-| 1 | Self-test FAILED — gate did not block the known-bad fixture |
+| 0 | Self-test passed — gate blocks the known-bad fixture in every schema shape |
+| 1 | Self-test FAILED — gate did not block in one or more schema shapes |
 
 ---
 
@@ -238,6 +270,26 @@ instructs the agent to call the gate before editing.
 
 **Cursor enforcement is advisory, not enforced.** Only the Claude Code
 `PreToolUse` hook provides a deterministic block-before-land.
+
+---
+
+## Cross-harness deny contracts (verified June 2026)
+
+The gate emits the deny decision in the exact JSON each harness expects. These
+contracts were verified against current vendor docs (June 2026):
+
+| Harness | Hook | Deny JSON (stdout) | Enforced before edit? |
+|---|---|---|---|
+| **Claude Code** | `PreToolUse` | `{ "hookSpecificOutput": { "hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "…" } }` | Yes (block carried in JSON, not exit code — [#21988](https://github.com/anthropics/claude-code/issues/21988)) |
+| **VS Code Copilot** | `preToolUse` | Same `hookSpecificOutput.permissionDecision: "deny"` shape as Claude Code | Yes |
+| **Claude Code (legacy)** | `PreToolUse` | top-level `{ "decision": "block", "reason": "…" }` (still accepted; `block`→deny) | Yes |
+| **Cursor** | `afterFileEdit` | `{ "permission": "allow", "agent_message": "…" }` — informational only | **No** (advisory; Cursor has no pre-edit veto hook) |
+
+`deny` takes precedence over `ask`/`allow` when multiple hooks apply (Claude Code
+and Copilot). On Cursor, the pre-edit veto path is structurally unavailable, so
+the gate degrades to a post-edit advisory plus an agent rules file. The
+install-time self-test asserts the block survives serialisation into the modern
+and legacy Claude Code / Copilot shapes and the PostToolUse fallback.
 
 ---
 

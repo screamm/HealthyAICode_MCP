@@ -32,6 +32,29 @@ export interface PreToolUseHookOutput {
   systemMessage?: string;
 }
 
+/**
+ * Legacy Claude Code `PreToolUse` hook output (top-level `decision` form).
+ *
+ * Before `hookSpecificOutput.permissionDecision` existed, PreToolUse hooks
+ * signalled a block through a top-level `{ decision, reason }` object, where
+ * `"block"` denies and `"approve"` allows (the deprecated `"approve" | "block" |
+ * "ask"` values map to `"allow" | "deny" | "ask"`). Current Claude Code versions
+ * still accept this shape for backward compatibility (verified against the
+ * hooks reference, 2026-06; e.g. v2.0.76 accepts it without a validation error),
+ * and some third-party harness builds only understand the legacy form.
+ *
+ * The gate emits the modern shape by default and uses this legacy emitter only
+ * for cross-version conformance proof (see `runGateSelfTest`), so that the
+ * install-time self-test can assert a known-bad edit is blocked across BOTH
+ * schema shapes rather than only the one the running harness happens to parse.
+ */
+export interface LegacyPreToolUseHookOutput {
+  /** "block" denies the edit; "approve" allows; "ask" defers to the user. */
+  decision: 'approve' | 'block' | 'ask';
+  /** Self-correction reason shown to the model when blocked (or asked). */
+  reason: string;
+}
+
 /** Claude Code `PostToolUse` coaching output (graceful fallback when a block can't be enforced). */
 export interface PostToolUseHookOutput {
   /** "block" feeds `reason` back to the model as corrective context after the edit. */
@@ -75,6 +98,32 @@ export function toPreToolUseHookOutput(decision: GateDecision): PreToolUseHookOu
     output.systemMessage = `Code-health gate ${decision.verdict.toUpperCase()} (${decision.reasonCode}): ${decision.filePath}`;
   }
   return output;
+}
+
+/** Maps a {@link GateDecision} verdict to a legacy top-level `decision` value. */
+function toLegacyDecision(decision: GateDecision): 'approve' | 'block' | 'ask' {
+  switch (decision.verdict) {
+    case 'deny':
+      return 'block';
+    case 'warn':
+      return 'ask';
+    case 'allow':
+    default:
+      return 'approve';
+  }
+}
+
+/**
+ * Builds the **legacy** top-level `{ decision, reason }` `PreToolUse` payload.
+ * Equivalent semantics to {@link toPreToolUseHookOutput} but in the deprecated
+ * schema older / third-party harness versions understand: `decision: "block"`
+ * denies. Used by the cross-schema conformance self-test.
+ */
+export function toLegacyPreToolUseHookOutput(decision: GateDecision): LegacyPreToolUseHookOutput {
+  return {
+    decision: toLegacyDecision(decision),
+    reason: decision.reason,
+  };
 }
 
 /**

@@ -24,23 +24,29 @@ export type {
   GateDecision,
   GateConfig,
   GateSelfTestResult,
+  GateHookSchemaShape,
+  GateSchemaConformance,
 } from './gate-types';
 
-/** Smell classification used by the hard-deny rules. */
+/** Smell classification used by the hard-deny and false-positive-control rules. */
 export {
   SECURITY_SMELL_TYPES,
   AI_NATIVE_SMELL_TYPES,
+  ADVISORY_SMELL_TYPES,
   isSecuritySmell,
   isAiNativeSmell,
+  isAdvisorySmell,
 } from './smell-classification';
 
-/** Claude Code hook output contract. */
+/** Claude Code hook output contract (modern + legacy PreToolUse, PostToolUse fallback). */
 export {
   toPreToolUseHookOutput,
+  toLegacyPreToolUseHookOutput,
   toPostToolUseHookOutput,
 } from './claude-code-contract';
 export type {
   PreToolUseHookOutput,
+  LegacyPreToolUseHookOutput,
   PostToolUseHookOutput,
 } from './claude-code-contract';
 

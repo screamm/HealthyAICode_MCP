@@ -26,6 +26,15 @@ console.log('\n=== @healthy-ai-code/gate install-time conformance self-test ===\
 console.log(`  Harness    : ${result.harness}`);
 console.log(`  Expected   : verdict="${result.expectedVerdict}"`);
 console.log(`  Observed   : verdict="${result.observedVerdict}"`);
+console.log('');
+console.log('  Hook-output schema conformance (known-bad edit must encode a block in each):');
+for (const c of result.schemaConformance) {
+  console.log(
+    `    [${c.blocked ? 'BLOCK' : 'PASS-THROUGH'}] ${c.shape}` +
+    `  (${c.field}="${c.observedValue}", needs "${c.expectedValue}")`,
+  );
+}
+console.log('');
 console.log(`  Result     : ${result.passed ? 'PASS' : 'FAIL'}`);
 
 if (!result.passed) {
@@ -33,8 +42,9 @@ if (!result.passed) {
   console.log(`  FAILURE DETAIL: ${result.detail ?? 'no detail'}`);
   console.log('');
   console.log(
-    '  The gate is installed but did NOT block the known-bad fixture.\n' +
-    '  This means the hook deny path is broken or misconfigured.\n' +
+    '  The gate is installed but did NOT block the known-bad fixture across all\n' +
+    '  supported hook-output schema shapes. This means the deny path is broken or\n' +
+    '  a harness reading one of the failing shapes would let the edit through.\n' +
     '  Fix before deploying the gate in production.',
   );
   console.log('');
@@ -43,7 +53,9 @@ if (!result.passed) {
 
 console.log('');
 console.log(
-  '  Known-bad edit (hardcoded credential) was correctly DENIED.\n' +
+  '  Known-bad edit (insecure MD5 crypto misuse) was correctly DENIED and encodes\n' +
+  '  a block in every supported hook-output schema shape (modern PreToolUse\n' +
+  '  permissionDecision, legacy PreToolUse decision, and the PostToolUse fallback).\n' +
   '  Gate is wired correctly on this installed harness version.',
 );
 console.log('');

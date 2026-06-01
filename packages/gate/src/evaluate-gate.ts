@@ -27,7 +27,7 @@ import {
   type GateDecision,
   type GateReasonCode,
 } from './gate-types';
-import { isAiNativeSmell, isSecuritySmell } from './smell-classification';
+import { isAdvisorySmell, isAiNativeSmell, isSecuritySmell } from './smell-classification';
 import { collectSecuritySmells } from './security-smells';
 // Deep import: core's index does not re-export the scorer. The gate recomputes a
 // file's score from the merged smell set (see below) so the reported score and
@@ -103,15 +103,34 @@ export function evaluateGate(edit: ProposedEdit, config?: GateConfig): GateDecis
   const newSmells = newlyIntroducedSmells(beforeSmells, afterSmells);
 
   // Recompute the score from the MERGED smell set so the reported score (and the
-  // `below_floor` / `score_regression` checks) reflect the security smells too.
-  // Using core's own `calculateScore` keeps the formula in lockstep with the
-  // published Open Code Health Score. When no security smell is present, the
-  // merged set equals `analyzeCode`'s set and the score is unchanged.
+  // `below_floor` check) reflect the security smells too. Using core's own
+  // `calculateScore` keeps the formula in lockstep with the published Open Code
+  // Health Score. When no security smell is present, the merged set equals
+  // `analyzeCode`'s set and the score is unchanged.
   const scoreBefore = beforeResult ? calculateScore(beforeSmells, language) : null;
   const scoreAfter = calculateScore(afterSmells, language);
   const categoryAfter = categorize(scoreAfter);
   // For a new file there is no prior score; delta is 0 (judged on floor only).
   const scoreDelta = scoreAfter - (scoreBefore ?? scoreAfter);
+
+  // Regression-relevant delta: the same formula, but over the smell set with
+  // advisory (documentation / intent / style) findings removed. The plain
+  // `scoreDelta` above dips whenever an edit adds healthy code that dilutes a
+  // doc-coverage or style ratio — a `LowDocCoverage` registers and the file
+  // loses ~0.3 even though nothing got worse. Judging the regression rule on
+  // that raw delta denies benign add-helper / extract-variable edits (measured:
+  // a ~10% false-positive rate, the canonical "hook off on day one" trigger).
+  // The regression rule below uses this advisory-stripped delta instead, so only
+  // a *structural* regression (complexity, nesting, duplication, …) trips it.
+  // The reported `scoreDelta`, `scoreBefore`, `scoreAfter`, `below_floor`, and
+  // both hard-deny rules are unchanged — only the delta-regression threshold
+  // sees the filtered view.
+  const stripAdvisory = (s: Smell[]): Smell[] => s.filter((x) => !isAdvisorySmell(x.type));
+  const regressionScoreBefore = beforeResult
+    ? calculateScore(stripAdvisory(beforeSmells), language)
+    : null;
+  const regressionScoreAfter = calculateScore(stripAdvisory(afterSmells), language);
+  const regressionDelta = regressionScoreAfter - (regressionScoreBefore ?? regressionScoreAfter);
 
   const decisionBase = {
     filePath,
@@ -160,11 +179,16 @@ export function evaluateGate(edit: ProposedEdit, config?: GateConfig): GateDecis
   }
 
   // Rule 4 — delta regression (only meaningful when there is a prior version).
-  if (scoreBefore != null && scoreDelta < cfg.minDelta) {
+  // Judged on the advisory-stripped delta so that adding healthy code that only
+  // dilutes a doc-coverage / style ratio is NOT denied (false-positive control).
+  if (regressionScoreBefore != null && regressionDelta < cfg.minDelta) {
+    // Only the structural (non-advisory) new smells are the cause here; report
+    // those, not the advisory ones, so the self-correction message is honest.
+    const structuralNewSmells = newSmells.filter((s) => !isAdvisorySmell(s.type));
     return {
       verdict: 'deny',
       reasonCode: 'score_regression',
-      reason: buildReason('score_regression', { ...decisionBase, introduced: newSmells }),
+      reason: buildReason('score_regression', { ...decisionBase, introduced: structuralNewSmells }),
       ...decisionBase,
     };
   }

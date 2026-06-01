@@ -59,6 +59,44 @@ export const AI_NATIVE_SMELL_TYPES: ReadonlySet<string> = new Set<string>([
   'AiAttributedSATD',
 ]);
 
+/**
+ * Smell-type names that are **advisory** — documentation, intent, naming and
+ * style findings whose score contribution wiggles with file size rather than
+ * with any behaviour or safety change.
+ *
+ * Why this set exists (false-positive control)
+ * --------------------------------------------
+ * The gate's `score_regression` rule denies an edit whose health delta drops
+ * below the tolerance. Documentation-coverage and style metrics are *ratios* or
+ * *file-wide* findings: adding a small, perfectly healthy pure function dilutes
+ * the doc-coverage ratio and registers a fresh `LowDocCoverage` (weight 0.3 →
+ * −0.3 to the score) **even though the new code introduced no defect**. Treating
+ * that as a regression blocks exactly the benign edits (add-helper,
+ * extract-variable, extract-local) developers make constantly — the surest way
+ * to get the hook switched off "on day one".
+ *
+ * These types are therefore excluded from the *delta-regression* judgement (see
+ * `regressionRelevantSmells`). They are **not** excluded from the absolute
+ * `below_floor` check: a file genuinely dragged below the floor — for any reason,
+ * including pervasive doc debt — is still surfaced. And they never affect the
+ * security / AI-native hard-deny rules, which run on their own dedicated sets.
+ *
+ * Membership is an explicit, auditable allow-list of *non-structural,
+ * non-security, non-supply-chain* findings. Structural-complexity smells
+ * (ComplexMethod, DeepNesting, CognitiveComplexity, BrainMethod, GodClass,
+ * LargeMethod/LargeFile, DuplicateCode, …) are deliberately NOT advisory: an
+ * edit that makes a function materially more complex is a real regression and
+ * must still be denied.
+ */
+export const ADVISORY_SMELL_TYPES: ReadonlySet<string> = new Set<string>([
+  'LowDocCoverage',
+  'DocumentationDebt',
+  'IntentClarity',
+  'MagicNumber',
+  'StyleInconsistency',
+  'LowMaintainability',
+]);
+
 /** True when the smell type is in the hard-deny security set. */
 export function isSecuritySmell(type: SmellType): boolean {
   return SECURITY_SMELL_TYPES.has(type);
@@ -67,4 +105,13 @@ export function isSecuritySmell(type: SmellType): boolean {
 /** True when the smell type is in the hard-deny AI-native / supply-chain set. */
 export function isAiNativeSmell(type: SmellType): boolean {
   return AI_NATIVE_SMELL_TYPES.has(type);
+}
+
+/**
+ * True when the smell type is advisory (documentation / intent / style). Such
+ * smells are excluded from the delta-regression judgement so that adding healthy
+ * code is not blocked merely because a doc-coverage or style ratio dipped.
+ */
+export function isAdvisorySmell(type: SmellType): boolean {
+  return ADVISORY_SMELL_TYPES.has(type);
 }

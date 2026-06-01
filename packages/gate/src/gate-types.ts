@@ -74,8 +74,39 @@ export interface GateConfig {
 }
 
 /**
+ * Identifies one concrete hook-output schema shape that the conformance
+ * self-test proves a known-bad edit is blocked under.
+ */
+export type GateHookSchemaShape =
+  /** Modern Claude Code / VS Code Copilot: `hookSpecificOutput.permissionDecision: "deny"`. */
+  | 'preToolUse.permissionDecision'
+  /** Legacy Claude Code PreToolUse: top-level `decision: "block"`. */
+  | 'preToolUse.legacyDecision'
+  /** Graceful fallback when a pre-edit block cannot be enforced: PostToolUse `decision: "block"`. */
+  | 'postToolUse.decision';
+
+/**
+ * Per-schema-shape conformance result: does the serialised hook output for THIS
+ * shape actually encode a block for the known-bad edit?
+ */
+export interface GateSchemaConformance {
+  shape: GateHookSchemaShape;
+  /** Whether the serialised output for this shape encodes a block. */
+  blocked: boolean;
+  /** The field path inspected (e.g. "hookSpecificOutput.permissionDecision"). */
+  field: string;
+  /** The value observed at that field (e.g. "deny", "block"). */
+  observedValue: string;
+  /** The value required for a block (e.g. "deny", "block"). */
+  expectedValue: string;
+}
+
+/**
  * Result of the install-time conformance self-test: proves a known-bad edit is
- * actually blocked on the installed gate version.
+ * actually **blocked** on the installed gate version — not just that the gate's
+ * verdict is `deny`, but that the JSON the harness reads encodes a block — and
+ * that this holds across more than one hook-output schema shape (so a single
+ * Claude Code / Copilot schema change cannot silently turn the gate off).
  */
 export interface GateSelfTestResult {
   passed: boolean;
@@ -87,6 +118,12 @@ export interface GateSelfTestResult {
   observedVerdict: GateVerdict;
   /** The verdict the self-test expected (always 'deny' for the known-bad fixture). */
   expectedVerdict: GateVerdict;
+  /**
+   * Per-schema-shape conformance: the self-test asserts the known-bad edit is
+   * blocked under EVERY shape here. `passed` is true only when the verdict is
+   * `deny` AND every entry's `blocked` is true.
+   */
+  schemaConformance: GateSchemaConformance[];
   /** Diagnostic detail when `passed` is false. */
   detail?: string;
 }
