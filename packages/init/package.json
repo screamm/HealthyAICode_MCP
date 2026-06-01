@@ -1,0 +1,53 @@
+{
+  "name": "@healthy-ai-code/init",
+  "version": "0.1.0",
+  "description": "One-command installer: registers the Healthy AI Code MCP server, installs the PreToolUse gate hook, and runs a first health score — all under 60 seconds.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/screamm/HealthyAICode_MCP.git"
+  },
+  "homepage": "https://github.com/screamm/HealthyAICode_MCP#readme",
+  "bugs": {
+    "url": "https://github.com/screamm/HealthyAICode_MCP/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-health",
+    "installer",
+    "claude-code",
+    "ai",
+    "healthy-ai-code"
+  ],
+  "bin": {
+    "healthy-ai-code-init": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@healthy-ai-code/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

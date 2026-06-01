@@ -1,0 +1,56 @@
+{
+  "name": "@healthy-ai-code/gate",
+  "version": "0.1.0",
+  "description": "Deterministic delta-gating hook for AI code edits — blocks an edit before it lands only when it lowers a file below the floor or introduces a security / AI-native smell. Emits the Claude Code PreToolUse structured-JSON deny contract.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/screamm/HealthyAICode_MCP.git"
+  },
+  "homepage": "https://github.com/screamm/HealthyAICode_MCP#readme",
+  "bugs": {
+    "url": "https://github.com/screamm/HealthyAICode_MCP/issues"
+  },
+  "keywords": [
+    "code-health",
+    "delta-gating",
+    "claude-code",
+    "pretooluse",
+    "hook",
+    "ai-code",
+    "static-analysis",
+    "guardrail"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "healthy-ai-code-gate": "dist/cli.js",
+    "healthy-ai-code-gate-selftest": "dist/run-selftest.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "selftest": "node dist/run-selftest.js",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@healthy-ai-code/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
