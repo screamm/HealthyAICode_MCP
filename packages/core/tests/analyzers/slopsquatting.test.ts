@@ -108,8 +108,10 @@ describe('detectSlopsquatting — hallucination corpus', () => {
     expect(found[0].description.toLowerCase()).toContain('hallucination');
   });
 
-  it('flags a corpus hit on npm (openai-node-sdk)', async () => {
-    const out = await detectSlopsquatting(`import x from 'openai-node-sdk';`, 'typescript', 'a.ts');
+  it('flags a corpus hit on npm (react-codeshift)', async () => {
+    // react-codeshift is a documented real-world slopsquatting attack (Aikido/Lasso):
+    // a conflation of jscodeshift + react-codemod that accumulated downloads across 237 repos.
+    const out = await detectSlopsquatting(`import x from 'react-codeshift';`, 'typescript', 'a.ts');
     expect(slops(out)).toHaveLength(1);
   });
 });
@@ -165,13 +167,13 @@ describe('detectSlopsquatting — offline by default', () => {
     const code = `
 import e from 'express';
 import t from 'expres';
-import h from 'openai-node-sdk';
+import h from 'react-codeshift';
 `;
     await detectSlopsquatting(code, 'typescript', 'a.ts', {
       liveCheck: true,
       fetchPackageMeta,
     });
-    // express = popular (skip), expres = typosquat (offline hit), openai-node-sdk = corpus.
+    // express = popular (skip), expres = typosquat (offline hit), react-codeshift = corpus.
     // None should reach the live fetcher.
     expect(fetchPackageMeta).not.toHaveBeenCalled();
   });
