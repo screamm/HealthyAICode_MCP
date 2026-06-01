@@ -1,0 +1,1432 @@
+[
+  {
+    "title": "Code for Machines, Not Just Humans: Quantifying AI-Friendliness with Code Health Metrics (arXiv 2601.02200)",
+    "url": "https://arxiv.org/abs/2601.02200",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "AI-Generated Smells: An Analysis of Code and Architecture in LLM- and Agent-Driven Development (arXiv 2605.02741)",
+    "url": "https://arxiv.org/html/2605.02741",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "SmellBench: Evaluating LLM Agents on Architectural Code Smell Repair (arXiv 2605.07001)",
+    "url": "https://arxiv.org/abs/2605.07001",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Software design smells prediction using evolutionary and structural metrics (ScienceDirect 2025)",
+    "url": "https://www.sciencedirect.com/science/article/abs/pii/S2590118425000590",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Statistical-Based Metric Threshold Setting Method for Software Fault Prediction (arXiv 2602.06831)",
+    "url": "https://arxiv.org/html/2602.06831v1",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Studying the Prevalence of Exception Handling Anti-Patterns (arXiv 1704.00778)",
+    "url": "https://arxiv.org/abs/1704.00778",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "DrAsync: Identifying and Visualizing Anti-Patterns in Asynchronous JavaScript (ICSE 2022)",
+    "url": "https://www.franktip.org/pubs/icse2022-drasync.pdf",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Assessing automatically-generated tests code quality: beyond traditional test smells (Springer 2025)",
+    "url": "https://link.springer.com/article/10.1007/s10664-025-10718-x",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Measuring how changes in code readability attributes affect code quality evaluation by LLMs (arXiv 2507.05289)",
+    "url": "https://arxiv.org/abs/2507.05289",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "AI Copilot Code Quality: 2025 Data Suggests 4x Growth in Code Clones (GitClear)",
+    "url": "https://www.gitclear.com/ai_assistant_code_quality_2025_research",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Investigating The Smells of LLM Generated Code (arXiv 2510.03029)",
+    "url": "https://arxiv.org/abs/2510.03029",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "ROSE: Transformer-Based Refactoring Recommendation for Architectural Smells (arXiv 2507.12561)",
+    "url": "https://arxiv.org/abs/2507.12561",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Enhancing Software Quality with AI: A Transformer-Based Approach for Code Smell Detection (MDPI 2025)",
+    "url": "https://www.mdpi.com/2076-3417/15/8/4559",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "Architectural smells — Arcan Documentation",
+    "url": "https://docs.arcan.tech/2.9.0/architectural_smells/",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "SonarSource Cognitive Complexity White Paper",
+    "url": "https://www.sonarsource.com/docs/CognitiveComplexity.pdf",
+    "dimension": "metrics-research"
+  },
+  {
+    "title": "CodeScene CodeHealth MCP Server",
+    "url": "https://codescene.com/product/code-health-mcp",
+    "dimension": "competitive"
+  },
+  {
+    "title": "CodeScene 6x More Accurate Than SonarQube Study",
+    "url": "https://codescene.com/blog/6x-improvement-over-sonarqube",
+    "dimension": "competitive"
+  },
+  {
+    "title": "SonarQube MCP Server Product Page",
+    "url": "https://www.sonarsource.com/products/sonarqube/mcp-server/",
+    "dimension": "competitive"
+  },
+  {
+    "title": "SonarQube MCP Server Documentation",
+    "url": "https://docs.sonarsource.com/sonarqube-mcp-server",
+    "dimension": "competitive"
+  },
+  {
+    "title": "act101 — 163-language AST Refactoring MCP Server",
+    "url": "https://act101.ai/",
+    "dimension": "competitive"
+  },
+  {
+    "title": "Qodo (CodiumAI) AI Code Review Platform",
+    "url": "https://www.qodo.ai/",
+    "dimension": "competitive"
+  },
+  {
+    "title": "DeepSource AI Code Review Tools Comparison 2026",
+    "url": "https://deepsource.com/resources/ai-code-review-tools",
+    "dimension": "competitive"
+  },
+  {
+    "title": "tree-sitter-analyzer MCP Server (MIT, GitHub)",
+    "url": "https://github.com/aimasteracc/tree-sitter-analyzer",
+    "dimension": "competitive"
+  },
+  {
+    "title": "Codacy MCP Server (GitHub)",
+    "url": "https://github.com/codacy/codacy-mcp-server",
+    "dimension": "competitive"
+  },
+  {
+    "title": "arXiv:2601.02200 — Code for Machines, Not Just Humans",
+    "url": "https://arxiv.org/abs/2601.02200",
+    "dimension": "competitive"
+  },
+  {
+    "title": "arXiv:2509.20491 — AI-Specific Code Smells: From Specification to Detection",
+    "url": "https://arxiv.org/abs/2509.20491",
+    "dimension": "competitive"
+  },
+  {
+    "title": "CodeScene GitHub open-source MCP server",
+    "url": "https://github.com/codescene-oss/codescene-mcp-server",
+    "dimension": "competitive"
+  },
+  {
+    "title": "Vibe Coding Crisis: AI Technical Debt",
+    "url": "https://usekyros.ai/blog/vibe-coding-crisis-ai-technical-debt",
+    "dimension": "competitive"
+  },
+  {
+    "title": "CodeScene Scale AI Coding Safely",
+    "url": "https://codescene.com/use-cases/scale-ai-coding-safely",
+    "dimension": "competitive"
+  },
+  {
+    "title": "Qodo Series B funding announcement",
+    "url": "https://effloow.com/articles/best-ai-code-review-tools-coderabbit-claude-qodo-2026",
+    "dimension": "competitive"
+  },
+  {
+    "title": "SonarQube AI Code Assurance Documentation",
+    "url": "https://docs.sonarsource.com/sonarqube-cloud/ai-capabilities/ai-code-assurance",
+    "dimension": "competitive"
+  },
+  {
+    "title": "MCP 2026-07-28 Specification Release Candidate",
+    "url": "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Tools Specification 2025-11-25 (outputSchema, annotations, error handling)",
+    "url": "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "Tool Annotations as Risk Vocabulary — MCP Blog March 2026",
+    "url": "https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Elicitation Specification (draft)",
+    "url": "https://modelcontextprotocol.io/specification/draft/client/elicitation",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Tasks Specification 2025-11-25",
+    "url": "https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "Reducing MCP Token Usage by 100x — Dynamic Toolsets v2 (Speakeasy)",
+    "url": "https://www.speakeasy.com/blog/how-we-reduced-token-usage-by-100x-dynamic-toolsets-v2",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Tool Descriptions Are Smelly! (arXiv 2602.14878)",
+    "url": "https://arxiv.org/html/2602.14878v1",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Sampling — Flipping the Flow (WorkOS)",
+    "url": "https://workos.com/blog/mcp-sampling",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "Introducing the MCP Registry (September 2025)",
+    "url": "https://blog.modelcontextprotocol.io/posts/2025-09-08-mcp-registry-preview/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP Resources Specification (subscriptions)",
+    "url": "https://modelcontextprotocol.info/docs/concepts/resources/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP is Not the Problem, It's Your Server: Best Practices (Phil Schmid)",
+    "url": "https://www.philschmid.de/mcp-best-practices",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "What's New in MCP: Elicitation, Structured Content, OAuth Enhancements (Cisco)",
+    "url": "https://blogs.cisco.com/developer/whats-new-in-mcp-elicitation-structured-content-and-oauth-enhancements",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "MCP 2026-07-28 Stateless Release Candidate Explained (MCP.Directory)",
+    "url": "https://mcp.directory/blog/mcp-2026-07-28-release-candidate",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "10 Strategies to Reduce MCP Token Bloat (The New Stack)",
+    "url": "https://thenewstack.io/how-to-reduce-mcp-token-bloat/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "Code Quality Linting & Static Analysis MCP Servers (ChatForest)",
+    "url": "https://chatforest.com/reviews/code-quality-linting-mcp-servers/",
+    "dimension": "mcp-protocol"
+  },
+  {
+    "title": "Prompt caching — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Compaction — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/compaction",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Task budgets — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/task-budgets",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Fine-grained tool streaming — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/fine-grained-tool-streaming",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Programmatic tool calling — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Introducing advanced tool use on the Claude Developer Platform",
+    "url": "https://www.anthropic.com/engineering/advanced-tool-use",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Token-saving updates on the Anthropic API",
+    "url": "https://www.anthropic.com/news/token-saving-updates",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Effective context engineering for AI agents — Anthropic Engineering",
+    "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Structured outputs — Claude API Docs",
+    "url": "https://docs.claude.com/en/docs/build-with-claude/structured-outputs",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Adaptive thinking — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Batch processing — Claude API Docs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/batch-processing",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Claude Prompt Caching in 2026: The 5-Minute TTL Change — DEV Community",
+    "url": "https://dev.to/whoffagents/claude-prompt-caching-in-2026-the-5-minute-ttl-change-thats-costing-you-money-4363",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Anthropic Dynamic Filtering Reduces Web Fetch Token Use by 24% on Average — Geeky Gadgets",
+    "url": "https://www.geeky-gadgets.com/anthropic-tool-calling-updates/",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Claude Opus 4.6 Introduces Adaptive Reasoning and Context Compaction — InfoQ",
+    "url": "https://www.infoq.com/news/2026/03/opus-4-6-context-compaction/",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "Hermes Agent Ships Tool Search for MCP — MarkTechPost",
+    "url": "https://www.marktechpost.com/2026/05/29/hermes-agent-ships-tool-search-for-mcp-anthropic-evals-show-49-to-74-accuracy-gain-on-opus-4/",
+    "dimension": "token-reduction-api"
+  },
+  {
+    "title": "To Diff or Not to Diff? Structure-Aware and Adaptive Output Formats for Efficient LLM-based Code Editing",
+    "url": "https://arxiv.org/html/2604.27296",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Pre-Act: Multi-Step Planning and Reasoning Improves Acting in LLM Agents",
+    "url": "https://arxiv.org/html/2505.09970v2",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "MANTRA: Enhancing Automated Method-Level Refactoring with Contextual RAG and Multi-Agent LLM Collaboration",
+    "url": "https://arxiv.org/html/2503.14340v2",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "HAFixAgent: History-Aware Automated Program Repair Agent",
+    "url": "https://arxiv.org/html/2511.01047",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Teaching Language Models to Critique via Reinforcement Learning (CTRL)",
+    "url": "https://arxiv.org/abs/2502.03492",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Abstain and Validate: A Dual-LLM Policy for Reducing Noise in Agentic Program Repair",
+    "url": "https://arxiv.org/abs/2510.03217",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Optimizing Agentic Workflows using Meta-tools (AWO)",
+    "url": "https://arxiv.org/html/2601.22037v2",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "A Probabilistic Inference Scaling Theory for LLM Self-Correction (EMNLP 2025)",
+    "url": "https://aclanthology.org/2025.emnlp-main.685/",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "RefAgent: A Multi-agent LLM-based Framework for Automatic Software Refactoring",
+    "url": "https://arxiv.org/html/2511.03153v1",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "SWE-Edit: Rethinking Code Editing for Efficient SWE-Agent",
+    "url": "https://arxiv.org/abs/2604.26102",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Iterative review-fix loops remove LLM hallucinations, and there is a formula for it",
+    "url": "https://dev.to/yannick555/iterative-review-fix-loops-remove-llm-hallucinations-and-there-is-a-formula-for-it-4ee8",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Specification and Detection of LLM Code Smells",
+    "url": "https://arxiv.org/abs/2512.18020",
+    "dimension": "agentic-loops"
+  },
+  {
+    "title": "Evaluating Thresholds for Object-Oriented Software Metrics (Filo et al., JBCS 2024)",
+    "url": "https://journals-sol.sbc.org.br/index.php/jbcs/article/view/3373",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "SATT: Tailoring Code Metric Thresholds for Different Software Architectures (IEEE 2016)",
+    "url": "https://ieeexplore.ieee.org/document/7781795/",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Code Red: Business Impact of Code Quality — 39 Proprietary Codebases (arXiv 2203.04374)",
+    "url": "https://ar5iv.labs.arxiv.org/html/2203.04374",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Co-Change Graph Entropy: A New Process Metric for Defect Prediction (arXiv 2504.18511, MSR 2025)",
+    "url": "https://arxiv.org/abs/2504.18511",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "On the calibration of Just-in-time Defect Prediction (arXiv 2504.12051, MSR 2025)",
+    "url": "https://arxiv.org/abs/2504.12051",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Code Smell Detection via Pearson Correlation and ML Hyperparameter Optimization (arXiv 2510.05835)",
+    "url": "https://arxiv.org/abs/2510.05835",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Benchmarking LLM for Code Smells Detection: GPT-4.0 vs DeepSeek-V3 (arXiv 2504.16027, EASE 2025)",
+    "url": "https://arxiv.org/abs/2504.16027",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Software Metric Based Impact Analysis of Code Smells — Large Scale Empirical Study (Rahman et al., SPE 2025)",
+    "url": "https://onlinelibrary.wiley.com/doi/abs/10.1002/spe.3405",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Impact of Co-Occurrences of Code Smells and Design Patterns on Internal Code Quality Attributes (Imran et al., IET Software 2025)",
+    "url": "https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/sfw2/5579438",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "SQALE: The Ultimate Quality Model for Technical Debt (Sonar)",
+    "url": "https://www.sonarsource.com/blog/sqale-the-ultimate-quality-model-to-assess-technical-debt",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Code for Machines, Not Just Humans: Quantifying AI-Friendliness with Code Health Metrics (arXiv 2601.02200)",
+    "url": "https://arxiv.org/abs/2601.02200",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Goodhart's Law in Software Engineering — Why Metrics Get Gamed",
+    "url": "https://codepulsehq.com/guides/goodharts-law-engineering-metrics",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Calibrating Deep Learning-based Code Smell Detection using Human Feedback (IEEE ICSME 2023)",
+    "url": "https://ieeexplore.ieee.org/document/10356395/",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "CodeScene Code Health Product Page (proprietary calibration details)",
+    "url": "https://codescene.com/product/code-health",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "SonarQube Quality Gates — Sonar Way Thresholds (2025.1)",
+    "url": "https://docs.sonarsource.com/sonarqube-server/2025.1/instance-administration/analysis-functions/quality-gates",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "Deriving metric thresholds from benchmark data (Alves et al., ICSM 2010)",
+    "url": "https://www.researchgate.net/publication/224185200_Deriving_metric_thresholds_from_benchmark_data",
+    "dimension": "scoring-calibration"
+  },
+  {
+    "title": "AI-Generated Smells: An Analysis of Code and Architecture in LLM- and Agent-Driven Development (arXiv 2605.02741)",
+    "url": "https://arxiv.org/html/2605.02741",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Specification and Detection of LLM Code Smells (arXiv 2512.18020)",
+    "url": "https://arxiv.org/html/2512.18020",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "AI-Specific Code Smells: From Specification to Detection — SpecDetect4AI (arXiv 2509.20491)",
+    "url": "https://arxiv.org/html/2509.20491v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Detecting and Correcting Hallucinations in LLM-Generated Code via Deterministic AST Analysis (arXiv 2601.19106)",
+    "url": "https://arxiv.org/html/2601.19106v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "An Empirical Analysis of Static Analysis Methods for Detection and Mitigation of Code Library Hallucinations (arXiv 2604.07755)",
+    "url": "https://arxiv.org/html/2604.07755v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Importing Phantoms: Measuring LLM Package Hallucination Vulnerabilities (arXiv 2501.19012)",
+    "url": "https://arxiv.org/html/2501.19012v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "'TODO: Fix the Mess Gemini Created': GenAI-Induced Self-Admitted Technical Debt (arXiv 2601.07786)",
+    "url": "https://arxiv.org/html/2601.07786v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Self-Admitted Technical Debt in LLM Software: Empirical Comparison with ML and Non-ML Software (arXiv 2601.06266)",
+    "url": "https://arxiv.org/html/2601.06266v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "PromptDebt: A Comprehensive Study of Technical Debt Across LLM Projects (arXiv 2509.20497)",
+    "url": "https://arxiv.org/html/2509.20497v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Investigating The Smells of LLM Generated Code (arXiv 2510.03029)",
+    "url": "https://arxiv.org/html/2510.03029v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "From Technical Debt to Cognitive and Intent Debt (arXiv 2603.22106)",
+    "url": "https://arxiv.org/abs/2603.22106",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "An Empirical Study of Interaction Smells in Multi-Turn Human-LLM Collaborative Code Generation (arXiv 2603.09701)",
+    "url": "https://arxiv.org/abs/2603.09701",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Debt Behind the AI Boom: A Large-Scale Empirical Study of AI-Generated Code in the Wild (arXiv 2603.28592)",
+    "url": "https://arxiv.org/pdf/2603.28592",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "How to optimize SonarQube for reviewing AI-generated code (SonarSource 2025)",
+    "url": "https://www.sonarsource.com/blog/how-to-optimize-sonarqube-for-reviewing-ai-generated-code",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "AI-Hallucinated Dependencies in PyPI and npm: The 2025 Slopsquatting Risk (Rescana)",
+    "url": "https://www.rescana.com/post/ai-hallucinated-dependencies-in-pypi-and-npm-the-2025-slopsquatting-supply-chain-risk-explained",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Code Refactoring with LLM: A Comprehensive Evaluation With Few-Shot Settings (arXiv 2511.21788)",
+    "url": "https://arxiv.org/html/2511.21788v1",
+    "dimension": "ai-code-smells"
+  },
+  {
+    "title": "Secret Breach Detection in Source Code with Large Language Models (arXiv 2504.18784)",
+    "url": "https://arxiv.org/abs/2504.18784",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Secret Breach Detection in Source Code — HTML version with methodology detail",
+    "url": "https://arxiv.org/html/2504.18784v1",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Evaluating LLMs in detecting Secrets in Android Apps — SecretLoc (arXiv 2510.18601)",
+    "url": "https://arxiv.org/abs/2510.18601",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "VIVID: Remediation Prioritization in SAST via Vulnerability Data Flows (arXiv 2505.16205)",
+    "url": "https://arxiv.org/abs/2505.16205",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "OWASP Top 10:2025 — Official Release",
+    "url": "https://owasp.org/Top10/2025/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Semgrep Blog: OWASP Top 10 2025 — What's New (4,000+ rules remapped)",
+    "url": "https://semgrep.dev/blog/2026/owasp-top-10-2025-whats-new/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "OWASP Top 10 for LLM Applications 2025 (PDF)",
+    "url": "https://owasp.org/www-project-top-10-for-large-language-model-applications/assets/PDF/OWASP-Top-10-for-LLMs-v2025.pdf",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "LLM01:2025 Prompt Injection — OWASP Gen AI Security Project",
+    "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "CSA Research Note: Vibe Coding Security Crisis — Credential Sprawl and SDLC Debt",
+    "url": "https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-generated-code-security-vibe-coding-202/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "CSA Research Note: AI-Generated Code Vulnerability Surge 2026",
+    "url": "https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-generated-code-vulnerability-surge-2026/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Eradicating the Unseen: Path Traversal Detection Across GitHub (arXiv 2505.20186)",
+    "url": "https://arxiv.org/abs/2505.20186",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "ChatGPT's Potential in Cryptography Misuse Detection vs Static Analysis Tools (arXiv 2409.06561)",
+    "url": "https://arxiv.org/abs/2409.06561",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Sonar Taint Analysis — Static Taint Flow Analysis Tool Checker",
+    "url": "https://www.sonarsource.com/solutions/taint-analysis/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "OWASP Smart Contract Top 10 2026",
+    "url": "https://scs.owasp.org/sctop10/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Software Supply Chain Attacks 2026: Latest Incidents Analysis",
+    "url": "https://www.redfoxsec.com/blog/software-supply-chain-attacks-2026-latest-incidents-analysis-and-how-to-protect-your-pipeline",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Konvu: Reachability Analysis for Vulnerability False Positive Reduction",
+    "url": "https://konvu.com/solutions/reachability-analysis",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Datadog Security Labs: Learnings from npm Supply Chain Compromises",
+    "url": "https://securitylabs.datadoghq.com/articles/learnings-from-recent-npm-compromises/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Rafter: SAST Tool Comparison 2026 (SonarQube vs Semgrep vs CodeQL vs Snyk)",
+    "url": "https://rafter.so/blog/static-code-analysis-tools-comparison",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Cycode: Beyond Regex — ML-Powered Generic Secret Detection",
+    "url": "https://cycode.com/blog/generic-secrets-detection/",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "Pillar Security: Rules File Backdoor — CVE-2025-53773, AI Coding Tool Attack",
+    "url": "https://www.pillar.security/blog/new-vulnerability-in-github-copilot-and-cursor-how-hackers-can-weaponize-code-agents",
+    "dimension": "security-sast"
+  },
+  {
+    "title": "tree-sitter v0.25.0 release (newreleases.io)",
+    "url": "https://newreleases.io/project/github/tree-sitter/tree-sitter/release/v0.25.0",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "tree-sitter GitHub releases page",
+    "url": "https://github.com/tree-sitter/tree-sitter/releases",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "ast-grep official MCP server",
+    "url": "https://github.com/ast-grep/ast-grep-mcp",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "ast-grep rewrite-code documentation",
+    "url": "https://ast-grep.github.io/guide/rewrite-code.html",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "ast-grep tool comparison documentation",
+    "url": "https://ast-grep.github.io/advanced/tool-comparison.html",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Semgrep autofix documentation",
+    "url": "https://semgrep.dev/docs/writing-rules/autofix",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Semgrep supported languages",
+    "url": "https://semgrep.dev/docs/supported-languages",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "GritQL GitHub (biomejs/gritql)",
+    "url": "https://github.com/biomejs/gritql",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Honeycomb acquires Grit (GritQL open source announcement)",
+    "url": "https://www.honeycomb.io/blog/honeycomb-acquires-grit",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Pure-Go tree-sitter runtime article (dev.to)",
+    "url": "https://dev.to/thegdsks/parsing-11-languages-in-pure-go-without-cgo-how-i-replaced-regex-with-a-tree-sitter-runtime-g04",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Codebase-Memory: Tree-Sitter Knowledge Graphs for LLM Code Exploration via MCP (arXiv 2603.27277)",
+    "url": "https://arxiv.org/abs/2603.27277",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "JCodeMunch token-efficient MCP server",
+    "url": "https://github.com/jgravelle/jcodemunch-mcp",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Incremental Parsing with Tree-sitter 2026 benchmark article",
+    "url": "https://dasroot.net/posts/2026/02/incremental-parsing-tree-sitter-code-analysis/",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "OXC JavaScript Tooling (40x faster transformer than Babel)",
+    "url": "https://oxc.rs/docs/guide/benchmarks",
+    "dimension": "ast-tooling"
+  },
+  {
+    "title": "Rope: Python Refactoring Library - Using Rope as a Library",
+    "url": "https://rope.readthedocs.io/en/latest/library.html",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "Gopls: Code Transformation Features",
+    "url": "https://go.dev/gopls/features/transformation",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "arXiv:2601.19207 - REM2.0: Refactoring and Equivalence in Rust",
+    "url": "https://arxiv.org/abs/2601.19207",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "arXiv:2503.14340 - MANTRA: Multi-Agent LLM Refactoring Framework",
+    "url": "https://arxiv.org/abs/2503.14340",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "arXiv:2510.26480 - Automated Extract Method with Open-Source LLMs (Python)",
+    "url": "https://arxiv.org/abs/2510.26480",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "ast-grep: Comparison with Other Frameworks",
+    "url": "https://ast-grep.github.io/advanced/tool-comparison.html",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "ast-grep: Rewrite Code Guide",
+    "url": "https://ast-grep.github.io/guide/rewrite-code.html",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "OpenRewrite: Writing a Java Refactoring Recipe",
+    "url": "https://docs.openrewrite.org/authoring-recipes/writing-a-java-refactoring-recipe",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "uber/piranha - PolyglotPiranha GitHub",
+    "url": "https://github.com/uber/piranha",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "PLDI 2024: A Lightweight Polyglot Code Transformation Language (PolyglotPiranha)",
+    "url": "https://dl.acm.org/doi/10.1145/3656429",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "GritQL Documentation",
+    "url": "https://docs.grit.io/",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "biomejs/gritql - GritQL GitHub",
+    "url": "https://github.com/biomejs/gritql",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "tree-sitter: Suitability for automated code refactoring (Discussion #1108)",
+    "url": "https://github.com/tree-sitter/tree-sitter/discussions/1108",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "Martin Fowler: Refactoring with Codemods to Automate API Changes",
+    "url": "https://martinfowler.com/articles/codemods-api-refactoring.html",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "codemod.com: Announcing JavaScript ast-grep (jssg)",
+    "url": "https://codemod.com/blog/jssg",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "LibCST Documentation",
+    "url": "https://libcst.readthedocs.io/",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "Rope MCP Server on MCP Market",
+    "url": "https://mcpmarket.com/server/rope",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "dl.acm.org: Adventure of a Lifetime - Extract Method Refactoring for Rust (REM, OOPSLA 2023)",
+    "url": "https://dl.acm.org/doi/10.1145/3622821",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "arXiv:2405.20551 - EM-Assist: Safe Automated Extract Method Refactoring with LLMs",
+    "url": "https://arxiv.org/abs/2405.20551",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "Hypermod: Comparing ast-grep and jscodeshift",
+    "url": "https://www.hypermod.io/blog/4-jscodeshift-vs-ast-grep",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "Gitar Blog: Polyglot Code Refactoring Tools",
+    "url": "https://gitar.ai/blog/polyglot-code-refactoring-tools",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "OpenRewrite Documentation Home",
+    "url": "https://docs.openrewrite.org/",
+    "dimension": "auto-transformers"
+  },
+  {
+    "title": "An Empirical Study of Suppressed Static Analysis Warnings (FSE 2025)",
+    "url": "https://software-lab.org/publications/fse2025_suppressions.pdf",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "SonarQube Incremental Analysis 2025.1 Documentation",
+    "url": "https://docs.sonarsource.com/sonarqube-server/2025.1/analyzing-source-code/incremental-analysis/introduction",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "GitHub Code Quality in Public Preview — GitHub Changelog Oct 2025",
+    "url": "https://github.blog/changelog/2025-10-28-github-code-quality-in-public-preview/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "GitHub Code Quality Organization Dashboard — GitHub Changelog Feb 2026",
+    "url": "https://github.blog/changelog/2026-02-24-github-code-quality-organization-level-dashboard-in-public-preview/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "60 Million Copilot Code Reviews and Counting — GitHub Blog",
+    "url": "https://github.blog/ai-and-ml/github-copilot/60-million-copilot-code-reviews-and-counting/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "MCP Support in VS Code Generally Available — GitHub Changelog July 2025",
+    "url": "https://github.blog/changelog/2025-07-14-model-context-protocol-mcp-support-in-vs-code-is-generally-available/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "CodeScene Code Biomarkers Blog",
+    "url": "https://codescene.com/blog/code-biomarkers/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "Static Code Analysis Best Practices Enterprise — Augment Code",
+    "url": "https://www.augmentcode.com/guides/static-code-analysis-best-practices-enterprise",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "Developer Productivity Metrics 2026 — Zylos Research",
+    "url": "https://zylos.ai/research/2026-02-07-developer-productivity-metrics",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "DeepSource Autofix in 2026 — DEV Community",
+    "url": "https://dev.to/rahulxsingh/deepsource-autofix-how-automatic-code-fixes-work-in-2026-764",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "SonarQube for IDE — SonarSource",
+    "url": "https://www.sonarsource.com/products/sonarqube/ide/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "Alert Fatigue Solutions for DevOps Teams 2025 — incident.io",
+    "url": "https://incident.io/blog/alert-fatigue-solutions-for-dev-ops-teams-in-2025",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "DORA Metrics Are Not Enough in 2026 — Oobeya",
+    "url": "https://oobeya.io/blog/dora-metrics-not-enough-2026",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "LLM-Driven False Positive Mitigation for Static Analysis — ACM 2025",
+    "url": "https://dl.acm.org/doi/10.1145/3773365.3773410",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "Quality Standards and New Code — SonarQube Documentation",
+    "url": "https://docs.sonarsource.com/sonarqube-server/user-guide/about-new-code",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "Adding an MCP Server to a VS Code Extension — Ken Muse",
+    "url": "https://www.kenmuse.com/blog/adding-mcp-server-to-vs-code-extension/",
+    "dimension": "developer-dx"
+  },
+  {
+    "title": "SlopCodeBench: Benchmarking How Coding Agents Degrade Over Long-Horizon Iterative Tasks",
+    "url": "https://arxiv.org/html/2603.24755v1",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Source Code Hotspots: A Diagnostic Method for Quality Issues",
+    "url": "https://arxiv.org/html/2602.13170v1",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "CodeScene: Making Legacy Code AI-Ready: Benchmarks on Agentic Refactoring",
+    "url": "https://codescene.com/blog/making-legacy-code-ai-ready-benchmarks-on-agentic-refactoring",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "CodeScene Blog (including May 2026 posts on token usage and deterministic agents)",
+    "url": "https://codescene.com/blog",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Bumpy Road Code Smell: Cyclomatic complexity in context",
+    "url": "https://codescene.com/blog/bumpy-road-code-complexity-in-context/",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "CodeScene Behavioral Code Analysis Documentation v5.2.6",
+    "url": "https://docs.enterprise.codescene.io/versions/5.2.6/usage/index.html",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "BFSig: Leveraging File Significance in Bus Factor Estimation (ACM ESEC/FSE 2023)",
+    "url": "https://dl.acm.org/doi/10.1145/3611643.3613877",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Knowledge Islands: Visualizing Developers Knowledge Concentration",
+    "url": "https://arxiv.org/abs/2408.08733",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Exploring microservice ownership and organizational coupling (Springer 2025)",
+    "url": "https://link.springer.com/article/10.1007/s00607-025-01454-7",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "SlopCodeBench on Emergent Mind",
+    "url": "https://www.emergentmind.com/papers/2603.24755",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "CodeScene Change Coupling Documentation",
+    "url": "https://docs.enterprise.codescene.io/versions/5.1.0/guides/technical/change-coupling.html",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Towards Multi-Class Socio-Technical Congruence (Wiley 2025)",
+    "url": "https://onlinelibrary.wiley.com/doi/10.1002/smr.70040",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Agentic Refactoring: An Empirical Study of AI Coding Agents (arxiv 2511.04824)",
+    "url": "https://arxiv.org/pdf/2511.04824",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Automated Code Review Assignments: Alternative Perspective of Code Ownership (arxiv 2512.05551)",
+    "url": "https://arxiv.org/html/2512.05551v1",
+    "dimension": "behavioral-temporal"
+  },
+  {
+    "title": "Rethinking Code Complexity Through the Lens of Large Language Models (LM-CC)",
+    "url": "https://arxiv.org/abs/2602.07882",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Human-Aligned Code Readability Assessment with Large Language Models (CoReEval)",
+    "url": "https://arxiv.org/abs/2510.16579",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Not All Code Is Equal: A Data-Centric Study of Code Complexity and LLM Reasoning",
+    "url": "https://arxiv.org/abs/2601.21894",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Beyond Strict Rules: LLMs for Code Smell Detection (IEEE TSE 2026)",
+    "url": "https://arxiv.org/abs/2601.09873",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Towards Explainable Code Readability Classification With Graph Neural Networks (Wiley 2025)",
+    "url": "https://onlinelibrary.wiley.com/doi/abs/10.1002/smr.70048",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "SonarQube Server 2025.1 Release Notes (nested function CC change)",
+    "url": "https://docs.sonarsource.com/sonarqube-server/2025.1/server-update-and-maintenance/release-notes-and-notices/release-upgrade-notes",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "SonarSource Cognitive Complexity White Paper (official)",
+    "url": "https://www.sonarsource.com/resources/cognitive-complexity/",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Cognitive Load-Aware Inference: Token Economy Optimization for LLMs",
+    "url": "https://arxiv.org/abs/2507.00653",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Empirical Evaluation of Cognitive Complexity as Predictor of Understandability (JSS 2022)",
+    "url": "https://dl.acm.org/doi/10.1016/j.jss.2022.111561",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Descriptive Compound Identifier Names Improve Source Code Comprehension (ICPC 2018)",
+    "url": "https://dl.acm.org/doi/10.1145/3196321.3196332",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "SmellyCode++: Multi-Label Dataset for Code Smell Detection (Nature Scientific Data 2025)",
+    "url": "https://www.nature.com/articles/s41597-025-05465-z",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Personalization of Code Readability Evaluation Based on LLM (arXiv 2411.10583)",
+    "url": "https://arxiv.org/pdf/2411.10583",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Code Refactoring with LLM: Comprehensive Evaluation with Few-Shot Settings",
+    "url": "https://arxiv.org/abs/2511.21788",
+    "dimension": "cognitive-complexity"
+  },
+  {
+    "title": "Effort - Claude API Docs (Anthropic)",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Adaptive thinking - Claude API Docs (Anthropic)",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Introducing Claude Opus 4.8 (Anthropic)",
+    "url": "https://www.anthropic.com/news/claude-opus-4-8",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Introducing Claude Opus 4.7 (Anthropic)",
+    "url": "https://www.anthropic.com/news/claude-opus-4-7",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Best AI Model for Coding Agents in 2026: A Routing Guide (Augment Code)",
+    "url": "https://www.augmentcode.com/guides/ai-model-routing-guide",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Claude 4.6 Adaptive Thinking Rewrites the Agent Cost Playbook (AgentMarketCap)",
+    "url": "https://agentmarketcap.ai/blog/2026/04/14/claude-4-6-adaptive-thinking-effort-agent-pipeline-cost-quality-2026",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Triage: Routing Software Engineering Tasks to Cost-Effective LLM Tiers via Code Quality Signals (arXiv:2604.07494)",
+    "url": "https://arxiv.org/pdf/2604.07494",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Claude Opus 4.8 Review: Benchmarks, Dynamic Workflows, Price (BuildFastWithAI)",
+    "url": "https://www.buildfastwithai.com/blogs/claude-opus-4-8-review-benchmarks-dynamic-workflows-2026",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Claude Opus 4.7 vs 4.8: Should Coding Agents Upgrade? (Verdent Guides)",
+    "url": "https://www.verdent.ai/guides/claude-opus-4-7-vs-4-8",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Claude API Pricing: Haiku 4.5, Sonnet 4.6, and Opus 4.7 (BenchLM.ai)",
+    "url": "https://benchlm.ai/blog/posts/claude-api-pricing",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Anthropic Ships Claude Opus 4.8 Alongside Dynamic Workflows (MarkTechPost)",
+    "url": "https://www.marktechpost.com/2026/05/28/anthropic-ships-claude-opus-4-8-alongside-dynamic-workflows-and-cheaper-fast-mode-with-workflows-capped-at-1000-subagents/",
+    "dimension": "model-selection"
+  },
+  {
+    "title": "Are Solved Issues in SWE-bench Really Solved Correctly? (ICSE 2026)",
+    "url": "https://arxiv.org/html/2503.15223v2",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "SWE-Refactor: A Repository-Level Benchmark for Real-World LLM-Based Code Refactoring",
+    "url": "https://arxiv.org/abs/2602.03712",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Reproducible Automated Program Repair Is Hard -- Experiences With Defects4J",
+    "url": "https://arxiv.org/html/2604.26674",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "RefactoringMiner Accuracy Documentation",
+    "url": "https://github.com/tsantalis/RefactoringMiner/blob/master/documentation/accuracy.md",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Benchmark Health Index: A Systematic Framework for Benchmarking the Benchmarks of LLMs",
+    "url": "https://arxiv.org/pdf/2602.11674",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Rigor, Reliability, and Reproducibility: A Decade-Scale Survey of 572 Code Benchmarks (HOW2BENCH)",
+    "url": "https://arxiv.org/abs/2501.10711",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "From Restructuring to Stabilization: Iterative Code Readability Refactoring with LLMs",
+    "url": "https://arxiv.org/abs/2602.21833",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "LessLeak-Bench: Data Leakage in LLMs Across 83 SE Benchmarks",
+    "url": "https://arxiv.org/html/2502.06215v1",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "SmellyCode++: Multi-Label Dataset for Code Smell Detection (Nature Scientific Data 2025)",
+    "url": "https://www.nature.com/articles/s41597-025-05465-z",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Measuring What Matters: Offline Evaluation of GitHub MCP Server",
+    "url": "https://github.blog/ai-and-ml/generative-ai/measuring-what-matters-how-offline-evaluation-of-github-mcp-server-works/",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "AI-Ready Code: How Code Health Determines AI Performance (CodeScene 2026)",
+    "url": "https://codescene.com/hubfs/whitepapers/AI-Ready-Code-How-Code-Health-Determines-AI-Performance.pdf",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Mutation Testing in Test Code Refactoring: Leveraging Mutants (Springer 2025)",
+    "url": "https://link.springer.com/chapter/10.1007/978-3-031-94544-1_12",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "What's in a Benchmark? The Case of SWE-Bench in Automated Program Repair",
+    "url": "https://arxiv.org/abs/2602.04449",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "Benchmarking LLM for Code Smells Detection: GPT-4.0 vs DeepSeek-V3 (EASE 2025)",
+    "url": "https://arxiv.org/abs/2504.16027",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "RefactoringMiner++ -- Refactoring Detection in C++ Programs (FSE 2025)",
+    "url": "https://arxiv.org/html/2502.17716v1",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "SWE-bench Verified Leaderboard -- Epoch AI",
+    "url": "https://epoch.ai/benchmarks/swe-bench-verified",
+    "dimension": "benchmark-methodology"
+  },
+  {
+    "title": "CodeScene CodeHealth MCP Server Early Access",
+    "url": "https://codescene.com/early-access-codescene-mcp-server",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "CodeScene Pricing",
+    "url": "https://codescene.com/pricing",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "MCP Adoption Statistics 2026 - Digital Applied",
+    "url": "https://www.digitalapplied.com/blog/mcp-adoption-statistics-2026-model-context-protocol",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "Everything your team needs to know about MCP in 2026 - WorkOS",
+    "url": "https://workos.com/blog/everything-your-team-needs-to-know-about-mcp-in-2026",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "We Scanned 20 MCP Servers for Vulnerabilities - DEV Community",
+    "url": "https://dev.to/ecap0/we-scanned-20-top-mcp-servers-for-vulnerabilities-the-results-will-shock-you-21c5",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "MCP Security Checklist 2026",
+    "url": "https://www.networkintelligence.ai/blogs/model-context-protocol-mcp-security-checklist/",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "From Bugs to Benchmarks: A Comprehensive Survey of Software Defect Datasets (2025)",
+    "url": "https://arxiv.org/html/2504.17977v1",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "CASTLE: Benchmarking Dataset for Static Code Analyzers and LLMs - arXiv",
+    "url": "https://arxiv.org/html/2503.09433v1",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "ISO/IEC DIS 5055-3 - Resource Sustainability Measure",
+    "url": "https://www.dinmedia.de/en/draft-standard/iso-iec-dis-5055-3/398390910",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "ISO/IEC 5055 - Automated Source Code Quality Measures",
+    "url": "https://www.it-cisq.org/standards/code-quality-standards/",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "kreuzberg-dev/tree-sitter-language-pack - 305 languages",
+    "url": "https://github.com/kreuzberg-dev/tree-sitter-language-pack",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "Open Core is a misunderstood business model - Open Core Ventures",
+    "url": "https://www.opencoreventures.com/blog/open-core-is-a-misunderstood-business-model",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "Best SonarQube Alternatives 2026 - Kodus",
+    "url": "https://kodus.io/en/sonarqube-alternatives-code-quality/",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "ReviewMyCode MCP Server: Rules and Extensibility",
+    "url": "https://www.c-sharpcorner.com/article/schrdingers-ai-part-14-3-reviewmycode-mcp-server-rules-extensibility/",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "AI Coding Models Flywheel Effect - MindStudio",
+    "url": "https://www.mindstudio.ai/blog/ai-coding-models-flywheel-effect",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "State of MCP in 2025 - Glama",
+    "url": "https://glama.ai/blog/2025-12-07-the-state-of-mcp-in-2025",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "MCP Connector Poisoning via npm packages - DEV Community",
+    "url": "https://dev.to/toniantunovic/mcp-connector-poisoning-how-compromised-npm-packages-hijack-your-ai-agent-3ha0",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "CodeScene GitHub MCP Server (OSS)",
+    "url": "https://github.com/codescene-oss/codescene-mcp-server",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "HashiCorp Open Source Strategy - Medium",
+    "url": "https://medium.com/@takafumi.endo/how-hashicorp-became-one-of-the-most-valuable-oss-companies-e27e3a6e7ba0",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "Grafana Enterprise vs OSS",
+    "url": "https://grafana.com/products/enterprise/grafana/",
+    "dimension": "strategy-moat"
+  },
+  {
+    "title": "From Technical Debt to Cognitive and Intent Debt (arXiv:2603.22106)",
+    "url": "https://arxiv.org/abs/2603.22106",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "TODO: Fix the Mess Gemini Created — GenAI-Induced SATD (arXiv:2601.07786)",
+    "url": "https://arxiv.org/html/2601.07786v1",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Comprehension Debt in GenAI-Assisted SE Projects (arXiv:2604.13277)",
+    "url": "https://arxiv.org/html/2604.13277v1",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Codebase Cognitive Debt — Thoughtworks Technology Radar v34",
+    "url": "https://www.thoughtworks.com/radar/techniques/codebase-cognitive-debt",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Thoughtworks Radar v34 Press Release (April 2026)",
+    "url": "https://www.thoughtworks.com/about-us/news/2026/combat-ai-cognitive-debt-radar-v34",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Code Comment Inconsistency Detection — ICSE 2025",
+    "url": "https://dl.acm.org/doi/10.1109/ICSE55347.2025.00035",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Detecting Code Comment Inconsistencies using LLM and Program Analysis (FSE 2024)",
+    "url": "https://dl.acm.org/doi/10.1145/3663529.3664458",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "SonarQube Autodetect AI Code — 2025.2",
+    "url": "https://docs.sonarsource.com/sonarqube-server/2025.2/ai-capabilities/autodetect-ai-code",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Automating Removal of Obsolete TODO Comments — TDCLEANER (arXiv:2108.05846)",
+    "url": "https://arxiv.org/pdf/2108.05846",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "How to Reduce MCP Token Bloat — The New Stack",
+    "url": "https://thenewstack.io/how-to-reduce-mcp-token-bloat/",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Reducing MCP token usage by 100x — Speakeasy",
+    "url": "https://www.speakeasy.com/blog/how-we-reduced-token-usage-by-100x-dynamic-toolsets-v2",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Epistemic Debt: The Hidden Cost of AI Speed — Failing Fast",
+    "url": "https://failingfast.io/ai-epistemic-debt/",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Cognitive Debt: The AI Risk Nobody's Measuring — Michelle Pellon",
+    "url": "https://michellepellon.com/blog/2026-02-23-cognitive-debt",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "Self-Admitted Technical Debt in LLM Software (arXiv:2601.06266)",
+    "url": "https://arxiv.org/html/2601.06266v1",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "docstr-coverage — PyPI",
+    "url": "https://pypi.org/project/docstr-coverage/",
+    "dimension": "intent-cognitive-debt"
+  },
+  {
+    "title": "GitHub SARIF support for code scanning",
+    "url": "https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "SARIF 2.1.0 OASIS Standard",
+    "url": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "GitHub Code Quality public preview (Oct 2025)",
+    "url": "https://github.blog/changelog/2025-10-28-github-code-quality-in-public-preview/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "GitHub Code Quality org dashboard (Feb 2026)",
+    "url": "https://github.blog/changelog/2026-02-24-github-code-quality-organization-level-dashboard-in-public-preview/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "GitHub Code Quality metrics and ratings",
+    "url": "https://docs.github.com/en/code-security/reference/code-quality/metrics-and-ratings",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "GitHub Code Scanning: stop combining multiple SARIF runs (Jul 2025)",
+    "url": "https://github.blog/changelog/2025-07-21-code-scanning-will-stop-combining-multiple-sarif-runs-uploaded-in-the-same-sarif-file/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "GitLab Code Quality report format",
+    "url": "https://docs.gitlab.com/ci/testing/code_quality/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "OpenSSF Scorecard checks",
+    "url": "https://github.com/ossf/scorecard/blob/main/docs/checks.md",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "OpenSSF Scorecard GitHub Action (SARIF output)",
+    "url": "https://github.com/ossf/scorecard-action",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "sarif-standard taxonomies (CWE, OWASP, NIST)",
+    "url": "https://github.com/sarif-standard/taxonomies",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "Roam code — SARIF MCP competitor",
+    "url": "https://github.com/Cranot/roam-code",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "in-toto SCAI predicate v0.3",
+    "url": "https://github.com/in-toto/attestation/blob/main/spec/predicates/scai.md",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "in-toto test-result predicate v0.1",
+    "url": "https://github.com/in-toto/attestation/blob/main/spec/predicates/test-result.md",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "SLSA Source Track v1.2 requirements",
+    "url": "https://slsa.dev/spec/v1.2/source-requirements",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "CycloneDX specification overview (v1.7)",
+    "url": "https://cyclonedx.org/specification/overview/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "llms.txt guide for API docs and AI agents",
+    "url": "https://buildwithfern.com/post/optimizing-api-docs-ai-agents-llms-txt-guide",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "JetBrains Qodana custom SARIF extensions",
+    "url": "https://www.jetbrains.com/help/qodana/qodana-sarif-output.html",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "SonarQube SARIF import guide",
+    "url": "https://docs.sonarsource.com/sonarqube-server/2025.2/analyzing-source-code/importing-external-issues/importing-sarif-reports",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "Sonar complete SARIF guide",
+    "url": "https://www.sonarsource.com/resources/library/sarif/",
+    "dimension": "standards-interop"
+  },
+  {
+    "title": "OpenSSF Scorecard official site",
+    "url": "https://scorecard.dev/",
+    "dimension": "standards-interop"
+  }
+]

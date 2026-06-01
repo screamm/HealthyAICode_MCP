@@ -4,6 +4,12 @@ Reference documentation for AI assistants working on this codebase.
 
 ---
 
+## Mission
+
+We aim to become the world's best MCP for code health and clean ("beautiful") code — the independent, vendor-neutral, transparent verification layer for AI-generated code. This is a stated goal, not a current claim. The evidence-based path and the explicit decision rule for when the "world-best" claim is earned live in `claudedocs/2026-06-01-path-to-world-best.md`. Honest current status (1 Jun 2026): measurably competitive (tied at the top with `lizard` on MLCQ smell prediction, statistically better than PMD), honestly validated, and proven robust — not yet world-best. Every claim in this repo must stay evidence-backed; no marketing language.
+
+---
+
 ## Git & Commits
 
 **Committa aldrig kod-ändringar.** Användaren meddelar alltid explicit när en commit ska göras. Kör inte `git add`, `git commit` eller `git push` utan explicit instruktion.
@@ -12,14 +18,16 @@ Reference documentation for AI assistants working on this codebase.
 
 ## Project Overview
 
-Local MCP server that gives AI assistants objective code health feedback (28 biomarkers, 41 languages, 27 tools). Enables a self-correcting refactoring loop where the AI refactors until a health score target is reached.
+Local MCP server that gives AI assistants objective code health feedback (55 biomarkers, ~46 languages, 28 tools). Enables a self-correcting refactoring loop where the AI refactors until a health score target is reached.
 
 **Monorepo structure:**
 
 ```
 packages/
-  core/          # @healthy-ai-code/core   — all analysis logic, language-agnostic
+  core/          # @healthy-ai-code/core       — all analysis logic, language-agnostic
   mcp-server/    # @healthy-ai-code/mcp-server — MCP wire protocol, one tool per file
+  gate/          # @healthy-ai-code/gate        — deterministic delta-gating PreToolUse hook / CI gate
+  init/          # @healthy-ai-code/init        — npx one-command installer and scaffolding
 ```
 
 **Package manager:** pnpm
