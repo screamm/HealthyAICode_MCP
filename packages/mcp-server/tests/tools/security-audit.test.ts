@@ -1,5 +1,7 @@
 // packages/mcp-server/tests/tools/security-audit.test.ts
-// Sprint 28 — security-audit tool tests
+// Sprint 28 — security-audit tool tests.
+// Updated sprint sarif-unify: added assertions for partialFingerprints and
+// security-severity on the security-audit SARIF path.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, writeFileSync, existsSync } from 'fs';
@@ -122,5 +124,87 @@ describe('code_health_security_audit tool', () => {
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
     expect(() => JSON.parse(result.content[0].text)).not.toThrow();
+  });
+
+  // ── Sprint sarif-unify: assert enriched fields on security-audit SARIF path ──
+
+  it('security-audit SARIF path: results with findings carry partialFingerprints.primaryLocationLineHash', async () => {
+    // Write a TypeScript file with a known hardcoded credential that the static
+    // detector reliably flags as HardcodedCredential.
+    writeFileSync(
+      join(testDir, 'app.ts'),
+      [
+        "const DB_PASSWORD = 'super-secret-pass-1234';",
+        "export function queryUser(id: string) {",
+        "  return `SELECT * FROM users WHERE id = '${id}'`;",
+        "}",
+      ].join('\n'),
+    );
+
+    const result = await server.callTool('code_health_security_audit', {
+      directory: testDir,
+      outputFormat: 'sarif',
+    });
+
+    expect(result.isError).toBeFalsy();
+    const body = JSON.parse(result.content[0].text);
+    expect(body.sarif).toBeDefined();
+    expect(body.sarif.version).toBe('2.1.0');
+
+    const results: unknown[] = body.sarif.runs[0].results;
+
+    if (results.length > 0) {
+      // Every result that exists must carry partialFingerprints
+      for (const r of results as Array<{
+        partialFingerprints?: { primaryLocationLineHash?: string };
+      }>) {
+        expect(r.partialFingerprints, 'partialFingerprints must be present on sarif result').toBeDefined();
+        expect(r.partialFingerprints?.primaryLocationLineHash).toMatch(/^[0-9a-f]{16}:1$/);
+      }
+    }
+    // If no findings: the structure is still valid SARIF (0 results is allowed for a clean file)
+    expect(Array.isArray(results)).toBe(true);
+  });
+
+  it('security-audit SARIF path: security smells have security-severity in driver.rules', async () => {
+    // Write a file with hardcoded credential and SQL injection so we have security smells
+    writeFileSync(
+      join(testDir, 'vulns.ts'),
+      [
+        "const API_KEY = 'sk-live-abc123secretkey456';",
+        "export function getUser(id: string) {",
+        "  return `SELECT * FROM users WHERE id = '${id}'`;",
+        "}",
+      ].join('\n'),
+    );
+
+    const result = await server.callTool('code_health_security_audit', {
+      directory: testDir,
+      outputFormat: 'sarif',
+    });
+
+    expect(result.isError).toBeFalsy();
+    const body = JSON.parse(result.content[0].text);
+    const run = body.sarif.runs[0];
+
+    if (run.results.length > 0) {
+      // driver.rules should be populated with enriched rules
+      const rules: Array<{ properties?: { 'security-severity'?: string } }> =
+        run.tool.driver.rules ?? [];
+
+      const securityRules = rules.filter(
+        (r) => r.properties && r.properties['security-severity'] !== undefined,
+      );
+
+      // At minimum we expect at least one security rule when findings exist
+      expect(securityRules.length).toBeGreaterThan(0);
+
+      for (const rule of securityRules) {
+        const score = rule.properties?.['security-severity'] ?? '';
+        expect(typeof score).toBe('string');
+        expect(parseFloat(score)).toBeGreaterThan(0);
+        expect(parseFloat(score)).toBeLessThanOrEqual(10);
+      }
+    }
   });
 });

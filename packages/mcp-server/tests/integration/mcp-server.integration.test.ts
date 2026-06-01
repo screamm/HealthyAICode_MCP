@@ -9,7 +9,12 @@ import { registerExplainCodeHealth, registerExplainProductivity } from '../../sr
 
 class MockMcpServer {
   private tools: Map<string, Function> = new Map();
+  /** Legacy tool registration (deprecated SDK API). */
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
+  /** New tool registration with config object (used by code_health_review and code_health_auto_refactor). */
+  registerTool(name: string, _config: any, handler: Function): void {
     this.tools.set(name, handler);
   }
   async callTool(name: string, args: any): Promise<any> {

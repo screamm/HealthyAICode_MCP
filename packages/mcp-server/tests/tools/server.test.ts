@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: vi.fn(function (this: any) {
     this.tool = vi.fn();
+    this.registerTool = vi.fn();
     this.connect = vi.fn().mockResolvedValue(undefined);
   }),
 }));
@@ -39,6 +40,7 @@ describe('createServer', () => {
     const toolNames: string[] = [];
     vi.mocked(McpServer).mockImplementationOnce(function (this: any) {
       this.tool = (name: string) => { toolNames.push(name); };
+      this.registerTool = (name: string) => { toolNames.push(name); };
       this.connect = vi.fn();
     } as any);
 

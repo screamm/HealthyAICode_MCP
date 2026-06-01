@@ -6,7 +6,12 @@ import { registerCodeHealthReview } from '../../src/tools/code-health-review';
 
 class MockMcpServer {
   private tools: Map<string, Function> = new Map();
+  /** Legacy API — kept for tools that still use server.tool(). */
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
+  /** New API — used by registerCodeHealthReview and registerAutoRefactor. */
+  registerTool(name: string, _config: any, handler: Function): void {
     this.tools.set(name, handler);
   }
   async callTool(name: string, args: any): Promise<any> {
@@ -122,6 +127,7 @@ export function process(a: any, b: any, c: any, d: any, e: any, f: any): any {
     const registered: string[] = [];
     const server = {
       tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerCodeHealthReview(server);
     expect(registered).toContain('code_health_review');
