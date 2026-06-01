@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/screamm/Healthy-AI-Code-MCP/blob/master/docs/ochs/ochs-schema.json",
+  "title": "OCHS Score Object",
+  "description": "Open Code Health Score (OCHS) v0.1 — a deterministic 1–10 file-health score produced by the OCHS scoring formula: score = max(1.0, 10 − Σ(weight_i × sqrt(count_i))). See https://github.com/screamm/Healthy-AI-Code-MCP/blob/master/docs/ochs/OCHS-v0.1.md",
+  "type": "object",
+  "required": ["ochsVersion", "score", "smells"],
+  "additionalProperties": true,
+  "properties": {
+    "ochsVersion": {
+      "type": "string",
+      "description": "OCHS specification version. MUST be present so downstream consumers can determine formula compatibility.",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+      "examples": ["0.1", "0.1.0"]
+    },
+    "score": {
+      "type": "number",
+      "description": "The OCHS score for the file. Range: [1.0, 10.0]. Computed as max(1.0, 10 − Σ(weight_i × sqrt(count_i))).",
+      "minimum": 1.0,
+      "maximum": 10.0
+    },
+    "filePath": {
+      "type": "string",
+      "description": "Path to the file that was analysed. Optional but recommended."
+    },
+    "language": {
+      "type": "string",
+      "description": "Detected or provided language for the file (e.g., 'typescript', 'python', 'java')."
+    },
+    "loopComplete": {
+      "type": "boolean",
+      "description": "True when score meets the AI_READY_THRESHOLD (9.5, or 9.7 if AiAttributedSATD is present). Signals that the file is safe for autonomous AI-assisted modification."
+    },
+    "category": {
+      "type": "string",
+      "description": "Score category derived from OCHS thresholds.",
+      "enum": ["green", "yellow", "red"]
+    },
+    "smells": {
+      "type": "array",
+      "description": "List of code smell / biomarker findings detected in the file.",
+      "items": {
+        "$ref": "#/definitions/SmellFinding"
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Optional supplementary file-level metrics (e.g., lineCount, functionCount, cyclomaticComplexity).",
+      "additionalProperties": true
+    },
+    "subscores": {
+      "type": "object",
+      "description": "Optional sub-scores by domain (security, complexity, maintainability, duplication). Not part of the mandatory OCHS schema.",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 1.0,
+        "maximum": 10.0
+      }
+    }
+  },
+  "definitions": {
+    "SmellFinding": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/SmellType"
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level of this finding. Informational only — does not affect the score.",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable description of the finding."
+        },
+        "line": {
+          "type": "integer",
+          "description": "Source line number where the finding starts (1-based).",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "description": "Source line number where the finding ends (1-based, inclusive).",
+          "minimum": 1
+        },
+        "functionName": {
+          "type": "string",
+          "description": "Name of the function or method where the finding occurs, if applicable."
+        },
+        "details": {
+          "type": "object",
+          "description": "Finding-specific detail payload. Schema is biomarker-specific.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "SmellType": {
+      "type": "string",
+      "description": "One of the 55 OCHS v0.1 biomarker identifiers.",
+      "enum": [
+        "AbstractionLeakage",
+        "AiAttributedSATD",
+        "ArchitectureDebt",
+        "AsyncAntiPattern",
+        "BrainMethod",
+        "BumpyRoad",
+        "CodeChurn",
+        "CognitiveComplexity",
+        "CommandInjectionRisk",
+        "ComplexConditional",
+        "ComplexityMassConcentration",
+        "ComplexMethod",
+        "CryptographicMisuseRisk",
+        "DataClumps",
+        "DeepNesting",
+        "DependencyVulnerability",
+        "DeveloperCongestion",
+        "DocumentationDebt",
+        "DuplicateCode",
+        "ExceptionHandlingAntiPattern",
+        "FeatureEnvy",
+        "FragmentedCode",
+        "GodClass",
+        "HallucinatedPackageImport",
+        "HardcodedApiKey",
+        "HardcodedAssumption",
+        "HardcodedCredential",
+        "IntentClarity",
+        "KnowledgeLoss",
+        "LargeFile",
+        "LargeMethod",
+        "LlmNoStructuredOutput",
+        "LlmNoSystemMessage",
+        "LlmUnboundedCall",
+        "LlmUnpinnedModel",
+        "LlmUnsetTemperature",
+        "LongParameterList",
+        "LowDocCoverage",
+        "LowMaintainability",
+        "MagicNumber",
+        "MessageChain",
+        "MethodTemporalCoupling",
+        "MissingEdgeCase",
+        "PathTraversalRisk",
+        "PrimitiveObsession",
+        "SATD",
+        "SlopsquattingRisk",
+        "SplitResidue",
+        "SqlInjectionRisk",
+        "SsrfRisk",
+        "StyleInconsistency",
+        "TestProximity",
+        "TypeSafetyEscape",
+        "UnsafeDeserialization",
+        "XssRisk"
+      ]
+    }
+  }
+}

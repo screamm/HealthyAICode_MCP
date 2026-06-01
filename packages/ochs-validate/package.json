@@ -1,0 +1,50 @@
+{
+  "name": "ochs-validate",
+  "version": "0.1.0",
+  "description": "Standalone OCHS v0.1 validator — validates an OCHS score object against the published JSON schema and re-derives the score from the smell vector to verify formula consistency. No @healthy-ai-code/core runtime dependency.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/screamm/Healthy-AI-Code-MCP.git"
+  },
+  "homepage": "https://github.com/screamm/Healthy-AI-Code-MCP/tree/master/packages/ochs-validate#readme",
+  "bugs": {
+    "url": "https://github.com/screamm/Healthy-AI-Code-MCP/issues"
+  },
+  "keywords": [
+    "ochs",
+    "code-health",
+    "validator",
+    "static-analysis",
+    "open-standard",
+    "linter"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ochs-validate": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "schemas/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
