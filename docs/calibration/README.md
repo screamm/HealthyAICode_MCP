@@ -20,8 +20,8 @@ Default: `false`. With the flag off you get zero behavioural difference from pri
 | Language | Calibration source | Status |
 |----------|--------------------|--------|
 | Java | Defects4J (835 bugs) | Available — see [java-report.md](java-report.md) |
-| Python | (planned — BugSwarm or PyTraceBugs) | Future sprint |
-| TypeScript | (planned — SZZ-mining on internal history) | Future sprint |
+| Python | BugsInPy (149 bug/fix pairs, 298 records) | Available — see [python-validation.md](python-validation.md) |
+| TypeScript / JavaScript | SZZ-proxy, 3 OSS repos, n=1043 | Available — see [ts-validation.md](ts-validation.md); AUROC 0.678 [0.648, 0.710] |
 | C# | (planned) | Future sprint |
 | Rust / Go / PHP / Ruby / Swift | (no Tier A smells yet) | Not applicable until Tier A is shipped |
 
@@ -38,9 +38,11 @@ See [java-report.md](java-report.md) for full numbers and the ROC curve.
 
 ## Available Calibration Data
 
-| Language | Source | AUC | Status |
-|----------|--------|-----|--------|
-| Java | Defects4J | 0.71 | Baseline |
+| Language | Source | AUROC | n | Notes |
+|----------|--------|-------|---|-------|
+| Java | Defects4J | 0.71 | 96 | Baseline (placeholder — run pipeline to verify) |
+| Python | BugsInPy | 0.498 | 298 | Near chance — logic bugs only; structural health score does not predict logic defects (expected result) |
+| TypeScript/JS | SZZ proxy (execa + ts-node + zod) | **0.678** [0.648, 0.710] | 1043 | Real run 1 Jun 2026; p < 0.0001; see ts-validation.md for caveats |
 
 ## What This Is NOT
 

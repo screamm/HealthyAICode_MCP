@@ -1,0 +1,92 @@
+{
+  "ochsVersion": "0.1",
+  "generatedAt": "2026-06-01T00:00:00Z",
+  "scoringFormula": "score = 10 - sum(avgEffectiveWeight * sqrt(count)) per smell type; floor = 1.0",
+  "thresholds": {
+    "aiReady": 9.5,
+    "healthy": 9.0,
+    "problematic": 6.0
+  },
+  "fixtures": [
+    {
+      "id": "healthy-ts-simple",
+      "path": "healthy/simple.ts",
+      "language": "typescript",
+      "description": "Minimal TypeScript: 7 pure functions, no complexity, no nesting.",
+      "expectedScore": 10.0,
+      "expectedCategory": "green",
+      "expectedSmellCount": 0,
+      "tolerance": 0.0
+    },
+    {
+      "id": "healthy-py-simple",
+      "path": "healthy/simple.py",
+      "language": "python",
+      "description": "Minimal Python: 3 one-liner functions.",
+      "expectedScore": 10.0,
+      "expectedCategory": "green",
+      "expectedSmellCount": 0,
+      "tolerance": 0.0
+    },
+    {
+      "id": "healthy-java-simple",
+      "path": "healthy/Simple.java",
+      "language": "java",
+      "description": "Minimal Java: single class with 3 trivial methods.",
+      "expectedScore": 10.0,
+      "expectedCategory": "green",
+      "expectedSmellCount": 0,
+      "tolerance": 0.0
+    },
+    {
+      "id": "healthy-go-simple",
+      "path": "healthy/simple.go",
+      "language": "go",
+      "description": "Minimal Go: single-function package.",
+      "expectedScore": 10.0,
+      "expectedCategory": "green",
+      "expectedSmellCount": 0,
+      "tolerance": 0.0
+    },
+    {
+      "id": "unhealthy-ts-complex",
+      "path": "unhealthy/complex.ts",
+      "language": "typescript",
+      "description": "TypeScript with ComplexMethod, DeepNesting, LongParameterList, BrainMethod, CognitiveComplexity, PrimitiveObsession, LowDocCoverage, and ComplexityMassConcentration (Sprint 57 Structural Erosion) — saturates at floor 1.0.",
+      "expectedScore": 1.0,
+      "expectedCategory": "red",
+      "expectedSmellCount": 17,
+      "tolerance": 0.0
+    },
+    {
+      "id": "unhealthy-py-complex",
+      "path": "unhealthy/complex.py",
+      "language": "python",
+      "description": "Python with DeepNesting, CognitiveComplexity, BrainMethod, MagicNumber.",
+      "expectedScore": 5.8,
+      "expectedCategory": "red",
+      "expectedSmellCount": 6,
+      "tolerance": 0.0
+    },
+    {
+      "id": "unhealthy-ts-godclass",
+      "path": "unhealthy/entity-god-class.ts",
+      "language": "typescript",
+      "description": "TypeScript class with 22 trivial single-line accessor methods. WMC≈22 but ATFD=0 and LCOM4=1, so it does NOT meet the LCOM4/ATFD-based GodClass threshold (ATFD>5, WMC>=20, LCOM4>1). The 22 methods are structurally identical one-line clones (`x() { return 'y'; }`), so the Sprint 58 in-file DuplicateCode detector correctly fires once (type-2 clone) — green but no longer perfect.",
+      "expectedScore": 9.0,
+      "expectedCategory": "green",
+      "expectedSmellCount": 1,
+      "tolerance": 0.0
+    },
+    {
+      "id": "unhealthy-go-nesting",
+      "path": "unhealthy/deep-nesting.go",
+      "language": "go",
+      "description": "Go with DeepNesting, ComplexMethod, MagicNumber, LowDocCoverage — yellow zone.",
+      "expectedScore": 6.4,
+      "expectedCategory": "yellow",
+      "expectedSmellCount": 5,
+      "tolerance": 0.0
+    }
+  ]
+}

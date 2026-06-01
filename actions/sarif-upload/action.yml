@@ -1,0 +1,67 @@
+name: 'Healthy AI Code — Upload SARIF'
+description: >
+  Upload a SARIF 2.1.0 report produced by the Healthy AI Code health-audit
+  script to GitHub Code Scanning via github/codeql-action/upload-sarif@v4.
+
+inputs:
+  sarif-file:
+    description: >
+      Path to the SARIF file to upload (relative to the repository root).
+      The health-audit script writes this file when called with
+      --format sarif --out <path>.
+    required: true
+    default: 'health.sarif'
+
+  token:
+    description: >
+      GitHub token used to authenticate with the Code Scanning API.
+      Must have the security-events: write permission.
+      Defaults to the built-in GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
+
+  category:
+    description: >
+      Optional category label for this analysis.  Useful when you upload
+      multiple SARIF reports in the same workflow run (e.g. one per
+      language or sub-project).
+    required: false
+    default: 'healthy-ai-code'
+
+  checkout-path:
+    description: >
+      Absolute path on the runner where the repository was checked out.
+      Used to relativize absolute paths in the SARIF file.
+      Defaults to the Actions workspace root.
+    required: false
+    default: ${{ github.workspace }}
+
+outputs:
+  analysis-url:
+    description: >
+      URL of the Code Scanning analysis page for this run (when available
+      via the upload-sarif action).
+    value: ${{ steps.upload.outputs.sarif-id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate SARIF file exists
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.sarif-file }}" ]; then
+          echo "::error::SARIF file not found: ${{ inputs.sarif-file }}"
+          echo "::error::Run health-audit with --format sarif --out ${{ inputs.sarif-file }} first."
+          exit 1
+        fi
+        echo "SARIF file found: ${{ inputs.sarif-file }} ($(wc -c < "${{ inputs.sarif-file }}") bytes)"
+
+    - name: Upload SARIF to GitHub Code Scanning
+      id: upload
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        token: ${{ inputs.token }}
+        category: ${{ inputs.category }}
+        checkout_path: ${{ inputs.checkout-path }}
+        wait-for-processing: 'true'

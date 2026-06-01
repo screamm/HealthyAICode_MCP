@@ -1,0 +1,35 @@
+{
+  "generated": "2026-06-01T12:04:17.712Z",
+  "dataset": "BugsInPy",
+  "language": "python",
+  "n": 298,
+  "bugsAnalyzed": 149,
+  "fetchFailures": 1,
+  "parseFailures": 0,
+  "projects": [
+    "pandas",
+    "keras",
+    "scrapy",
+    "youtube-dl",
+    "matplotlib",
+    "luigi"
+  ],
+  "auroc": 0.49837845142110715,
+  "aurocCiLower": 0.4374774531024531,
+  "aurocCiUpper": 0.559673849211727,
+  "mannWhitneyPValue": 0.9414507216379522,
+  "ece": 0.35006711409395974,
+  "meanScoreBuggy": 3.4852348993288587,
+  "meanScoreFixed": 3.4610738255033553,
+  "youdenThreshold": 1,
+  "youdenIndex": 0,
+  "precisionAtThreshold": 0,
+  "recallAtThreshold": 0,
+  "f1AtThreshold": 0,
+  "confusionAtThreshold": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 149,
+    "tn": 149
+  }
+}

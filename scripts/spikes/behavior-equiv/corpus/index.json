@@ -1,0 +1,27 @@
+{
+  "description": "Behavior-equivalence spike corpus. Each pair: a `before` function and an `after` (refactored) function exporting the same name. `equivalent:true` pairs are semantics-preserving refactorings (must NOT be flagged => false-positive check). `equivalent:false` pairs contain an injected semantic break modeled on common LLM-refactoring bug classes (must be flagged => true-positive / detection check). Bug classes drawn from the failure modes catalogued around arXiv:2602.15761 (19-35% non-equivalence in LLM refactorings).",
+  "pairs": [
+    { "id": "ts-clamp-boundary", "lang": "ts", "fn": "clamp", "equivalent": true, "bugClass": "none", "note": "RELABELLED: > vs >= at upper bound is provably equivalent here (when x===hi both return hi). Spike correctly found no divergence; original label was wrong. Kept as a TN that documents a real subtlety." },
+    { "id": "ts-inrange-boundary", "lang": "ts", "fn": "inRange", "equivalent": false, "bugClass": "boundary-condition", "note": "inclusive <= upper bound becomes exclusive < ; needs boundary-aware input synthesis" },
+    { "id": "ts-sum-offbyone", "lang": "ts", "fn": "sumRange", "equivalent": false, "bugClass": "off-by-one", "note": "after loop drops last element" },
+    { "id": "ts-default-arg", "lang": "ts", "fn": "greet", "equivalent": false, "bugClass": "dropped-default", "note": "after drops default parameter value" },
+    { "id": "ts-int-div", "lang": "ts", "fn": "avg", "equivalent": false, "bugClass": "integer-truncation", "note": "after Math.floor introduces truncation" },
+    { "id": "ts-short-circuit", "lang": "ts", "fn": "pickLabel", "equivalent": false, "bugClass": "falsy-coercion", "note": "|| replaces ?? changing 0/'' handling" },
+    { "id": "ts-sort-mutate", "lang": "ts", "fn": "topTwo", "equivalent": false, "bugClass": "operator-swap", "note": "comparator sign flipped" },
+    { "id": "ts-empty-edge", "lang": "ts", "fn": "firstOr", "equivalent": false, "bugClass": "dropped-edge-case", "note": "after drops empty-array guard" },
+    { "id": "ts-rename-eq", "lang": "ts", "fn": "factorial", "equivalent": true, "bugClass": "none", "note": "recursive -> iterative, equivalent" },
+    { "id": "ts-extract-eq", "lang": "ts", "fn": "normalize", "equivalent": true, "bugClass": "none", "note": "extract-method, equivalent" },
+    { "id": "ts-guard-eq", "lang": "ts", "fn": "classify", "equivalent": true, "bugClass": "none", "note": "switch -> map lookup, equivalent" },
+
+    { "id": "py-clamp-boundary", "lang": "py", "fn": "clamp", "equivalent": false, "bugClass": "boundary-condition", "note": "after uses < instead of <= at lower bound" },
+    { "id": "py-range-offbyone", "lang": "py", "fn": "sum_range", "equivalent": false, "bugClass": "off-by-one", "note": "range(1,n) drops first element" },
+    { "id": "py-mutable-default", "lang": "py", "fn": "append_item", "equivalent": false, "bugClass": "mutable-default", "note": "after introduces mutable default arg accumulation bug" },
+    { "id": "py-int-div", "lang": "py", "fn": "halve", "equivalent": false, "bugClass": "integer-truncation", "note": "// replaces / changing float result" },
+    { "id": "py-truthy", "lang": "py", "fn": "pick", "equivalent": false, "bugClass": "falsy-coercion", "note": "or-default fires on 0 / empty" },
+    { "id": "py-slice-offbyone", "lang": "py", "fn": "head", "equivalent": false, "bugClass": "off-by-one", "note": "slice bound shifted" },
+    { "id": "py-dict-default", "lang": "py", "fn": "count_get", "equivalent": false, "bugClass": "dropped-edge-case", "note": "after KeyErrors on missing key instead of default 0" },
+    { "id": "py-rename-eq", "lang": "py", "fn": "factorial", "equivalent": true, "bugClass": "none", "note": "recursive -> iterative, equivalent" },
+    { "id": "py-comprehension-eq", "lang": "py", "fn": "evens", "equivalent": true, "bugClass": "none", "note": "loop -> comprehension, equivalent" },
+    { "id": "py-guard-eq", "lang": "py", "fn": "safe_div", "equivalent": true, "bugClass": "none", "note": "try/except -> guard, equivalent" }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "name": "healthy-ai-code",
+  "displayName": "Healthy AI Code",
+  "description": "Real-time code health diagnostics powered by the Healthy AI Code MCP engine (28 biomarkers, 41 languages).",
+  "version": "0.1.0",
+  "publisher": "healthy-ai-code",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/healthy-ai-code-mcp"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "code health",
+    "code quality",
+    "static analysis",
+    "refactoring",
+    "ai"
+  ],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:csharp",
+    "onLanguage:ruby",
+    "onLanguage:php",
+    "onLanguage:kotlin"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "healthyAiCode.analyzeFile",
+        "title": "Healthy AI Code: Analyze Current File"
+      },
+      {
+        "command": "healthyAiCode.showReport",
+        "title": "Healthy AI Code: Show Health Report"
+      }
+    ],
+    "configuration": {
+      "title": "Healthy AI Code",
+      "properties": {
+        "healthyAiCode.mcpServerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the healthy-ai-code-mcp server entry point (dist/index.js). Leave empty to use the bundled server."
+        },
+        "healthyAiCode.enableOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically analyse the active file when it is saved."
+        },
+        "healthyAiCode.scoreThresholdWarning": {
+          "type": "number",
+          "default": 6.0,
+          "description": "Files with a health score below this value are highlighted as warnings."
+        },
+        "healthyAiCode.scoreThresholdError": {
+          "type": "number",
+          "default": 4.0,
+          "description": "Files with a health score below this value are highlighted as errors."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "test": "node --experimental-vm-modules node_modules/.bin/vitest run src/test",
+    "vscode:prepublish": "npm run compile",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@healthy-ai-code/core": "file:../packages/core"
+  }
+}

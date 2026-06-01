@@ -1,0 +1,46 @@
+name: Healthy AI Code — SARIF Upload
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# Code Scanning requires security-events: write.
+# contents: read and actions: read are required for private repositories.
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+
+jobs:
+  health-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run health audit (SARIF output)
+        run: node scripts/health-audit.mjs --format sarif --out health.sarif
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: ./actions/sarif-upload
+        with:
+          sarif-file: health.sarif
+          token: ${{ github.token }}
+          category: healthy-ai-code

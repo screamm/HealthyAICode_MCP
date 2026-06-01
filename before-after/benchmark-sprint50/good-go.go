@@ -54,12 +54,12 @@ const (
 	ROUNDING_FACTOR = 100.0
 
 	// Address validation lengths.
-	STREET_MIN_LEN    = 5
-	STREET_MAX_LEN    = 200
-	ZIP_SHORT_LEN     = 5
-	ZIP_LONG_LEN      = 9
-	CA_POSTAL_LEN     = 6
-	CA_POSTAL_SPLIT   = 3
+	STREET_MIN_LEN  = 5
+	STREET_MAX_LEN  = 200
+	ZIP_SHORT_LEN   = 5
+	ZIP_LONG_LEN    = 9
+	CA_POSTAL_LEN   = 6
+	CA_POSTAL_SPLIT = 3
 
 	// City minimum length.
 	CITY_MIN_LEN = 2
@@ -229,6 +229,31 @@ func normalizeUSZip(zip string) (string, error) {
 	return clean, nil
 }
 
+// normalizeField runs a normalizer over the raw field value, storing the result
+// under key on success and returning an empty string. On failure it leaves
+// normalized untouched and returns the error message for the caller to collect.
+func normalizeField(
+	normalized map[string]string,
+	key string,
+	raw string,
+	normalize func(string) (string, error),
+) string {
+	value, err := normalize(strings.TrimSpace(raw))
+	if err != nil {
+		return err.Error()
+	}
+	normalized[key] = value
+	return ""
+}
+
+// collectFieldError appends msg to errors when it is non-empty.
+func collectFieldError(errors []string, msg string) []string {
+	if msg == "" {
+		return errors
+	}
+	return append(errors, msg)
+}
+
 // applyUSValidation validates the state and ZIP fields for US addresses.
 func applyUSValidation(address map[string]string, strict bool, normalized map[string]string) []string {
 	var errors []string
@@ -242,13 +267,7 @@ func applyUSValidation(address map[string]string, strict bool, normalized map[st
 	} else {
 		normalized["state"] = state
 	}
-	zip, err := normalizeUSZip(strings.TrimSpace(address["zip"]))
-	if err != nil {
-		errors = append(errors, err.Error())
-	} else {
-		normalized["zip"] = zip
-	}
-	return errors
+	return collectFieldError(errors, normalizeField(normalized, "zip", address["zip"], normalizeUSZip))
 }
 
 // applyCAValidation validates the postal code field for Canadian addresses.
@@ -275,12 +294,7 @@ func ValidateAndNormalizeAddress(
 	var errors []string
 	normalized := map[string]string{"country": country}
 
-	street, err := normalizeStreet(strings.TrimSpace(address["street"]))
-	if err != nil {
-		errors = append(errors, err.Error())
-	} else {
-		normalized["street"] = street
-	}
+	errors = collectFieldError(errors, normalizeField(normalized, "street", address["street"], normalizeStreet))
 
 	city := strings.TrimSpace(address["city"])
 	if city == "" {

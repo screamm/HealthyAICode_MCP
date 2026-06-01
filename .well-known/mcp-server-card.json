@@ -1,0 +1,62 @@
+{
+  "name": "Healthy AI Code",
+  "tagline": "29 tools · 28 biomarkers · 46 languages · fully local, no account required",
+  "description": "Local MCP server that gives AI assistants objective, score-based code health feedback. Enables a self-correcting refactoring loop where the AI keeps iterating until the health score reaches the target (≥9.5 = AI-ready). Covers TypeScript, JavaScript, Python, Java, C#, Go, Ruby, Rust, PHP, Kotlin, Scala, Swift, Elixir, and 33 more languages. No account, no API key, no external calls.",
+  "version": "0.1.0",
+  "mcpName": "io.github.screamm/healthy-ai-code-mcp",
+  "protocolVersion": "2025-11-25",
+  "transport": ["stdio"],
+  "license": "MIT",
+  "homepage": "https://github.com/screamm/healthy-ai-code-mcp",
+  "repository": "https://github.com/screamm/healthy-ai-code-mcp",
+  "author": {
+    "name": "David Rydgren",
+    "email": "davidrydgren@gmail.com",
+    "github": "screamm"
+  },
+  "keywords": [
+    "code-quality",
+    "code-health",
+    "refactoring",
+    "static-analysis",
+    "technical-debt",
+    "developer-tools",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "code-review",
+    "security",
+    "typescript",
+    "javascript",
+    "python",
+    "java",
+    "kotlin",
+    "csharp",
+    "rust",
+    "go",
+    "php",
+    "ruby",
+    "swift"
+  ],
+  "categories": ["code-quality", "developer-tools", "security"],
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "toolCount": 29,
+  "languageCount": 46,
+  "biomarkerCount": 28,
+  "noAccountRequired": true,
+  "fullyLocal": true,
+  "installation": {
+    "npx": "npx -y @healthy-ai-code/mcp-server",
+    "claudeDesktopConfig": {
+      "command": "npx",
+      "args": ["-y", "@healthy-ai-code/mcp-server"]
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

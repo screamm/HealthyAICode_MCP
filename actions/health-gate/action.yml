@@ -1,0 +1,129 @@
+name: 'Healthy AI Code — Merge Gate'
+description: >
+  Analyses the PR diff with analyzeChangeset and fails the check when any
+  changed file regresses below a configurable floor score (delta-gating).
+  Emits an OCHS summary and a SARIF 2.1.0 report compatible with
+  GitHub Code Scanning.
+
+  Delta-gating means the gate only fires when an edit makes a file *worse*
+  (score drops ≥ regressionDelta) or introduces a new unhealthy file below
+  the floor. Files that were already unhealthy before the PR are not
+  penalised for pre-existing debt.
+
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  base-branch:
+    description: >
+      The base branch (or commit SHA) to diff the PR HEAD against.
+      Defaults to the pull_request event's base ref, then falls back to
+      'main'.  Override to e.g. 'origin/develop' for monorepo setups.
+    required: false
+    default: ''
+
+  floor:
+    description: >
+      Minimum allowed post-edit health score for any changed file.
+      A regression that brings a file below this value fails the gate.
+      Must be a number in [1, 10].  Defaults to 7.0.
+    required: false
+    default: '7.0'
+
+  regression-delta:
+    description: >
+      Minimum score drop (exclusive) that counts as a regression.
+      E.g. the default 0.5 means a drop of exactly 0.5 is tolerated but
+      0.51 is not.  Set to 0 to fail on any score decrease.
+    required: false
+    default: '0.5'
+
+  sarif-out:
+    description: >
+      Path (relative to the repository root) where the SARIF 2.1.0 report
+      will be written.  Set to '' to skip SARIF output entirely.
+    required: false
+    default: 'health-gate.sarif'
+
+  fail-on-regression:
+    description: >
+      When 'true' (default) the action exits with code 1 if any regressions
+      are found, failing the workflow step.  Set to 'false' to emit the
+      report and annotations without breaking the build (advisory mode).
+    required: false
+    default: 'true'
+
+  working-directory:
+    description: >
+      Path to the git repository root.  Defaults to $GITHUB_WORKSPACE.
+    required: false
+    default: ''
+
+outputs:
+  files-analyzed:
+    description: Number of changed files that were analyzed.
+    value: ${{ steps.gate.outputs.files-analyzed }}
+
+  regression-count:
+    description: Number of files that regressed below the floor.
+    value: ${{ steps.gate.outputs.regression-count }}
+
+  overall-safe:
+    description: "'true' when no regressions or new-unhealthy files were found."
+    value: ${{ steps.gate.outputs.overall-safe }}
+
+  sarif-path:
+    description: Absolute path to the written SARIF file (empty if skipped).
+    value: ${{ steps.gate.outputs.sarif-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js (ensure >= 18)
+      # We don't pin a version here because the action must work on whatever
+      # Node the runner already has.  The gate script performs its own check.
+      shell: bash
+      run: |
+        node_version=$(node --version 2>/dev/null | sed 's/v//')
+        major=$(echo "$node_version" | cut -d. -f1)
+        if [ -z "$major" ] || [ "$major" -lt 18 ]; then
+          echo "::error::Node.js >= 18 is required (found: ${node_version:-none}). Add a setup-node step before this action."
+          exit 1
+        fi
+        echo "Node.js $node_version — OK"
+
+    - name: Install @healthy-ai-code/core (if not already present)
+      shell: bash
+      # Install only if the built dist is not reachable from this action's
+      # own node_modules.  In a monorepo checkout the built package is
+      # already available via the workspace; in a consuming repo we fall
+      # back to a temporary npm install.
+      run: |
+        ACTION_DIR="${{ github.action_path }}"
+        CORE_DIST="$ACTION_DIR/node_modules/@healthy-ai-code/core/dist/index.js"
+        if [ ! -f "$CORE_DIST" ]; then
+          echo "Installing @healthy-ai-code/core into action sandbox..."
+          cd "$ACTION_DIR"
+          npm install --prefer-offline --no-audit --no-fund \
+            @healthy-ai-code/core 2>&1 | tail -5
+        else
+          echo "@healthy-ai-code/core already available."
+        fi
+
+    - name: Run merge-gate analysis
+      id: gate
+      shell: bash
+      env:
+        INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
+        INPUT_FLOOR: ${{ inputs.floor }}
+        INPUT_REGRESSION_DELTA: ${{ inputs.regression-delta }}
+        INPUT_SARIF_OUT: ${{ inputs.sarif-out }}
+        INPUT_FAIL_ON_REGRESSION: ${{ inputs.fail-on-regression }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_BASE_REF: ${{ github.base_ref }}
+      run: node "${{ github.action_path }}/dist/gate.js"

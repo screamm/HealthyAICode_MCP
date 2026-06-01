@@ -1,0 +1,20 @@
+[
+  {
+    "language": "go",
+    "rocOptimalThreshold": 4.9,
+    "youdenJ": 0.96,
+    "alvesPercentile90": 10,
+    "thresholdDelta": -5.1,
+    "sampleSize": 111,
+    "buggyCount": 50
+  },
+  {
+    "language": "python",
+    "rocOptimalThreshold": 4.4,
+    "youdenJ": 1,
+    "alvesPercentile90": 9.7,
+    "thresholdDelta": -5.299999999999999,
+    "sampleSize": 25,
+    "buggyCount": 8
+  }
+]

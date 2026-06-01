@@ -1,0 +1,12 @@
+**/.gitignore
+**/.eslintrc*
+**/*.map
+**/*.ts
+!dist/**
+src/**
+node_modules/**
+tsconfig*.json
+vitest.config.ts
+.vscode/**
+.nyc_output
+out/**

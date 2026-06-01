@@ -1,0 +1,25 @@
+{
+  "name": "@healthy-ai-code/health-gate-action",
+  "version": "0.1.0",
+  "description": "GitHub Action: merge gate via analyzeChangeset delta-gating with OCHS + SARIF output",
+  "private": true,
+  "type": "module",
+  "main": "dist/gate.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node src/__tests__/dry-run.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@healthy-ai-code/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

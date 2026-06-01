@@ -1,0 +1,125 @@
+{
+  "generatedAt": "2026-05-31T21:49:51.532Z",
+  "globalStats": {
+    "totalFiles": 36,
+    "analyzed": 36,
+    "crashes": 0,
+    "parseFailures": 0,
+    "crashRate": 0,
+    "parseFailRate": 0,
+    "throughputFilesPerSec": 3.0727210652099695,
+    "durations": {
+      "p50": 245,
+      "p95": 1607,
+      "min": 21,
+      "max": 2902,
+      "mean": 325.44444444444446
+    },
+    "scoreDistribution": {
+      "mean": 6.430555555555555,
+      "p50": 7,
+      "p95": 10,
+      "min": 1,
+      "max": 10,
+      "below9_0": 27,
+      "below9_5": 28,
+      "below9_6": 28,
+      "perfect10": 6,
+      "dist": {
+        "1.0-3.0": 6,
+        "3.0-5.0": 4,
+        "5.0-7.0": 6,
+        "7.0-9.0": 11,
+        "9.0-9.5": 1,
+        "9.5-10.0": 8
+      }
+    }
+  },
+  "loopStats": {
+    "totalTested": 3,
+    "errors": 0,
+    "improved": 0,
+    "converged": 0,
+    "commentInvariantViolations": 0,
+    "avgScoreBefore": 1,
+    "avgScoreAfter": 1,
+    "avgSteps": 0
+  },
+  "repoSummaries": [
+    {
+      "name": "cobra-go",
+      "lang": "go",
+      "size": "small",
+      "hasGitHistory": false,
+      "totalFiles": 36,
+      "analyzed": 36,
+      "crashes": 0,
+      "parseFailures": 0,
+      "parseFailRate": 0,
+      "crashRate": 0,
+      "throughput": "3.1",
+      "durations": {
+        "p50": 245,
+        "p95": 1607,
+        "min": 21,
+        "max": 2902,
+        "mean": 325.44444444444446
+      },
+      "scores": {
+        "mean": 6.430555555555555,
+        "p50": 7,
+        "p95": 10,
+        "min": 1,
+        "max": 10,
+        "below9_0": 27,
+        "below9_5": 28,
+        "below9_6": 28,
+        "perfect10": 6
+      },
+      "errorSamples": []
+    }
+  ],
+  "loopResults": [
+    {
+      "file": "field-repos\\cobra-go\\active_help_test.go",
+      "lang": "go",
+      "scoreBefore": 1,
+      "scoreAfter": 1,
+      "steps": 0,
+      "loopComplete": false,
+      "improved": false,
+      "commentsBefore": 37,
+      "commentsAfter": 37,
+      "commentInvariantOk": true,
+      "durationMs": 834
+    },
+    {
+      "file": "field-repos\\cobra-go\\args_test.go",
+      "lang": "go",
+      "scoreBefore": 1,
+      "scoreAfter": 1,
+      "steps": 0,
+      "loopComplete": false,
+      "improved": false,
+      "commentsBefore": 32,
+      "commentsAfter": 32,
+      "commentInvariantOk": true,
+      "durationMs": 1312
+    },
+    {
+      "file": "field-repos\\cobra-go\\command.go",
+      "lang": "go",
+      "scoreBefore": 1,
+      "scoreAfter": 1,
+      "steps": 0,
+      "loopComplete": false,
+      "improved": false,
+      "commentsBefore": 379,
+      "commentsAfter": 379,
+      "commentInvariantOk": true,
+      "durationMs": 3894
+    }
+  ],
+  "robustnessBugs": [],
+  "crashes": []
+}

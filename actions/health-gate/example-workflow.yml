@@ -1,0 +1,97 @@
+# .github/workflows/health-gate.yml
+# Example workflow for the Healthy AI Code Merge Gate action.
+#
+# Copy this file to your repository's .github/workflows/ directory and adjust
+# the 'uses' path to match how you reference the action (local path, or
+# published tag such as screamm/HealthyAICode_MCP/actions/health-gate@v1).
+#
+# What this workflow does:
+#   1. Checks out the PR branch with full git history (fetch-depth: 0).
+#   2. Sets up Node 20 and installs the project's dependencies.
+#   3. Builds @healthy-ai-code/core so the action can import analyzeChangeset.
+#   4. Runs the health-gate action against the PR diff.
+#   5. Uploads the resulting SARIF to GitHub Code Scanning.
+#
+# The gate FAILS (non-zero exit) when any changed file regresses below the
+# configured floor or introduces a regression larger than regression-delta.
+
+name: Code Health Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - 'release/**'
+
+permissions:
+  # Required to post annotations on the PR
+  pull-requests: read
+  # Required to upload SARIF to Code Scanning
+  security-events: write
+  # Required to read the repository contents
+  contents: read
+
+jobs:
+  health-gate:
+    name: Merge Gate (code health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full history is required for analyzeChangeset to diff against the base
+          fetch-depth: 0
+          # Also fetch the base branch so git diff can compare against it
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build @healthy-ai-code/core
+        # Ensures dist/index.js exists for the action to import
+        run: |
+          if [ -f "pnpm-workspace.yaml" ]; then
+            npm install -g pnpm@9 && pnpm build
+          else
+            npm run build
+          fi
+
+      - name: Run health-gate
+        id: gate
+        # In a consuming repo, replace the path below with the published tag:
+        # uses: screamm/HealthyAICode_MCP/actions/health-gate@v1
+        uses: ./actions/health-gate
+        with:
+          base-branch: 'origin/${{ github.base_ref }}'
+          floor: '7.0'
+          regression-delta: '0.5'
+          sarif-out: 'health-gate.sarif'
+          fail-on-regression: 'true'
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always() && steps.gate.outputs.sarif-path != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: health-gate.sarif
+          category: healthy-ai-code-gate
+          wait-for-processing: true
+
+      - name: Gate summary
+        if: always()
+        run: |
+          echo "Files analysed  : ${{ steps.gate.outputs.files-analyzed }}"
+          echo "Regressions     : ${{ steps.gate.outputs.regression-count }}"
+          echo "Overall safe    : ${{ steps.gate.outputs.overall-safe }}"
