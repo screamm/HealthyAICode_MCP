@@ -9,34 +9,34 @@
     "note": "No Claude API calls. All transformations are mechanical AST-guided text rewrites."
   },
   "summary": {
-    "filesTestedTotal": 33,
-    "filesAlreadyAiReady": 16,
-    "filesStartingBelow9": 17,
-    "filesStartingBelowAIReady": 17,
-    "filesFixed": 2,
-    "fixRate": 11.8,
-    "avgScoreImprovement": 0.27,
-    "medianIterationsToFix": 3,
+    "filesTestedTotal": 68,
+    "filesAlreadyAiReady": 26,
+    "filesStartingBelow9": 34,
+    "filesStartingBelowAIReady": 42,
+    "filesFixed": 1,
+    "fixRate": 2.9,
+    "avgScoreImprovement": 0.81,
+    "medianIterationsToFix": 1,
     "scoreDistribution": {
-      "below5": 2,
-      "5to7": 7,
-      "7to9": 8,
-      "9to9.5": 0,
-      "aiReady": 16
+      "below5": 7,
+      "5to7": 9,
+      "7to9": 18,
+      "9to9.5": 8,
+      "aiReady": 26
     }
   },
   "byLanguage": {
     "typescript": {
-      "total": 11,
-      "below9": 6,
+      "total": 39,
+      "below9": 18,
       "fixed": 1,
-      "avgImprovement": -0.88
+      "avgImprovement": 0.42
     },
     "csharp": {
       "total": 2,
       "below9": 1,
       "fixed": 0,
-      "avgImprovement": 1.2
+      "avgImprovement": 0
     },
     "elixir": {
       "total": 2,
@@ -45,40 +45,40 @@
       "avgImprovement": 0
     },
     "go": {
-      "total": 2,
-      "below9": 1,
+      "total": 3,
+      "below9": 2,
       "fixed": 0,
-      "avgImprovement": 0
+      "avgImprovement": 3
     },
     "java": {
       "total": 2,
       "below9": 1,
       "fixed": 0,
-      "avgImprovement": 1.2
+      "avgImprovement": 0
     },
     "kotlin": {
       "total": 2,
-      "below9": 1,
+      "below9": 0,
       "fixed": 0,
-      "avgImprovement": 0.4
+      "avgImprovement": 0
     },
     "php": {
       "total": 2,
       "below9": 1,
-      "fixed": 1,
-      "avgImprovement": 1.6
-    },
-    "python": {
-      "total": 2,
-      "below9": 1,
       "fixed": 0,
       "avgImprovement": 0
+    },
+    "python": {
+      "total": 8,
+      "below9": 6,
+      "fixed": 0,
+      "avgImprovement": 0.9
     },
     "ruby": {
       "total": 2,
       "below9": 1,
-      "fixed": 0,
-      "avgImprovement": 0
+      "fixed": 1,
+      "avgImprovement": 3.1
     },
     "rust": {
       "total": 2,
@@ -90,7 +90,7 @@
       "total": 2,
       "below9": 1,
       "fixed": 0,
-      "avgImprovement": 3.9
+      "avgImprovement": 0
     },
     "swift": {
       "total": 2,
@@ -104,9 +104,39 @@
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\agents-md-fixture.ts",
       "language": "typescript",
       "initialScore": 3.6,
-      "finalScore": 1,
-      "scoreDelta": -2.6,
-      "iterations": 20,
+      "finalScore": 3.6,
+      "scoreDelta": 0,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\ai-satd-fixture.ts",
+      "language": "typescript",
+      "initialScore": 7.2,
+      "finalScore": 7.2,
+      "scoreDelta": 0,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\async-antipatterns.ts",
+      "language": "typescript",
+      "initialScore": 7.9,
+      "finalScore": 7.9,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\batch-same-type.ts",
+      "language": "typescript",
+      "initialScore": 5.8,
+      "finalScore": 8.6,
+      "scoreDelta": 2.8,
+      "iterations": 6,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
@@ -114,27 +144,27 @@
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\bumpy-road-fixture.ts",
       "language": "typescript",
       "initialScore": 8.9,
-      "finalScore": 8.6,
-      "scoreDelta": -0.3,
-      "iterations": 2,
+      "finalScore": 8.9,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\Complex.cs",
       "language": "csharp",
-      "initialScore": 5.5,
-      "finalScore": 6.7,
-      "scoreDelta": 1.2,
-      "iterations": 3,
+      "initialScore": 5.8,
+      "finalScore": 5.8,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.ex",
       "language": "elixir",
-      "initialScore": 5.1,
-      "finalScore": 5.1,
+      "initialScore": 3.9,
+      "finalScore": 3.9,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": false,
@@ -153,20 +183,20 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\Complex.java",
       "language": "java",
-      "initialScore": 5.5,
-      "finalScore": 6.7,
-      "scoreDelta": 1.2,
-      "iterations": 3,
+      "initialScore": 5.8,
+      "finalScore": 5.8,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\Complex.kt",
       "language": "kotlin",
-      "initialScore": 8.7,
-      "finalScore": 9.1,
-      "scoreDelta": 0.4,
-      "iterations": 1,
+      "initialScore": 9,
+      "finalScore": 9,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
@@ -174,11 +204,11 @@
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.php",
       "language": "php",
       "initialScore": 8,
-      "finalScore": 9.6,
-      "scoreDelta": 1.6,
-      "iterations": 3,
-      "loopComplete": true,
-      "status": "FIXED"
+      "finalScore": 8,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.py",
@@ -194,11 +224,11 @@
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.rb",
       "language": "ruby",
       "initialScore": 6.5,
-      "finalScore": 6.5,
-      "scoreDelta": 0,
-      "iterations": 0,
-      "loopComplete": false,
-      "status": "NOT_FIXED"
+      "finalScore": 9.6,
+      "scoreDelta": 3.1,
+      "iterations": 1,
+      "loopComplete": true,
+      "status": "FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.rs",
@@ -213,10 +243,10 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\complex.scala",
       "language": "scala",
-      "initialScore": 5.5,
-      "finalScore": 9.4,
-      "scoreDelta": 3.9,
-      "iterations": 2,
+      "initialScore": 5.8,
+      "finalScore": 5.8,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
@@ -236,7 +266,147 @@
       "initialScore": 1,
       "finalScore": 1,
       "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\crypto-misuse.py",
+      "language": "python",
+      "initialScore": 7.6,
+      "finalScore": 7.6,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\crypto-misuse.ts",
+      "language": "typescript",
+      "initialScore": 8,
+      "finalScore": 8,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\deep-nesting.go",
+      "language": "go",
+      "initialScore": 6.4,
+      "finalScore": 9.4,
+      "scoreDelta": 3,
       "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\deep-nesting.py",
+      "language": "python",
+      "initialScore": 4.9,
+      "finalScore": 6.4,
+      "scoreDelta": 1.5,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\duplicate-code.ts",
+      "language": "typescript",
+      "initialScore": 4.6,
+      "finalScore": 5,
+      "scoreDelta": 0.4,
+      "iterations": 2,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\entity-god-class.ts",
+      "language": "typescript",
+      "initialScore": 9,
+      "finalScore": 9,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\exception-antipatterns.py",
+      "language": "python",
+      "initialScore": 8.6,
+      "finalScore": 8.9,
+      "scoreDelta": 0.3,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\exception-antipatterns.ts",
+      "language": "typescript",
+      "initialScore": 7.6,
+      "finalScore": 7.6,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\fragmented-code-fixture.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\gitlab-format-fixture.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\hallucinated-imports.py",
+      "language": "python",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\hallucinated-imports.ts",
+      "language": "typescript",
+      "initialScore": 9.3,
+      "finalScore": 9.3,
+      "scoreDelta": 0,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\high-erosion.ts",
+      "language": "typescript",
+      "initialScore": 1.9,
+      "finalScore": 1.9,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\insecure-deserialization.py",
+      "language": "python",
+      "initialScore": 8.3,
+      "finalScore": 8.3,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
@@ -244,57 +414,217 @@
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\large-params.ts",
       "language": "typescript",
       "initialScore": 8.1,
-      "finalScore": 9.7,
-      "scoreDelta": 1.6,
-      "iterations": 3,
+      "finalScore": 8.4,
+      "scoreDelta": 0.3,
+      "iterations": 2,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\llm-integration-smells.ts",
+      "language": "typescript",
+      "initialScore": 5.2,
+      "finalScore": 5.2,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\magic-number-patch.ts",
+      "language": "typescript",
+      "initialScore": 9.6,
+      "finalScore": 9.6,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": true,
-      "status": "FIXED"
+      "status": "ALREADY_HEALTHY"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\nested-logic.ts",
       "language": "typescript",
       "initialScore": 5.3,
+      "finalScore": 5.3,
+      "scoreDelta": 0,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\pre-act-multi-smell.ts",
+      "language": "typescript",
+      "initialScore": 1,
       "finalScore": 1,
-      "scoreDelta": -4.3,
-      "iterations": 20,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\prod-sql-injection.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\sarif-enrichment-fixture.ts",
+      "language": "typescript",
+      "initialScore": 9.7,
+      "finalScore": 9.7,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\slopsquatting-corpus.py",
+      "language": "python",
+      "initialScore": 8.5,
+      "finalScore": 8.5,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\slopsquatting-typosquat.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\split-residue-fixture.ts",
+      "language": "typescript",
+      "initialScore": 7.7,
+      "finalScore": 8.4,
+      "scoreDelta": 0.7,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\unhealthy\\ssrf-risk.ts",
+      "language": "typescript",
+      "initialScore": 8.2,
+      "finalScore": 8.2,
+      "scoreDelta": 0,
+      "iterations": 0,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\array-utils.ts",
       "language": "typescript",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
       "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\comment-invariant.ts",
+      "language": "typescript",
+      "initialScore": 9.1,
+      "finalScore": 9.6,
+      "scoreDelta": 0.5,
+      "iterations": 1,
+      "loopComplete": true,
+      "status": "FIXED"
     },
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\complex-refactored.ts",
       "language": "typescript",
       "initialScore": 7.6,
-      "finalScore": 7.9,
-      "scoreDelta": 0.3,
-      "iterations": 1,
+      "finalScore": 8.5,
+      "scoreDelta": 0.9,
+      "iterations": 2,
       "loopComplete": false,
       "status": "NOT_FIXED"
     },
     {
-      "filePath": "packages\\core\\tests\\fixtures\\healthy\\math-utils.ts",
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\controller-god-class.ts",
       "language": "typescript",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 9,
+      "finalScore": 9,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\llm-integration-clean.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
       "status": "ALREADY_HEALTHY"
     },
     {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\low-erosion.ts",
+      "language": "typescript",
+      "initialScore": 8,
+      "finalScore": 8.8,
+      "scoreDelta": 0.8,
+      "iterations": 3,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\magic-number-patch-fixed.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\math-utils.ts",
+      "language": "typescript",
+      "initialScore": 9,
+      "finalScore": 7.6,
+      "scoreDelta": -1.4,
+      "iterations": 1,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\no-async-issues.ts",
+      "language": "typescript",
+      "initialScore": 9.2,
+      "finalScore": 9.2,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\no-crypto-misuse.ts",
+      "language": "typescript",
+      "initialScore": 9.3,
+      "finalScore": 9.3,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": false,
+      "status": "NOT_FIXED"
+    },
+    {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\pure-functions.ts",
       "language": "typescript",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
@@ -303,8 +633,8 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\Simple.cs",
       "language": "csharp",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
@@ -333,8 +663,8 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\Simple.java",
       "language": "java",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
@@ -363,8 +693,8 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\simple.py",
       "language": "python",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
@@ -373,8 +703,8 @@
     {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\simple.rb",
       "language": "ruby",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,
@@ -421,10 +751,30 @@
       "status": "ALREADY_HEALTHY"
     },
     {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\slopsquatting-legit.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
       "filePath": "packages\\core\\tests\\fixtures\\healthy\\string-utils.ts",
       "language": "typescript",
-      "initialScore": 9.7,
-      "finalScore": 9.7,
+      "initialScore": 10,
+      "finalScore": 10,
+      "scoreDelta": 0,
+      "iterations": 0,
+      "loopComplete": true,
+      "status": "ALREADY_HEALTHY"
+    },
+    {
+      "filePath": "packages\\core\\tests\\fixtures\\healthy\\test-sql-injection.ts",
+      "language": "typescript",
+      "initialScore": 10,
+      "finalScore": 10,
       "scoreDelta": 0,
       "iterations": 0,
       "loopComplete": true,

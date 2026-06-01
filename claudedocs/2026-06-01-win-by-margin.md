@@ -177,3 +177,55 @@ Vad vi faktiskt har, verifierat: en grind som i en oberoende verifierad simuleri
 Vad vi inte har: ett kausalt RCT-resultat med en *riktig* agent, en OCHS med fler än en implementation, en akademisk medförfattare, peer-review, och en enda riktig användare.
 
 **Den ENA saken som mest avgör om vi vinner med marginal:** den förregistrerade gate-on-vs-gate-off-RCT:n med en riktig agent (Spel 3), publicerad med rådata. Den är den enda kausala claim hela advisory-kategorin är *strukturellt* förhindrad att göra — CodeScene, Sonar, Qodo och Copilot kan inte köra en kontrollarm där deras egen produkt är granskningen. Vinner den, har vi ett mekanism-anspråk konkurrenterna inte kan kontra utan att bygga om sin arkitektur. Förlorar den, vet vi det tidigt och pivoterar ärligt. Allt annat i planen — den öppna specen, biomarkörerna, attestationen, datasvänghjulet — är förstärkning av den siffran. Utan den är "vinn med marginal" fortfarande en tes; med den blir den ett bevisat, icke-kopierbart faktum.
+
+---
+
+## Increment 2026-06-02 — Spel 3 (riktig-agent-RCT) + härdning
+
+**Ton:** Senior, brutalt ärlig, noll hype. Varje siffra nedan är från en faktisk lokal körning eller oberoende omräknad ur rådata — inget är fabricerat. Detta increment **gör oss inte världsbäst**; det avancerar vägen och, viktigast, det **dämpar ett av huvuddokumentets egna påståenden** med riktig data. Läs § "Den obekväma domen" innan något citeras.
+
+### 0. Det enda som spelar roll: vad den RIKTIGA agenten visade (Spel 3-pilot)
+
+Vi körde äntligen den studie hela planen vilar på — inte den skriptade simulering som gav +1,45 (§ 2), utan en **riktig agent (Claude Sonnet 4.6) som autonomt hittade på realistiska utvecklaruppgifter och genererade naturliga edits**, fil för fil, sedan kördes båda armarna (gate-off / gate-on) på samma in-memory-buffert. 48 filer (midfiles.json[0..47], 6 batchar), baslinje-score 5,0–7,7, ~12 språk. Källfiler muterades aldrig. En oberoende verifierare re-scorade varje slutbuffert med `analyzeCode` (på nyombyggd `core`/`gate`), jämförde gate-ON-buffertar byte-för-byte mot originalet och recomputade aggregatet från grunden utan att lita på batch-JSON.
+
+**Verifierat aggregat (n=48, oberoende omräknat ur `benchmark-data/rct-real/batch-{0..5}.json`):**
+
+| Mått | Gate OFF | Gate ON |
+|---|---|---|
+| Medelscore | 5,958 | **6,254** |
+| Medel-delta (ON − OFF), parat | — | **+0,296** (parad SD 0,797; parat t ≈ 2,57) |
+| Delta-fördelning | — | **14 positiva, 34 exakt noll, 0 negativa** |
+| Nyintroducerade smells (icke-säkerhet) | 20 | **5** |
+| **Nyintroducerade säkerhets-/AI-smells** | **0** | **0** |
+| Editerna blockerade-och-reviderade | — | 11 (varav verifieraren räknar 5 äkta revisioner, 12 rena reverts, 30 natural-clean no-ops) |
+
+**Domen, rakt: enforced gating hjälper mätbart men SVAGT när en riktig agent gör NATURLIGA edits — och säkerhetsmarginalen som dominerade simuleringen FÖRSVINNER nästan helt.** Tre fakta måste resa med varje citering:
+
+1. **Naturliga agent-edits är oftast rena, och grinden no-op:ar då.** Av 48 filer var verifierarens mutuellt-exklusiva taxonomi: **30 natural-clean** (gate-ON byte-identisk med gate-OFF — grinden gjorde ingenting), **12 reverts** (gate-ON byte-identisk med originalet — uppgiften helt övergiven), **5 äkta revisioner** (gate-ON skiljer sig från både off och original). Det betyder att grindens *mätbara* verkan kom från en handfull filer, inte från korpusen brett. Detta **försvagar marginal-claimet** relativt simuleringen — och det måste sägas: en riktig agent injicerar inte 21 säkerhetshål på 48 filer som det skriptade adversariella scenariot gjorde.
+2. **Säkerhets-/AI-smell-fångsten — simuleringens starkaste fynd (0 vs 21) — reproduceras INTE här: 0 OFF vs 0 ON.** Oberoende bekräftat över alla 48 OFF-buffertar (`analyzeCode` säkerhetsfilter + `detectSecrets`). En autonom agent som löser en ärlig uppgift skriver helt enkelt inte hårdkodade nycklar eller SQL-injektion på det sätt den adversariellt skriptade sekvensen gjorde. **Grindens verkliga effekt på naturliga edits ligger på tråkig komplexitet/underhållbarhet (20→5), inte säkerhet.** Det är fortfarande ett äkta preventionsvärde, men det är en mycket mindre dramatisk siffra än +1,45 / 21-blockerade, och vi får inte sälja det som annat.
+3. **+0,296 drivs av prevention, inte lyft, precis som simuleringen — men i mindre skala.** 0 negativa deltas (grinden gör aldrig en fil sämre), 34 ties, 14 förbättringar. Av de 5 äkta revisionerna är 2 legitima uppgiftslösande renare edits (b2.0 `complex.py` 4,3→7,0; b2.7 `options.go`), 1 vann inte alls (b1 `Complex.cs` 4,3→4,3, ärligt registrerat), och **2 är "soft task-abandonment"** som verifieraren flaggar: b3.25 `withJvmOverloads.kt` undvek `LongParameterList` genom att *krympa funktionen från 5 till 2 parametrar* (smalare uppgift), b4.38 `symLinks.ts` släppte den substantiella refaktoreringen för en nära-trivial hjälpare. **Inget förbjudet gaming** (0 kommentarsborttagningar, 0 funktionsborttagningar, alla buffertar parsar) — men i två fall vann grinden genom att agenten *gjorde mindre*, inte renare. Det är en ärlig nyans, inte ett fusk.
+
+**Konsekvens för planen:** pilotens harness och mätinstrument fungerar (det var pilotens syfte, och det är bekräftat), men **piloten bevisar INTE ett starkt kausalt enforced-gating-värde på naturliga edits**. Den fulla, förregistrerade RCT:n (Spel 3, 365-dagars-raden) behöver (a) ett uppgiftsurval som tvingar fram riskfyllda edits (refaktoreringar, inte additiva hjälpare), (b) en levande agent som faktiskt redigerar källfiler i en loop snarare än engångs-buffertar, och (c) förregistrering på OSF *före* körning. Pre-registreringsdokumentet finns nu (`docs/benchmarks/rct-preregistration.md`) med H1/H3, within-file crossover-design, tre låsta utfallsmått och ett avsnitt som explicit skiljer denna riktiga-agent-RCT från den skriptade simuleringen.
+
+### 1. Vad som nu är BYGGT & VERIFIERAT (file-disjoint agenter, allt grönt)
+
+- **OCHS-validator-CLI — Spel 2 levererad i första version.** Nytt fristående paket `packages/ochs-validate` (MIT, *ingen* `@healthy-ai-code/core`-runtime-beroende — vikterna är kopierade verbatim, så en tredjepart kan validera utan vår motor). Publicerat JSON-schema (draft-07, alla 55 SmellType-enums, score-intervall [1,0; 10,0]), strukturell validator + formel-re-derivering `max(1,0; 10 − Σ vikt×√count)`, och `bin: ochs-validate`. Verifierat end-to-end på den riktiga `dist/cli.js`: giltigt objekt → PASS exit 0; ogiltig version `"v0.1"` → FAIL exit 1; formel-mismatch (rapporterad 10,0 vs re-deriverad 8,5) → FAIL exit 1; trasig JSON → FAIL exit 1. 98/98 paket-tester gröna inkl. 4 determinism-tester. **Detta är det första steget som gör OCHS till mer än ett proprietärt format med vänligt namn — men det är fortfarande EN implementation tills en extern part emitterar en conformant score.**
+- **SlopsquattingRisk härdad — Spel 5 mätt.** På en deterministisk, offline, märkt mängd (positives=56, negatives=4132): **precision 100,00 %, recall 100,00 %, TP=56 FP=0 FN=0** (mål ≥85 % precision, <1 % FP — båda överträffade). Full-snapshot-FP-bevis (den realistiska falsk-positiv-ytan): **0/5581 npm-namn och 0/14997 PyPI-moduler = 0,000 %**. Noll-nätverk-bevis vid opt-out är icke-vakuöst och självkontrollerat (källan importerar ingen nätverksmodul; en live `global.fetch`-tripwire träffas 0 gånger; opt-in når registret enbart via injicerad fetcher). **Förbehåll:** 100 % precision gäller *denna märkta mängd* — den innehåller hand-konstruerade single-edit-typosquats av prominenta paket, så det är en stark men inte fält-validerad siffra; verklig precision på live-hallucinationer återstår att mäta.
+- **`packages/gate` falsk-positiv-rate uppmätt — Spel 1-bas.** 29-edit benign-korpus över 5 språk (rename/added-pure-function/doc/refaktor/formattering/typannotering/import-omordning). **FP-rate 0/29 = 0,00 %** (mål <5 %) via exakt samma kodväg som produktionshooken. Per kategori alla 0. Den låga siffran är *inte* uppnådd genom att neutralisera grinden: negativ-kontroll-sviten bekräftar att varje skadlig edit (7 fixtures) fortfarande nekas av rätt skäl. En äkta (ej kosmetisk) FP rotorsakades och fixades under härdningen.
+
+### 2. Test- & grön-status (oberoende verifierat med riktig körning)
+
+`pnpm -r typecheck` grönt för alla 5 paket; `pnpm build` grönt; `pnpm test` exit 0, noll fel. **Totalt 1964 tester över 5 paket** (core 1547, mcp-server 206, ochs-validate 98, gate 84, init 29). **Ärlig not, inget överclaim:** uppdraget refererade "1844 tester över 4 paket"; repot har nu 5 källpaket (nya `ochs-validate`) och 1964 tester — deltat är BuildHarden-tester + det nya paketet, inte uppblåsning.
+
+### 3. Uppdaterad ärlig ställning mot beslutsregeln
+
+**Är vi närmare att vinna med marginal? Marginellt ja på leverans-bredd, men piloten DÄMPADE huvudtesen, inte stärkte den.**
+
+- **Plus:** Spel 2 (OCHS-CLI), Spel 5 (slopsquatting) och Spel 1-bas (gate-FP) är nu från tes till verifierad artefakt. Förregistreringsdokumentet finns. Harnessen för den riktiga RCT:n fungerar bevisat.
+- **Minus (det avgörande):** den riktiga-agent-piloten visade att enforced gating på *naturliga* edits ger **+0,296 (svagt, t≈2,57) och noll säkerhetsmarginal (0 vs 0)** — långt från simuleringens +1,45 / 0-vs-21. Grinden no-op:ar på 30/48 filer och vinner mätbart på en handfull. **Den kausala kärnan i § 2 håller bara för adversariella edit-sekvenser; mot en ärlig agent är effekten reell men liten.** Detta är exakt den sorts fynd planen lovade att publicera oavsett utfall — och vi gör det.
+
+**Det betyder inte att grinden är värdelös:** 0 negativa deltas på 48 naturliga edits + 20→5 komplexitets-smell-prevention + 0,00 % FP är ett ärligt "gör-aldrig-skada, fångar-tråkig-erosion"-värde. Men det är en *svagare* asymmetri än dokumentet hittills hävdat, och säkerhets-dramatiken (21 blockerade) tillhör simuleringen, inte den riktiga agenten.
+
+**Det SINGEL viktigaste återstående steget — oförändrat och nu skärpt av piloten:** den **fullskaliga, förregistrerade Spel 3-RCT:n med en levande agent som redigerar källfiler i en faktisk loop mot riktiga issues, med ett uppgiftsurval som framkallar riskfyllda refaktoreringar** (inte additiva hjälpare som råkar vara rena). Piloten bevisade att instrumentet mäter rätt; den bevisade också att det lätta scenariot ger en liten effekt. Den fullskaliga studien är det enda som avgör om det finns en *publicerbar* kausal siffra konkurrenterna inte kan kontra — eller om vi måste pivotera ärligt till "prevention av komplexitetserosion" som det realistiska claimet. OCHS-extern-adopter och riktiga användare är nästa-efter-det, men de följer av RCT-siffran, inte tvärtom.
+
+**Sammanfattat:** detta increment gör oss inte världsbäst och löser inte marginalfrågan — det levererar tre verifierade artefakter, kör pilotstudien ärligt, och tvingar fram en nedjustering av huvudtesens styrka. Vägen är intakt; beviset som avgör den är fortfarande okört i full skala.
