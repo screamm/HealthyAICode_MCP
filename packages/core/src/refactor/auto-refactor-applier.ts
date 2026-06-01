@@ -13,11 +13,20 @@ export interface ApplyResult {
   transformedCode: string;
   changes: string[];
   strategy: RefactoringStrategy;
+  /**
+   * Set by callers (e.g. the async transformer pipeline) when no safe deterministic
+   * transform exists for the language/strategy and the fix must be applied by the AI
+   * assistant manually. Optional — synchronous template applications omit it.
+   */
+  requiresManualIntervention?: boolean;
 }
 
 export function applyAutoRefactor(
   code: string,
-  refactorResult: AutoRefactorResult
+  refactorResult: AutoRefactorResult,
+  // Accepted for caller uniformity with the async transformer pipeline. The synchronous
+  // template applier targets TS/JS, so the language is informational here.
+  _language?: import('../types').Language
 ): ApplyResult {
   const { refactoringStrategy } = refactorResult;
 

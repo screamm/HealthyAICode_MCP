@@ -1,0 +1,12 @@
+id: early-return-ruby
+language: Ruby
+rule:
+  pattern: |
+    if $COND
+      $$$BODY
+    end
+fix: |
+  return unless $COND
+  $$$BODY
+message: "Replace positive if-block with early return guard clause (Ruby idiom: return unless)"
+severity: hint

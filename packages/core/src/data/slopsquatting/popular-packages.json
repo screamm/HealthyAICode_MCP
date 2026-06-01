@@ -1,0 +1,89 @@
+{
+  "_format": "slopsquatting-popular-packages-index",
+  "_version": "1.0.0",
+  "_description": "Index of popular package name snapshots used as the 'real packages' reference set for slopsquatting / HallucinatedPackageImport detection. The actual package lists live in the sibling data files to avoid duplication. This file provides metadata and ecosystem coverage notes.",
+  "_generatedAt": "2026-06-01T00:00:00.000Z",
+  "_rationale": "Slopsquatting detection works by comparing an import name against a known-real-packages set. A name that looks plausible but does NOT appear in the real set is a candidate hallucination. The snapshots here cover the two most hallucination-prone ecosystems (npm and PyPI) plus summary counts for others.",
+  "_sources": {
+    "npm": {
+      "file": "../npm-snapshot.json",
+      "description": "Top npm packages by download popularity (popularity-sorted registry search + curated well-known packages)",
+      "count": 10250,
+      "generatedAt": "2026-05-30T21:16:50.386Z",
+      "refreshCmd": "node scripts/update-package-snapshots.mjs --npm-only",
+      "sourceUrl": "https://registry.npmjs.org/-/v1/search?text=&sort=downloads"
+    },
+    "pypi": {
+      "file": "../pypi-snapshot.json",
+      "description": "Top PyPI packages by 30-day downloads (hugovk/top-pypi-packages ClickHouse dataset)",
+      "count": 15000,
+      "generatedAt": "2026-05-30T21:06:24.386Z",
+      "refreshCmd": "node scripts/update-package-snapshots.mjs --pypi-only",
+      "sourceUrl": "https://hugovk.github.io/top-pypi-packages/top-pypi-packages-30-days.min.json"
+    }
+  },
+  "_hallucination_rate_by_ecosystem": {
+    "npm": {
+      "mean_pct": 21.3,
+      "source": "arXiv:2406.10279 (USENIX Security 2025)"
+    },
+    "pypi": {
+      "mean_pct": 15.8,
+      "source": "arXiv:2406.10279 (USENIX Security 2025)"
+    },
+    "cargo": {
+      "mean_pct": 24.74,
+      "source": "arXiv:2501.19012 (Rust proxy for Cargo)"
+    }
+  },
+  "_detection_algorithm": {
+    "step1": "Normalize the import/require string to its registry package name (e.g. strip __init__ paths, handle @scope/pkg)",
+    "step2": "Look up normalized name in the ecosystem's real-packages set (npm-snapshot.json or pypi-snapshot.json)",
+    "step3": "If NOT found: compute Levenshtein distance to nearest real package name",
+    "step4": "If distance <= 2 AND real candidate exists: flag as likely TYPO hallucination",
+    "step5": "If distance > 2 OR no close real candidate: flag as likely FABRICATED or SUFFIX_PRO hallucination",
+    "step6": "Cross-check against hallucinated-corpus.json for confirmed hallucinations with elevated severity"
+  },
+  "_coverage_notes": {
+    "npm_top_10250": "Covers packages with >=~1000 weekly downloads. An LLM-hallucinated package that would actually have appeared in the top 10k would almost certainly be a real package. Packages below this threshold are not covered — false negatives possible for niche packages.",
+    "pypi_top_15000": "Covers packages with >=~500 monthly downloads based on ClickHouse/PyPI stats. Same caveat applies for niche packages.",
+    "other_ecosystems": "Cargo, Go, Maven, NuGet, RubyGems etc. are NOT covered by snapshot files. For those ecosystems, rely solely on hallucinated-corpus.json entries or live registry lookup via depscope.dev API."
+  },
+  "_research_citations": [
+    {
+      "id": "usenix2025",
+      "title": "We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating LLMs",
+      "url": "https://arxiv.org/abs/2406.10279",
+      "venue": "USENIX Security 2025",
+      "key_finding": "205,474 unique hallucinated names; 19.7% overall rate across 576,000 code samples from 16 LLMs"
+    },
+    {
+      "id": "arxiv2501",
+      "title": "Importing Phantoms: Measuring LLM Package Hallucination Vulnerabilities",
+      "url": "https://arxiv.org/abs/2501.19012",
+      "venue": "arXiv, January 2025",
+      "key_finding": "JS 14.73%, Python 23.14%, Rust 24.74%; larger models (>=70B) show significantly lower rates"
+    },
+    {
+      "id": "depscope2026",
+      "title": "DepScope Hallucinations Dataset",
+      "url": "https://github.com/cuttalo/depscope-hallucinations-dataset",
+      "author": "Rubino, V.",
+      "license": "CC-BY-NC-SA 4.0",
+      "key_finding": "161 confirmed hallucinations from real agent traffic + research, across 19 ecosystems. Updated daily."
+    },
+    {
+      "id": "trendmicro2025",
+      "title": "Slopsquatting: Hallucination in Coding Agents and Vibe Coding",
+      "url": "https://github.com/trendmicro/slopsquatting",
+      "license": "MIT",
+      "key_finding": "100 realistic web-dev tasks evaluated; reasoning-enhanced agents reduce hallucination vs baseline"
+    },
+    {
+      "id": "lanyado2024",
+      "title": "Slopsquatting: The AI Package Hallucination Attack Already Happening",
+      "url": "https://www.aikido.dev/blog/slopsquatting-ai-package-hallucination-attacks",
+      "key_finding": "huggingface-cli received 30,000+ authentic downloads after being registered; react-codeshift accumulated daily downloads across 237 repos"
+    }
+  ]
+}

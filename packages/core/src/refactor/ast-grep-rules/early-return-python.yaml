@@ -1,0 +1,17 @@
+id: early-return-python
+language: Python
+# Guard: only rewrite bare if-blocks — never if-else or if/elif, which would
+# silently drop the alternative branch.
+rule:
+  all:
+    - pattern: |
+        if $COND:
+          $$$BODY
+    - not:
+        regex: '\belse\b|\belif\b'
+fix: |
+  if not ($COND):
+      return
+  $$$BODY
+message: "Replace positive if-block with early return guard clause to reduce nesting"
+severity: hint

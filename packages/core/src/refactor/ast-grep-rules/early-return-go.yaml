@@ -1,0 +1,19 @@
+id: early-return-go
+language: Go
+# Guard: only rewrite bare if-blocks — never if-else, which would silently drop
+# the else branch.
+rule:
+  all:
+    - pattern: |
+        if $COND {
+          $$$BODY
+        }
+    - not:
+        regex: '\belse\b'
+fix: |
+  if !($COND) {
+    return
+  }
+  $$$BODY
+message: "Replace positive if-block with early return guard clause to reduce nesting"
+severity: hint

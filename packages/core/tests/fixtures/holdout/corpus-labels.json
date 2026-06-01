@@ -1,0 +1,1346 @@
+[
+  {
+    "filePath": "simple_math.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Pure utility functions, no smells, exemplary Python"
+  },
+  {
+    "filePath": "string_utils.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Clean string helpers with type hints and docstrings"
+  },
+  {
+    "filePath": "list_helpers.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "Well-structured list utilities"
+  },
+  {
+    "filePath": "date_utils.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Date helpers using only stdlib, clean and documented"
+  },
+  {
+    "filePath": "validators.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "Input validators — clear, single responsibility"
+  },
+  {
+    "filePath": "array-helpers.ts",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Typed generic array utilities, no smells"
+  },
+  {
+    "filePath": "string-helpers.ts",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "String utilities with good type safety"
+  },
+  {
+    "filePath": "math-helpers.ts",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Pure math functions, well-documented"
+  },
+  {
+    "filePath": "date-helpers.ts",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "Thin Date wrappers with clear contracts"
+  },
+  {
+    "filePath": "type-guards.ts",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Runtime type-guard helpers — exemplary TypeScript"
+  },
+  {
+    "filePath": "math_utils.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Simple Go integer utilities, idiomatic"
+  },
+  {
+    "filePath": "string_utils.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "String helpers using stdlib, clean"
+  },
+  {
+    "filePath": "slice_utils.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "Generic-like slice utilities for int, idiomatic Go"
+  },
+  {
+    "filePath": "validator.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "Input validation helpers, clean"
+  },
+  {
+    "filePath": "date_utils.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0,
+    "raterNotes": "Date utilities using time package, well-documented"
+  },
+  {
+    "filePath": "complex_validator.py",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "High-branch-count function; readable but borderline CC"
+  },
+  {
+    "filePath": "data_processor.py",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Conditional mutation inside loop — borderline"
+  },
+  {
+    "filePath": "nested_config.py",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Recursive config with env branching — moderate nesting"
+  },
+  {
+    "filePath": "event-handler.ts",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Multi-branch event dispatcher — borderline complexity"
+  },
+  {
+    "filePath": "parser.ts",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Token parser with moderate branching — acceptable"
+  },
+  {
+    "filePath": "formatter.ts",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Format-switching function — moderate CC"
+  },
+  {
+    "filePath": "router.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Simple router with wildcard matching — borderline"
+  },
+  {
+    "filePath": "config_loader.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "Config validator with merge function — moderate"
+  },
+  {
+    "filePath": "state_machine.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "FSM with switch/case transitions — borderline complexity"
+  },
+  {
+    "filePath": "complex.ts",
+    "maintainabilityRating": 1,
+    "llmBreakRate": 0.8,
+    "raterNotes": "God class with multiple responsibilities — very low maintainability"
+  },
+  {
+    "filePath": "complex.py",
+    "maintainabilityRating": 1,
+    "llmBreakRate": 0.8,
+    "raterNotes": "Deep nesting, complex CC — hard to maintain"
+  },
+  {
+    "filePath": "complex.go",
+    "maintainabilityRating": 1,
+    "llmBreakRate": 0.8,
+    "raterNotes": "Long parameter list, deep nesting, multi-responsibility"
+  },
+  {
+    "filePath": "requests_src_requests_adapters.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=28, loc=749, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/adapters.py, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests_api.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.40, smells=22, loc=181, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/api.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_auth.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=32, loc=355, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/auth.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_compat.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.30, smells=6, loc=114, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/compat.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_cookies.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.40, smells=10, loc=626, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/cookies.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_exceptions.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=163, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/exceptions.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_help.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.20, smells=3, loc=135, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/help.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_hooks.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.40, smells=1, loc=49, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/hooks.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_models.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=84, loc=1181, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/models.py, touched in 2 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests_sessions.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=30, loc=921, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/sessions.py, touched in 2 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests_status_codes.py",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.60, smells=72, loc=129, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/status_codes.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_structures.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=131, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/structures.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "requests_src_requests_utils.py",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=79, loc=1156, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/utils.py, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests__internal_utils.py",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.60, smells=1, loc=52, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/_internal_utils.py, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests__types.py",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=3, loc=184, bugFix=true. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/_types.py, touched in 2 bug-fix commit(s)"
+  },
+  {
+    "filePath": "requests_src_requests___init__.py",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.70, smells=15, loc=220, bugFix=false. Provenance: https://github.com/psf/requests @ cd90742, file: src/requests/__init__.py, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_analysis.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=270, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/analysis.go, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_analysistest_analysistest.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=25, loc=795, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/analysistest/analysistest.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_checker_checker.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=19, loc=654, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/checker/checker.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_checker_print.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.40, smells=4, loc=89, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/checker/print.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_diagnostic.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=89, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/diagnostic.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_internal_analysisflags_flags.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.40, smells=7, loc=311, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/internal/analysisflags/flags.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_internal_analysisflags_help.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.20, smells=2, loc=113, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/internal/analysisflags/help.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_internal_checker_checker.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=19, loc=345, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/internal/checker/checker.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_multichecker_multichecker.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=61, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/multichecker/multichecker.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_appends_appends.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=48, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/appends/appends.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_asmdecl_asmdecl.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=92, loc=835, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/asmdecl/asmdecl.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_assign_assign.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.40, smells=6, loc=147, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/assign/assign.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_atomic_atomic.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.60, smells=1, loc=88, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/atomic/atomic.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_atomicalign_atomicalign.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=7, loc=109, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/atomicalign/atomicalign.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_bools_bools.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=184, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/bools/bools.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_buildssa_buildssa.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.40, smells=4, loc=115, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/buildssa/buildssa.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_buildtag_buildtag.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.70, smells=15, loc=406, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/buildtag/buildtag.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_cgocall_cgocall.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.50, smells=11, loc=379, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/cgocall/cgocall.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_composite_composite.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.20, smells=5, loc=147, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/composite/composite.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_composite_whitelist.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=36, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/composite/whitelist.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_copylock_copylock.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=14, loc=392, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/copylock/copylock.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_ctrlflow_ctrlflow.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.50, smells=5, loc=279, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/ctrlflow/ctrlflow.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_deepequalerrors_deepequalerrors.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.40, smells=4, loc=119, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/deepequalerrors/deepequalerrors.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_defers_defers.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=61, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/defers/defers.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_directive_directive.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.40, smells=4, loc=205, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/directive/directive.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_errorsas_errorsas.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.60, smells=1, loc=90, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/errorsas/errorsas.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_fieldalignment_fieldalignment.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.80, smells=26, loc=390, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/fieldalignment/fieldalignment.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_findcall_findcall.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.50, smells=4, loc=100, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/findcall/findcall.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_framepointer_framepointer.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.80, smells=5, loc=142, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/framepointer/framepointer.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_gofix_gofix.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=34, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/gofix/gofix.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_hostport_hostport.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.30, smells=15, loc=211, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/hostport/hostport.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_httpmux_httpmux.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.20, smells=7, loc=185, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/httpmux/httpmux.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_httpresponse_httpresponse.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.20, smells=7, loc=176, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/httpresponse/httpresponse.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_ifaceassert_ifaceassert.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.40, smells=1, loc=102, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/ifaceassert/ifaceassert.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_inline_inline.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=23, loc=639, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/inline/inline.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_inspect_inspect.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=50, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/inspect/inspect.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_internal_gofixdirective_gofixdirective.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.20, smells=3, loc=144, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/internal/gofixdirective/gofixdirective.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_loopclosure_loopclosure.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.90, smells=13, loc=352, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/loopclosure/loopclosure.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_lostcancel_lostcancel.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=14, loc=325, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/lostcancel/lostcancel.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_any.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.80, smells=1, loc=54, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/any.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_atomictypes.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.90, smells=5, loc=252, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/atomictypes.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_bloop.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.50, smells=11, loc=245, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/bloop.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_embedlit.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.50, smells=13, loc=407, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/embedlit.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_errorsastype.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.6,
+    "raterNotes": "score=6.20, smells=7, loc=239, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/errorsastype.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_fmtappendf.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.50, smells=4, loc=163, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/fmtappendf.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_forvar.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.20, smells=4, loc=114, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/forvar.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_maps.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=15, loc=299, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/maps.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_minmax.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=26, loc=469, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/minmax.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_modernize.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.60, smells=3, loc=183, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/modernize.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_newexpr.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.00, smells=9, loc=204, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/newexpr.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_omitzero.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.70, smells=7, loc=133, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/omitzero.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_plusbuild.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.90, smells=2, loc=81, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/plusbuild.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_rangeint.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.80, smells=9, loc=385, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/rangeint.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_reflect.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.00, smells=10, loc=205, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/reflect.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_slices.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.30, smells=13, loc=293, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/slices.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_slicesbackward.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.00, smells=7, loc=276, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/slicesbackward.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_slicescontains.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=21, loc=448, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/slicescontains.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_slicesdelete.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.20, smells=8, loc=178, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/slicesdelete.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_sortslice.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.60, smells=5, loc=122, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/sortslice.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_stditerators.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=18, loc=390, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/stditerators.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_stringsbuilder.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.70, smells=8, loc=391, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/stringsbuilder.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_stringscut.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=25, loc=852, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/stringscut.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_stringscutprefix.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=2.80, smells=10, loc=271, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/stringscutprefix.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_stringsseq.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.00, smells=5, loc=141, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/stringsseq.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_testingcontext.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.00, smells=10, loc=251, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/testingcontext.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_unsafefuncs.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.90, smells=8, loc=206, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/unsafefuncs.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_modernize_waitgroupgo.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.50, smells=4, loc=178, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/modernize/waitgroupgo.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_nilfunc_nilfunc.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=68, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/nilfunc/nilfunc.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_nilness_nilness.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=16, loc=498, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/nilness/nilness.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_pkgfact_pkgfact.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.00, smells=5, loc=129, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/pkgfact/pkgfact.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_printf_printf.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=1.00, smells=45, loc=1244, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/printf/printf.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_printf_types.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.60, smells=8, loc=304, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/printf/types.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_reflectvaluecompare_reflectvaluecompare.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.70, smells=3, loc=78, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/reflectvaluecompare/reflectvaluecompare.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_scannererr_scannererr.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.8,
+    "raterNotes": "score=4.90, smells=5, loc=146, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/scannererr/scannererr.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_shadow_shadow.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.60, smells=2, loc=269, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/shadow/shadow.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_shift_dead.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.30, smells=8, loc=102, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/shift/dead.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_shift_shift.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.70, smells=5, loc=134, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/shift/shift.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_sigchanyzer_sigchanyzer.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.40, smells=4, loc=163, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/sigchanyzer/sigchanyzer.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_slog_slog.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.00, smells=19, loc=245, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/slog/slog.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_sortslice_analyzer.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.40, smells=9, loc=136, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/sortslice/analyzer.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_sqlrowserr_sqlrowserr.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.00, smells=6, loc=152, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/sqlrowserr/sqlrowserr.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_stdmethods_stdmethods.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.60, smells=3, loc=203, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/stdmethods/stdmethods.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_stdversion_stdversion.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.50, smells=8, loc=137, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/stdversion/stdversion.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_stringintconv_string.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.30, smells=8, loc=263, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/stringintconv/string.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_structtag_structtag.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=2.30, smells=11, loc=326, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/structtag/structtag.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_testinggoroutine_testinggoroutine.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.70, smells=8, loc=279, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/testinggoroutine/testinggoroutine.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_testinggoroutine_util.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.70, smells=6, loc=79, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/testinggoroutine/util.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_tests_tests.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.20, smells=18, loc=477, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/tests/tests.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_timeformat_timeformat.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.80, smells=3, loc=107, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/timeformat/timeformat.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_unmarshal_unmarshal.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.40, smells=5, loc=104, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/unmarshal/unmarshal.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_unreachable_unreachable.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.00, smells=22, loc=331, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/unreachable/unreachable.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_unsafeptr_unsafeptr.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.50, smells=5, loc=158, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/unsafeptr/unsafeptr.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_unusedresult_unusedresult.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.60, smells=7, loc=201, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/unusedresult/unusedresult.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_unusedwrite_unusedwrite.go",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=6.80, smells=3, loc=160, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/unusedwrite/unusedwrite.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_usesgenerics_usesgenerics.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=84, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/usesgenerics/usesgenerics.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_passes_waitgroup_waitgroup.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.00, smells=2, loc=92, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/passes/waitgroup/waitgroup.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_singlechecker_singlechecker.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=77, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/singlechecker/singlechecker.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_suite_fix_fix.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.40, smells=1, loc=47, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/suite/fix/fix.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_suite_vet_vet.go",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=2, loc=100, bugFix=true. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/suite/vet/vet.go, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "gotools_go_analysis_unitchecker_main.go",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=87, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/unitchecker/main.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_unitchecker_unitchecker.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=1.20, smells=17, loc=552, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/unitchecker/unitchecker.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "gotools_go_analysis_validate.go",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=3.80, smells=8, loc=138, bugFix=false. Provenance: https://github.com/golang/tools @ 3a33ec0, file: go/analysis/validate.go, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_arguments_cwd.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=40, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/cwd.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_arguments_encoding-option.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=1, loc=51, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/encoding-option.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_arguments_escape.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=89, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/escape.js, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_arguments_fd-options.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.00, smells=3, loc=109, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/fd-options.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_arguments_options.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=101, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/options.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_arguments_specific.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=2, loc=112, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/arguments/specific.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_convert_concurrent.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=34, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/concurrent.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_convert_duplex.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=70, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/duplex.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_convert_iterable.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=35, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/iterable.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_convert_readable.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=114, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/readable.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_convert_shared.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=47, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/shared.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_convert_writable.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.40, smells=3, loc=91, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/convert/writable.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_io_contents.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=117, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/contents.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_input-sync.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=45, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/input-sync.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_iterate.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.60, smells=2, loc=111, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/iterate.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_max-buffer.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=90, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/max-buffer.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_output-async.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=81, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/output-async.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_output-sync.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.60, smells=4, loc=136, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/output-sync.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_io_pipeline.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.00, smells=4, loc=49, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/io/pipeline.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_buffer-messages.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=48, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/buffer-messages.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_forward.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=57, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/forward.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_get-each.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=90, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/get-each.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_get-one.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.70, smells=2, loc=70, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/get-one.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_graceful.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=73, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/graceful.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_incoming.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=1, loc=80, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/incoming.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_ipc-input.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=45, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/ipc-input.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_methods.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.00, smells=1, loc=50, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/methods.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_outgoing.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=48, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/outgoing.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_reference.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.00, smells=4, loc=45, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/reference.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_send.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=92, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/send.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_ipc_strict.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=114, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/strict.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_ipc_validation.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=112, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/ipc/validation.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_methods_command.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=44, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/command.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_methods_create.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=66, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/create.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_methods_main-async.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.80, smells=4, loc=195, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/main-async.js, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_methods_main-sync.js",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.6,
+    "raterNotes": "score=6.90, smells=4, loc=164, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/main-sync.js, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_methods_node.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=64, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/node.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_methods_parameters.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=1, loc=33, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/parameters.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_methods_template.js",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.6,
+    "raterNotes": "score=6.30, smells=4, loc=154, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/methods/template.js, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_pipe_pipe-arguments.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=92, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/pipe/pipe-arguments.js, touched in 1 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_pipe_setup.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=73, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/pipe/setup.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_pipe_streaming.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=52, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/pipe/streaming.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_pipe_throw.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=59, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/pipe/throw.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_all-async.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=47, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/all-async.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_all-sync.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=1, loc=34, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/all-sync.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_exit-async.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=55, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/exit-async.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_stdio.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=48, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/stdio.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_wait-stream.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.70, smells=2, loc=97, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/wait-stream.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_resolve_wait-subprocess.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.60, smells=3, loc=147, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/resolve/wait-subprocess.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_return_early-error.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=61, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/return/early-error.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_return_final-error.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=41, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/return/final-error.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_return_message.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.2,
+    "raterNotes": "score=5.90, smells=5, loc=158, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/return/message.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_return_result.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.10, smells=3, loc=187, bugFix=true. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/return/result.js, touched in 0 bug-fix commit(s)"
+  },
+  {
+    "filePath": "execa_lib_stdio_direction.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=77, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/direction.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_duplicate.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.70, smells=3, loc=117, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/duplicate.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_handle-async.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=53, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/handle-async.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_handle-sync.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=58, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/handle-sync.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_handle.js",
+    "maintainabilityRating": 3,
+    "llmBreakRate": 0.15,
+    "raterNotes": "score=7.90, smells=3, loc=215, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/handle.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_input-option.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=51, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/input-option.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_native.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=107, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/native.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_stdio-option.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.70, smells=2, loc=61, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/stdio-option.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_stdio_type.js",
+    "maintainabilityRating": 2,
+    "llmBreakRate": 0.5,
+    "raterNotes": "score=4.60, smells=9, loc=174, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/stdio/type.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_terminate_graceful.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=1, loc=72, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/terminate/graceful.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_terminate_kill.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.70, smells=1, loc=94, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/terminate/kill.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_terminate_signal.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=71, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/terminate/signal.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_encoding-transform.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=52, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/encoding-transform.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_generator.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=108, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/generator.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_normalize.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=112, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/normalize.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_object-mode.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=42, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/object-mode.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_run-async.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.00, smells=2, loc=61, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/run-async.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_run-sync.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.90, smells=2, loc=51, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/run-sync.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_split.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=9.50, smells=1, loc=111, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/split.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_transform_validate.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=44, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/transform/validate.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_utils_uint-array.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.05,
+    "raterNotes": "score=8.70, smells=2, loc=70, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/utils/uint-array.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_verbose_default.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=55, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/verbose/default.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_verbose_info.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=40, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/verbose/info.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_verbose_log.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=55, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/verbose/log.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_verbose_output.js",
+    "maintainabilityRating": 4,
+    "llmBreakRate": 0.02,
+    "raterNotes": "score=9.20, smells=2, loc=61, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/verbose/output.js, stable (no bug-fix touches)"
+  },
+  {
+    "filePath": "execa_lib_verbose_values.js",
+    "maintainabilityRating": 5,
+    "llmBreakRate": 0,
+    "raterNotes": "score=10.00, smells=0, loc=34, bugFix=false. Provenance: https://github.com/sindresorhus/execa @ f3a2e84, file: lib/verbose/values.js, stable (no bug-fix touches)"
+  }
+]

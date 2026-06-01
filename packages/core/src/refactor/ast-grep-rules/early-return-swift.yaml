@@ -1,0 +1,17 @@
+id: early-return-swift
+language: Swift
+# Guard: only rewrite bare if-blocks — never if-else, which would silently drop
+# the else branch.
+rule:
+  all:
+    - pattern: |
+        if $COND {
+          $$$BODY
+        }
+    - not:
+        regex: '\belse\b'
+fix: |
+  guard $COND else { return }
+  $$$BODY
+message: "Replace positive if-block with Swift guard-else-return pattern to reduce nesting"
+severity: hint

@@ -1,0 +1,1040 @@
+{
+  "_format": "slopsquatting-hallucinated-corpus",
+  "_version": "1.0.0",
+  "_description": "Curated corpus of LLM-hallucinated package names for slopsquatting detection. Sources: DepScope Hallucinations Dataset (CC-BY-NC-SA 4.0, Rubino 2026), Trend Micro slopsquatting.jsonl (MIT), Aikido Security research, and academic literature (USENIX 2025, arXiv 2501.19012).",
+  "_generatedAt": "2026-06-01T00:00:00.000Z",
+  "_corpusSizes": {
+    "depscope": 100,
+    "trendmicro": 12,
+    "manual_research": 22,
+    "total": 134
+  },
+  "_provenanceUrls": [
+    "https://github.com/cuttalo/depscope-hallucinations-dataset",
+    "https://depscope.dev/api/benchmark/hallucinations",
+    "https://github.com/trendmicro/slopsquatting",
+    "https://arxiv.org/abs/2406.10279",
+    "https://arxiv.org/abs/2501.19012",
+    "https://www.aikido.dev/blog/slopsquatting-ai-package-hallucination-attacks"
+  ],
+  "_license": "CC-BY-NC-SA 4.0 (DepScope entries). Research-documented entries are facts not subject to copyright.",
+  "_hallucination_patterns": {
+    "typo": "Minor misspelling of a real package (e.g. reqeusts → requests, lodsh → lodash)",
+    "suffix_pro": "Real name + '-pro', '-easy', '-turbo', '-plus', '-extras', '-extended', '-advanced'",
+    "companion": "Plausible helper/extension that does not exist (e.g. fastapi-turbo, react-hooks-essential)",
+    "fabricated": "Completely invented name with no real-package basis (e.g. nebula-framework, vulcanmind)",
+    "conflation": "Merging two real packages into one fake name (e.g. react-codeshift from jscodeshift + react-codemod)",
+    "version_confusion": "Appending a version number that is not a valid package name (e.g. redis-7.0.12, postgresql@17 mistyped as postgresql)",
+    "cross_ecosystem": "Python package name used in npm context or vice-versa (8.7% of Python hallucinations are valid JS packages)"
+  },
+  "_research_statistics": {
+    "usenix2025_unique_hallucinated": 205474,
+    "usenix2025_hallucination_rate_pct": 19.7,
+    "usenix2025_python_rate_pct": 15.8,
+    "usenix2025_js_rate_pct": 21.3,
+    "usenix2025_commercial_model_rate_pct": 5.2,
+    "usenix2025_opensource_model_rate_pct": 21.7,
+    "usenix2025_samples_analyzed": 576000,
+    "usenix2025_models_tested": 16,
+    "arxiv2501_js_rate_pct": 14.73,
+    "arxiv2501_python_rate_pct": 23.14,
+    "arxiv2501_rust_rate_pct": 24.74,
+    "patterns_conflation_pct": 38,
+    "patterns_typo_pct": 13,
+    "patterns_fabricated_pct": 51,
+    "repeated_across_prompts_pct": 43,
+    "recurring_10_runs_pct": 58,
+    "source": "arXiv:2406.10279 (USENIX Security 2025); arXiv:2501.19012 (Jan 2025)"
+  },
+  "entries": [
+    {
+      "ecosystem": "conda",
+      "package_name": "torch-lightning-easy",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "pytorch-lightning",
+      "hit_count": 61
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "tokio-stream-extras",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "tokio-stream",
+      "hit_count": 41
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "typescript-utility-pack-pro",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "type-fest",
+      "hit_count": 41
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "fastapi-turbo",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "fastapi",
+      "hit_count": 41
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "react-hooks-essential",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "react",
+      "hit_count": 31
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "pandas-easy-pivot",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "pandas",
+      "hit_count": 31
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "postgresql",
+      "source": "depscope_observed",
+      "pattern": "version_confusion",
+      "likely_real_alternative": "postgresql@17",
+      "hit_count": 11
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "actix-web-extensions",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "actix-web",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "axum-middleware-pro",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "axum",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "blas-lapack",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "reqwest-extra-helpers",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "reqwest",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "rust-ffi",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "rustdecimal",
+      "source": "depscope_observed",
+      "pattern": "typo",
+      "likely_real_alternative": "rust_decimal",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "search-index",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "sered",
+      "source": "depscope_observed",
+      "pattern": "typo",
+      "likely_real_alternative": "serde",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cargo",
+      "package_name": "wasmbindgen",
+      "source": "depscope_observed",
+      "pattern": "typo",
+      "likely_real_alternative": "wasm-bindgen",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cocoapods",
+      "package_name": "AlamofireRateLimit",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cocoapods",
+      "package_name": "AlamofireRateLimiter",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cocoapods",
+      "package_name": "FirebaseAuthGoogleSignIn",
+      "source": "depscope_observed",
+      "pattern": "conflation",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cocoapods",
+      "package_name": "RateLimiting",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cocoapods",
+      "package_name": "realm-swift",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "cubiq/cpui",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "doctrine/event-subscriber",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "laravel/auth-pro",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "laravel/sanctum",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "laravel/rate-limiting",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "laravel/stripe-fork",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "spatie/laravel-rate-limiter",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "symfony/components-extra",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "symfony/symfony",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "symfony/locale-extension",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "symfony/security-voter",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "symfony/templating-engine",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "twig/l10n",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "twig/twig-extension-languages",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "twig/twig-extra",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "wordpress/wp-cli",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "composer",
+      "package_name": "wp-cli/wp-cli-custom-post-type-builder",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "apache-arrow-cpp",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "gatk",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "gatk4",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "gatk4-gatk-launcher",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "opencv",
+      "source": "depscope_observed",
+      "pattern": "cross_ecosystem",
+      "likely_real_alternative": "opencv-python-headless",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "openmmlab",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "py38-cython",
+      "source": "depscope_observed",
+      "pattern": "version_confusion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "py3dnn",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "rapids-cudf",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "rapsodisi-cuDF",
+      "source": "depscope_observed",
+      "pattern": "typo",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "scanpy-official",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "snailv",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "conda",
+      "package_name": "varscan",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cpan",
+      "package_name": "DBIx::Class::SchemaLoader::FromDBI",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cpan",
+      "package_name": "IPC::Socket",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cpan",
+      "package_name": "Mojolicious::Plugin::WebSocket",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cpan",
+      "package_name": "Mojolicious::WebSocket",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cran",
+      "package_name": "faster-raster",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cran",
+      "package_name": "rasterParallel",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cran",
+      "package_name": "rasterio",
+      "source": "depscope_observed",
+      "pattern": "cross_ecosystem",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cran",
+      "package_name": "rasterstack",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "cran",
+      "package_name": "spatialMoran",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/cilium/go-bpf",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/cilium/gobpf/pkg/bpf",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/coreos/go-etcd/raft",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/fasthttp/router-pro",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "github.com/fasthttp/router",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/gin-gonic/middleware",
+      "source": "depscope_research",
+      "pattern": "companion",
+      "likely_real_alternative": "github.com/gin-gonic/gin",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/go-kit/kit/log",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/go-kit/kit/log/zaplogger",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/golang/protobuf/cmd/protoc-gen-go",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/libpq/libpq",
+      "source": "depscope_observed",
+      "pattern": "cross_ecosystem",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/lxc/bpf-go",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/operator-framework/operator-sdk/cmd/operator-sdk",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "github.com/prometheus/advanced",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "github.com/prometheus/client_golang",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "go.etcd.io/etcd/clientv3",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "golang.org/x/net/quic-go",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "sigs.k8s.io/controller-runtime/pkg/builder",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "go",
+      "package_name": "sigs.k8s.io/kubebuilder/cmd/kubebuilder",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "aeson-sum-type",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "conduit-core",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "conduit-http",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "conduit-zip",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "servant-openapi",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "servant-openapi2",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "servant-swagger2",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "sum-types",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "swagger2hs",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "yesod-auth-jwt",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "yesod-auth-jwt-simple",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "yesod-authjwt",
+      "source": "depscope_observed",
+      "pattern": "typo",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hackage",
+      "package_name": "zipping",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hex",
+      "package_name": "ecto_multi_partitions",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hex",
+      "package_name": "my_user_image",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "hex",
+      "package_name": "phoenix-auth-helpers",
+      "source": "depscope_research",
+      "pattern": "companion",
+      "likely_real_alternative": "phoenix",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "hashicorp",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "homebrew",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "node-latest",
+      "source": "depscope_research",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "node",
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "redis-7.0.12",
+      "source": "depscope_observed",
+      "pattern": "version_confusion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "redis-plusplus",
+      "source": "depscope_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "terraform",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "homebrew",
+      "package_name": "terraform-plugin-aws",
+      "source": "depscope_observed",
+      "pattern": "companion",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "julia",
+      "package_name": "CustomGradient",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "julia",
+      "package_name": "Gaussian",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "julia",
+      "package_name": "JuliaTurings",
+      "source": "depscope_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": 1
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "huggingface-cli",
+      "source": "research_documented",
+      "pattern": "conflation",
+      "likely_real_alternative": "huggingface_hub[cli]",
+      "hit_count": 30000,
+      "note": "Real-world proof: registered by Bar Lanyado (Lasso Security, 2024-03), received 30,000+ downloads in 3 months. Source: aikido.dev blog"
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "react-codeshift",
+      "source": "research_documented",
+      "pattern": "conflation",
+      "likely_real_alternative": "jscodeshift",
+      "hit_count": null,
+      "note": "Conflation of jscodeshift and react-codemod. Received daily downloads via AI agent executions in 237 repos. Source: aikido.dev blog"
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "express-mongoose",
+      "source": "research_documented",
+      "pattern": "conflation",
+      "likely_real_alternative": "express",
+      "hit_count": null,
+      "note": "Example of conflation pattern — merging express and mongoose into a non-existent combined package. Source: aikido.dev blog"
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "unused-imports",
+      "source": "research_documented",
+      "pattern": "typo",
+      "likely_real_alternative": "eslint-plugin-unused-imports",
+      "hit_count": null,
+      "note": "Hallucinated shorthand alternative. Source: aikido.dev blog"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "securehashlib",
+      "source": "research_documented",
+      "pattern": "fabricated",
+      "likely_real_alternative": "hashlib",
+      "hit_count": null,
+      "note": "Example from arXiv:2501.19012 — fictional secure hashing library suggested when asking LLM to handle passwords securely"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "litestar-websocket",
+      "source": "trendmicro_observed",
+      "pattern": "companion",
+      "likely_real_alternative": "litestar",
+      "hit_count": null,
+      "note": "From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "litestar-websockets",
+      "source": "trendmicro_observed",
+      "pattern": "companion",
+      "likely_real_alternative": "litestar",
+      "hit_count": null,
+      "note": "Variant of litestar-websocket. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "pywebsocketx",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": "websockets",
+      "hit_count": null,
+      "note": "From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "vulcanmind",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": null,
+      "note": "Pure fabrication for sentiment analysis. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "nebula-framework",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": null,
+      "hit_count": null,
+      "note": "Part of a completely fictional Python stack. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "stardb-orm",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": "sqlalchemy",
+      "hit_count": null,
+      "note": "Fictional ORM. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "authfusion",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": "authlib",
+      "hit_count": null,
+      "note": "Fictional auth library. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "wavesocket",
+      "source": "trendmicro_observed",
+      "pattern": "fabricated",
+      "likely_real_alternative": "websockets",
+      "hit_count": null,
+      "note": "Fictional websocket library. From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "sentiment-analyzer-lightning",
+      "source": "trendmicro_observed",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "textblob",
+      "hit_count": null,
+      "note": "From trendmicro/slopsquatting.jsonl dataset (MIT)"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "llama-cpp-python",
+      "source": "trendmicro_observed",
+      "pattern": "companion",
+      "likely_real_alternative": "llama-cpp-python",
+      "hit_count": null,
+      "note": "Hallucinated variant name; real package exists as llama-cpp-python but with different import. From trendmicro/slopsquatting.jsonl"
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "lodsh",
+      "source": "research_documented",
+      "pattern": "typo",
+      "likely_real_alternative": "lodash",
+      "hit_count": null,
+      "note": "Classic typosquat example from aikido.dev/DepScope common patterns documentation"
+    },
+    {
+      "ecosystem": "pypi",
+      "package_name": "reqeusts",
+      "source": "research_documented",
+      "pattern": "typo",
+      "likely_real_alternative": "requests",
+      "hit_count": null,
+      "note": "Classic typosquat example from DepScope common patterns documentation"
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "react-router-guard",
+      "source": "pattern_inferred",
+      "pattern": "companion",
+      "likely_real_alternative": "react-router",
+      "hit_count": null,
+      "note": "Pattern-inferred: companion suffix common for react-router variants. Confirmed non-existent on npm as of 2026-06-01."
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "express-validator-plus",
+      "source": "pattern_inferred",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "express-validator",
+      "hit_count": null,
+      "note": "Pattern-inferred: suffix_pro on express-validator. Confirmed non-existent on npm as of 2026-06-01."
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "axios-retry-pro",
+      "source": "pattern_inferred",
+      "pattern": "suffix_pro",
+      "likely_real_alternative": "axios-retry",
+      "hit_count": null,
+      "note": "Pattern-inferred: suffix_pro on axios-retry. Confirmed non-existent on npm as of 2026-06-01."
+    },
+    {
+      "ecosystem": "npm",
+      "package_name": "mongoose-utils",
+      "source": "pattern_inferred",
+      "pattern": "companion",
+      "likely_real_alternative": "mongoose",
+      "hit_count": null,
+      "note": "Pattern-inferred: companion helper suffix. Confirmed non-existent on npm as of 2026-06-01."
+    }
+  ]
+}

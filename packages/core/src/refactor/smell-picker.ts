@@ -66,6 +66,20 @@ export function pickWorst(smells: Smell[]): Smell | null {
   return sort(actionable.length > 0 ? actionable : smells)[0];
 }
 
+/**
+ * Groups smells by their type into a `Map<SmellType, Smell[]>`, preserving the input order
+ * of instances within each group. Used by the Sprint 54 batcher to compute per-type penalties.
+ */
+export function groupByType(smells: Smell[]): Map<SmellType, Smell[]> {
+  const groups = new Map<SmellType, Smell[]>();
+  for (const smell of smells) {
+    const existing = groups.get(smell.type);
+    if (existing) existing.push(smell);
+    else groups.set(smell.type, [smell]);
+  }
+  return groups;
+}
+
 /** Returns the first smell matching the requested type, or the worst smell if none match. */
 export function pickByType(smells: Smell[], type: SmellType): Smell | null {
   const matching = smells.filter(s => s.type === type);

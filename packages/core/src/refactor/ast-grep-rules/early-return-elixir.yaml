@@ -1,0 +1,17 @@
+id: early-return-elixir
+language: Elixir
+# Guard: only rewrite bare if-blocks — never if-else, which would silently drop
+# the else branch.
+rule:
+  all:
+    - pattern: |
+        if $COND do
+          $$$BODY
+        end
+    - not:
+        regex: '\belse\b'
+fix: |
+  unless $COND, do: :ok
+  $$$BODY
+message: "Replace positive if-block with early return guard clause (Elixir idiom: unless)"
+severity: hint

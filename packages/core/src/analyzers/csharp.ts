@@ -1,5 +1,5 @@
 import Parser from 'tree-sitter';
-import CSharp from 'tree-sitter-c-sharp';
+import { loadCSharpGrammar } from './csharp-grammar';
 import type { FunctionResult, MetricBreakdown, Smell } from '../types';
 import { buildSimpleMetrics } from './metrics-builder';
 import { countCyclomaticNodes, calculateMaxNestingDepth } from './traversal-helpers';
@@ -15,8 +15,20 @@ import { detectLowDocCoverage } from '../smells/doc-coverage';
 import { computeCognitiveComplexity } from '../smells/cognitive-complexity';
 import { detectBumpyRoadChunks } from '../smells/bumpy-road';
 
-const parser = new Parser();
-parser.setLanguage(CSharp as unknown as Parameters<(typeof parser)['setLanguage']>[0]);
+// Lazily initialise the parser on first use. The C# grammar binding ships as an
+// async ES module (top-level await), so loading it at module-evaluation time would
+// break `require()` of the compiled CJS bundle (ERR_REQUIRE_ASYNC_MODULE).
+// `loadCSharpGrammar()` resolves it synchronously without degrading analysis.
+let cachedParser: Parser | null = null;
+
+function getCSharpParser(): Parser {
+  if (cachedParser !== null) return cachedParser;
+  const grammar = loadCSharpGrammar();
+  const p = new Parser();
+  p.setLanguage(grammar as unknown as Parameters<(typeof p)['setLanguage']>[0]);
+  cachedParser = p;
+  return p;
+}
 
 const CYCLOMATIC_NODE_TYPES = new Set([
   'if_statement', 'for_statement', 'foreach_statement',
@@ -44,7 +56,7 @@ export function analyzeCSharp(code: string, filePath = '<inline>'): {
   metrics: MetricBreakdown;
   smells: Smell[];
 } {
-  const tree = parser.parse(code);
+  const tree = getCSharpParser().parse(code);
 
   // Collect method nodes for per-function analysis
   const fnNodes: Parser.SyntaxNode[] = [];

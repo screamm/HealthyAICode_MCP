@@ -1,0 +1,15 @@
+id: early-return-typescript
+language: TypeScript
+# Guard: only rewrite bare if-blocks — never if-else, which would silently drop the
+# else branch.  The `not` regex matches the first 120 chars of the statement; an
+# if-else always has "} else" or "else" following the then-block.
+rule:
+  all:
+    - pattern: "if ($COND) { $$$BODY }"
+    - not:
+        regex: '\belse\b'
+fix: |
+  if (!($COND)) return;
+  $$$BODY
+message: "Replace positive if-block with early return guard clause to reduce nesting"
+severity: hint

@@ -1,0 +1,64 @@
+[
+  {
+    "type": "ComplexMethod",
+    "severity": "high",
+    "line": 12,
+    "functionName": "processOrder",
+    "description": "CC=18",
+    "suggestion": "Extract sub-routines"
+  },
+  {
+    "type": "DeepNesting",
+    "severity": "medium",
+    "line": 22,
+    "functionName": "validateUser",
+    "description": "Depth=5",
+    "suggestion": "Early-return guards"
+  },
+  {
+    "type": "GodClass",
+    "severity": "high",
+    "line": 1,
+    "description": "42 methods, 820 lines",
+    "suggestion": "Split into SRP classes"
+  },
+  {
+    "type": "HardcodedCredential",
+    "severity": "critical",
+    "line": 87,
+    "functionName": "connectDatabase",
+    "description": "Password literal",
+    "suggestion": "Use env var"
+  },
+  {
+    "type": "LongParameterList",
+    "severity": "medium",
+    "line": 55,
+    "functionName": "createReport",
+    "description": "9 params > threshold 4",
+    "suggestion": "Parameter object"
+  },
+  {
+    "type": "SATD",
+    "severity": "low",
+    "line": 103,
+    "description": "TODO workaround",
+    "suggestion": "Resolve and remove"
+  },
+  {
+    "type": "MagicNumber",
+    "severity": "low",
+    "line": 140,
+    "functionName": "calculateTax",
+    "description": "0.21 not named",
+    "suggestion": "const VAT_RATE=0.21"
+  },
+  {
+    "type": "BrainMethod",
+    "severity": "high",
+    "line": 200,
+    "functionName": "handleRequest",
+    "description": "95 lines, CC=14",
+    "suggestion": "Decompose function"
+  }
+]

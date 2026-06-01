@@ -48,6 +48,7 @@ import { analyzeDockerfile } from './dockerfile';
 import { analyzeHcl } from './hcl';
 import { analyzeMakefile } from './makefile';
 import { analyzeStructuralTierC } from './structural-tier-c';
+import { runAdditiveDetectors } from './additive-detectors';
 
 /** Analyzes TypeScript and JavaScript source files. */
 export { analyzeTypeScript } from './typescript';
@@ -199,10 +200,12 @@ const LANGUAGE_DISPATCH: Partial<Record<Language, LanguageAnalyzer>> = {
 /** Dispatches analysis to the appropriate language analyzer and returns functions, metrics, and smells. */
 export function analyzeByLanguage(code: string, language: Language, filePath = '<inline>'): AnalyzerOutput {
   const analyzer = LANGUAGE_DISPATCH[language];
-  if (analyzer) {
-    return analyzer(code, filePath);
-  }
-  return unsupportedOutput(code);
+  const base = analyzer ? analyzer(code, filePath) : unsupportedOutput(code);
+  // Sprint 51–60 Phase 2a: merge additive Sprint 57/58 detector smells (language-scoped).
+  // These do not change the scoring formula — they add weighted findings to parsed.smells.
+  const additive = runAdditiveDetectors(code, language, filePath, base.functions);
+  if (additive.length === 0) return base;
+  return { ...base, smells: [...base.smells, ...additive] };
 }
 
 function unsupportedOutput(code: string): AnalyzerOutput {

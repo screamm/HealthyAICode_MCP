@@ -4,6 +4,7 @@ import { analyzeByLanguage } from './analyzers/index';
 import { detectSmells } from './smells/detector';
 import { calculateScore, categorize } from './scoring/scorer';
 import { detectBrainMethods } from './temporal/brain-method';
+import { detectSlopsquattingOffline } from './analyzers/slopsquatting';
 import { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
 import type { HealthResult, Language } from './types';
 import { buildEmptyResult, buildUnparseableResult, buildUnsupportedResult, appendLargeFileSmellIfNeeded, type FileContext } from './core-helpers';
@@ -175,6 +176,77 @@ export type { RefactoringStep, RefactoringLoopResult } from './refactor/refactor
 /** Detects the source language from a file path extension (Sprint 32: exposed for MCP tool use). */
 export { detectLanguage } from './language-detect';
 
+/** Sprint 57: Slopsquatting / supply-chain biomarker — typosquat + LLM-hallucination-corpus detection. */
+export {
+  detectSlopsquatting,
+  detectSlopsquattingOffline,
+  resetSlopsquattingCaches,
+} from './analyzers/slopsquatting';
+export type { SlopsquattingOptions, PackageMeta } from './analyzers/slopsquatting';
+
+/** Sprint 51–60 Phase 2a: additive detector orchestrator wired into analyzeByLanguage(). */
+export { runAdditiveDetectors } from './analyzers/additive-detectors';
+/** Sprint 57: SpecDetect4AI LLM-integration smells (UMM/NMVP/NSM/NSO/TNES). */
+export { analyzeLlmIntegration } from './analyzers/llm-integration';
+export type { LlmLanguage } from './analyzers/llm-integration';
+/** Sprint 57: HallucinatedPackageImport detection against cached registry snapshots. */
+export { detectHallucinatedImports, resetSnapshotCaches } from './analyzers/hallucinated-import';
+/** Sprint 57: ComplexityMassConcentration (Structural Erosion Index). */
+export { detectComplexityMassConcentration } from './analyzers/complexity-mass';
+/** Sprint 57: AiAttributedSATD (GenAI-induced self-admitted technical debt). */
+export { detectAiAttributedSATD, detectAiAttributedSATDFromText } from './smells/ai-attributed-satd';
+/** Sprint 58: OWASP 2025 security sinks (UnsafeDeserialization / SsrfRisk / CryptographicMisuseRisk). */
+export { detectSecuritySinks } from './analyzers/security-sink-detector';
+/** Sprint 58: ExceptionHandlingAntiPattern detection (EmptyCatch / CatchGeneric / DestructiveWrapping / UnreachableHandler). */
+export { detectExceptionAntiPatterns } from './analyzers/exception-antipatterns';
+/** Sprint 58: AsyncAntiPattern detection — DrAsync P1/P3/P7/P8 (TS/JS). */
+export { detectAsyncAntiPatterns } from './analyzers/async-antipatterns';
+/** Sprint 58: in-file DuplicateCode detection (type 1/2 clones). */
+export { detectDuplicateCode } from './analyzers/duplicate-code';
+export type { CloneGroup } from './analyzers/duplicate-code';
+
+/** Sprint 51–60: deterministic delta-gate contract types (@healthy-ai-code/gate). */
+export type {
+  GateVerdict,
+  GateReasonCode,
+  GateDecision,
+  GateConfig,
+  GateSelfTestResult,
+} from './contracts/gate-types';
+
+/** Sprint 51–60: attestation (code_health_attest) contract types — EU AI Act Art. 12 controls evidence. */
+export type {
+  AttestationRecord,
+  AttestationSignature,
+  AttestationExportFormat,
+} from './contracts/attestation-types';
+
+/** Sprint 60: biomarker plugin API — register/run external biomarker detectors. */
+export {
+  registerPlugin,
+  unregisterPlugin,
+  getActivePlugins,
+  clearPluginRegistry,
+  runPlugins,
+  resolvePluginSmellWeight,
+} from './plugins/biomarker-plugin';
+export type { BiomarkerPlugin, PluginMetadata } from './plugins/biomarker-plugin';
+/** Sprint 60: plugin conformance harness and manifest schema. */
+export {
+  validatePlugin,
+  assertPluginConformance,
+} from './plugins/plugin-conformance';
+export type {
+  ConformanceResult,
+  PluginFixture,
+  ValidatePluginOptions,
+} from './plugins/plugin-conformance';
+export { PLUGIN_MANIFEST_SCHEMA, minimalValidManifest } from './plugins/plugin-schema';
+export type { PluginManifest } from './plugins/plugin-schema';
+
+/** Sprint 56: per-dimension health subscores (security/complexity/maintainability/duplication). DimensionSubscores type is re-exported via `export * from './types'`. */
+export { computeSubscores } from './scoring/subscores';
+
 /** Sprint 32: Validation pipeline — Pearson/Spearman/AUROC correlation against defect datasets. */
 export {
   runValidation,
@@ -236,6 +308,9 @@ export function analyzeCode(code: string, language: Language, filePath = '<inlin
   const parsed = tryAnalyze(code, { language, filePath });
   if (parsed === null) return buildUnparseableResult({ filePath, language }, totalLines);
   const smells = [...parsed.smells, ...detectSmells(parsed.functions, parsed.metrics, language), ...detectBrainMethods(parsed.functions, parsed.metrics.cyclomaticComplexity)];
+  // Supply-chain biomarker (Sprint 57): offline-only (zero network) typosquat + LLM-hallucination
+  // corpus detection. Self-guards to TS/JS/Python; returns [] for all other languages.
+  smells.push(...detectSlopsquattingOffline(code, language, filePath));
   appendLargeFileSmellIfNeeded(smells, totalLines);
   const score = calculateScore(smells, language);
   return { filePath, language, score, category: categorize(score), smells, metrics: parsed.metrics, functions: parsed.functions };

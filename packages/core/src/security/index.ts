@@ -21,6 +21,13 @@ export { detectInjectionRisks } from './injection-detector';
 export type { InjectionFinding } from './injection-detector';
 export { aggregateFindings, detectDisagreement } from './aggregator';
 export { formatAsSarif } from './sarif-formatter';
+export {
+  primaryLocationLineHash,
+  severityToSarifLevel,
+  buildEnrichedRules,
+  SECURITY_SEVERITY_MAP,
+} from './sarif-enrichment';
+export type { EnrichedSarifRule } from './sarif-enrichment';
 export { estimateScanCost } from './cost-estimation';
 export type { CostEstimate } from './cost-estimation';
 export { assessFinding, buildAssessmentPrompt, parseAssessmentResponse } from './llm-assessor';

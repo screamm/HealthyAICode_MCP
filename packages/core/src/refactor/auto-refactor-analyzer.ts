@@ -2,8 +2,13 @@ import { analyzeCode } from '../index';
 import type { Smell, SmellType, Language, FunctionResult } from '../types';
 import { getRefactoringTemplate, type RefactoringStrategy } from './smell-instructions';
 import { SMELL_WEIGHTS } from '../scoring/weights';
-import { buildFollowUpInstruction } from './follow-up-instruction';
+import { buildFollowUpInstruction, type BatchedFollowUpInstance } from './follow-up-instruction';
 import { pickWorst, pickByType, findFunction } from './smell-picker';
+import { buildPreActPlan, type PreActPlan } from './pre-act-planner';
+import { batchTopSmellType, type BatchedSmellPlan } from './smell-batcher';
+import { selectEditMode } from './edit-mode-selector';
+import { fetchBlameContext, type BlameContext } from './blame-context';
+import type { EditMode } from './edit-mode';
 
 export interface AutoRefactorResult {
   /** What to do next — read this first before looking at the code. */
@@ -104,6 +109,29 @@ export interface AutoRefactorResult {
    * Thinking effort scales with difficulty: easy→low, medium→medium, hard→xhigh (Opus 4.7), hard+score<5→max.
    */
   successLikelihood: 'easy' | 'medium' | 'hard';
+  /**
+   * Sprint 52 — the cheapest output format for this fix, chosen by `selectEditMode`:
+   * 'patch' (point fix / short fn), 'funcRewrite' (mid-size structural), 'fileRewrite' (GodClass/large).
+   * Lets the MCP layer return a minimal diff instead of full text for token reduction.
+   */
+  editMode: EditMode;
+  /**
+   * Sprint 54 — when `batchMode` is requested, every instance of the heaviest smell type in
+   * the file ranked by marginal score delta. Fix them all in one pass to ride the √count curve.
+   */
+  batchedPlan?: BatchedSmellPlan;
+  /**
+   * Sprint 54 — true when predicted CS is structurally too low for a mechanical fix
+   * (hard + stagnating, or a GodClass too large for the focus window). Prefer manual action.
+   */
+  manualInterventionRequired: boolean;
+  /**
+   * Sprint 54 — true once a whole-file Pre-Act plan has been computed for this file
+   * (surfaced via `analyzeForAutoRefactor` when `preActPlan` context is supplied).
+   */
+  preActPlanAvailable: boolean;
+  /** Sprint 54 — short git-blame summary (< 400 chars) for BrainMethod/GodClass/KnowledgeLoss. */
+  blameContextSummary?: string;
 }
 
 
@@ -115,32 +143,95 @@ const FILE_SCOPE_SMELLS = new Set<SmellType>(['LowDocCoverage', 'DocumentationDe
 const CLASS_SCOPE_SMELLS = new Set<SmellType>(['GodClass', 'FeatureEnvy', 'DataClumps']);
 
 /**
+ * Optional per-call tuning for {@link analyzeForAutoRefactor} (Sprint 52 + 54).
+ * All fields are additive — omitting the options object preserves prior behaviour.
+ */
+export interface AutoRefactorOptions {
+  /** Filter on a specific SmellType; if omitted the highest-severity smell is used. */
+  targetSmell?: SmellType;
+  /** Sprint 54 — when true, populate `batchedPlan` with every instance of the heaviest type. */
+  batchMode?: boolean;
+  /** Sprint 54 — pre-fetched git-blame summary (< 400 chars) for the target function. */
+  blameContext?: string;
+  /** Sprint 54 — Pre-Act plan computed once for the whole file; sets `preActPlanAvailable`. */
+  preActPlan?: PreActPlan;
+}
+
+/** Smell types that receive git-blame context (BrainMethod / GodClass / KnowledgeLoss). */
+const BLAME_CONTEXT_SMELLS = new Set<SmellType>(['BrainMethod', 'GodClass', 'KnowledgeLoss']);
+
+/**
  * Analyzes a code string and returns structured refactoring instructions for the worst smell found.
  * Returns null when no actionable smells are detected (the file is healthy).
  *
  * @param code      Full source code to analyze.
  * @param language  Source language.
  * @param filePath  Used as metadata in the result (defaults to '<inline>').
- * @param targetSmell  Optional SmellType to filter on; if omitted the highest-severity smell is used.
+ * @param options   Optional SmellType filter (back-compat: a bare SmellType is also accepted),
+ *                  plus Sprint 52/54 tuning (batchMode, blameContext, preActPlan).
  */
 export function analyzeForAutoRefactor(
   code: string,
   language: Language,
   filePath = '<inline>',
-  targetSmell?: SmellType
+  options?: SmellType | AutoRefactorOptions
 ): AutoRefactorResult | null {
+  const opts: AutoRefactorOptions = typeof options === 'string' ? { targetSmell: options } : (options ?? {});
   const result = analyzeCode(code, language, filePath);
   if (result.smells.length === 0) return null;
 
-  const candidate = targetSmell
-    ? pickByType(result.smells, targetSmell)
+  const candidate = opts.targetSmell
+    ? pickByType(result.smells, opts.targetSmell)
     : pickWorst(result.smells);
   if (!candidate) return null;
 
   const fn = findFunction(result.functions, candidate);
   if (!fn) return null;
 
-  return buildAutoRefactorResult({ code, filePath, result, candidate, fn });
+  return buildAutoRefactorResult({ code, filePath, result, candidate, fn, opts });
+}
+
+/**
+ * Sprint 54 — git-history-aware variant of {@link analyzeForAutoRefactor}. Identical to the
+ * sync entry point but, when the target smell is BrainMethod / GodClass / KnowledgeLoss and a
+ * `repoPath` is supplied, fetches the introducing-commit blame context and threads it into the
+ * follow-up instruction (`GIT-KONTEXT` block). Blame failures degrade silently to no context.
+ */
+export async function analyzeForAutoRefactorWithHistory(
+  code: string,
+  language: Language,
+  filePath: string,
+  repoPath: string,
+  options?: AutoRefactorOptions
+): Promise<AutoRefactorResult | null> {
+  const opts: AutoRefactorOptions = options ?? {};
+  const result = analyzeCode(code, language, filePath);
+  if (result.smells.length === 0) return null;
+
+  const candidate = opts.targetSmell
+    ? pickByType(result.smells, opts.targetSmell)
+    : pickWorst(result.smells);
+  if (!candidate) return null;
+
+  const fn = findFunction(result.functions, candidate);
+  if (!fn) return null;
+
+  let blameContext = opts.blameContext;
+  if (blameContext === undefined && BLAME_CONTEXT_SMELLS.has(candidate.type as SmellType)) {
+    const ctx = await fetchBlameContext(filePath, repoPath, fn.name);
+    if (ctx) blameContext = summariseBlameContext(ctx);
+  }
+
+  return buildAutoRefactorResult({ code, filePath, result, candidate, fn, opts: { ...opts, blameContext } });
+}
+
+/** Condenses a {@link BlameContext} into a < 400-char summary for the follow-up instruction. */
+function summariseBlameContext(ctx: BlameContext): string {
+  const sha = ctx.introducingCommitHash.slice(0, 8);
+  const diff = ctx.introducingDiff.slice(0, 200).replace(/\s+/g, ' ').trim();
+  const coChanged = ctx.coChangedFunctions.length > 0 ? ctx.coChangedFunctions.join(', ') : 'none';
+  return `introduced in ${sha} ("${ctx.introducingCommitMessage}") ~${ctx.ageMonths} months ago; ` +
+    `diff excerpt: ${diff}; co-changed files: ${coChanged}.`;
 }
 
 interface RefactorContext {
@@ -191,12 +282,72 @@ interface ComputedParts {
   uniqueRemaining: string[];
   colocatedSmells: string[];
   followUpInstruction: string;
+  editMode: EditMode;
+  batchedPlan: BatchedSmellPlan | undefined;
+  manualInterventionRequired: boolean;
+}
+
+/** Function-line-count above which a class-scope smell can't fit the focus window (Sprint 54). */
+const MANUAL_INTERVENTION_CLASS_LOC = 200;
+
+/**
+ * Determines whether the smell needs manual intervention rather than a mechanical fix.
+ * Abstain-and-validate (arXiv 2510.03217): flag structurally low-CS targets.
+ *  - hard difficulty AND stagnating predicted delta, OR
+ *  - a class-scope smell on a function/class larger than the focus window can capture.
+ */
+function computeManualIntervention(ctx: RefactorContext, scorePrediction: ScorePrediction): boolean {
+  if (ctx.successLikelihood === 'hard' && scorePrediction.stagnating) return true;
+  if (ctx.changeScope === 'class' && ctx.functionLineCount > MANUAL_INTERVENTION_CLASS_LOC) return true;
+  return false;
+}
+
+/**
+ * Decides whether to enable the RCI self-critique block (Sprint 54). Skipped for trivially
+ * easy near-target fixes (unnecessary token overhead on a 1-line surgical change near the goal).
+ */
+function shouldEnableRci(ctx: RefactorContext): boolean {
+  if (ctx.nearTarget && ctx.successLikelihood === 'easy') return false;
+  return true;
+}
+
+/** Builds the batched follow-up instances (function name + smell type) from a batched plan. */
+function toBatchedFollowUp(plan: BatchedSmellPlan | undefined): BatchedFollowUpInstance[] | undefined {
+  if (!plan || plan.instances.length === 0) return undefined;
+  return plan.instances.map(i => ({
+    fnName: i.fn?.name ?? i.smell.functionName ?? '<file>',
+    smellType: plan.smellType,
+  }));
+}
+
+/** Counts comment lines (`//` and `/* … *​/`) via simple regex — language-agnostic, consistent. */
+export function countCommentLines(code: string): number {
+  const lines = code.split('\n');
+  let count = 0;
+  let inBlock = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (inBlock) {
+      count++;
+      if (trimmed.includes('*/')) inBlock = false;
+      continue;
+    }
+    if (trimmed.startsWith('//')) {
+      count++;
+    } else if (trimmed.startsWith('/*')) {
+      count++;
+      if (!trimmed.includes('*/')) inBlock = true;
+    } else if (trimmed.includes('//')) {
+      count++;
+    }
+  }
+  return count;
 }
 
 /** Computes all intermediate parts needed for the final result. */
-function computeAllParts(opts: BuildResultOptions): ComputedParts {
-  const { code, result, candidate, fn } = opts;
-  const ctx = computeRefactorContext(opts);
+function computeAllParts(buildOpts: BuildResultOptions): ComputedParts {
+  const { code, result, candidate, fn, opts } = buildOpts;
+  const ctx = computeRefactorContext(buildOpts);
   const template = getRefactoringTemplate(candidate, fn, code);
   const instructions = buildInstructions(template, candidate, fn, code);
   const colocatedSmells = computeColocatedSmells(result.smells, candidate);
@@ -204,6 +355,13 @@ function computeAllParts(opts: BuildResultOptions): ComputedParts {
   const scorePrediction = computeScorePrediction(result.score, template, colocatedSmells);
   const uniqueRemaining = computeRemainingSmells(result.smells, candidate);
   const effortParam = computeEffortParam(ctx.nearTarget, ctx.successLikelihood, result.score);
+
+  const batchedPlan = opts.batchMode
+    ? batchTopSmellType(result.smells, result.functions)
+    : undefined;
+  const manualInterventionRequired = computeManualIntervention(ctx, scorePrediction);
+  const editMode = selectEditMode(candidate.type as SmellType, ctx.functionLineCount);
+
   const followUpInstruction = buildFollowUpInstruction({
     nearTarget: ctx.nearTarget,
     strategyLabel: template.strategy.replace(/_/g, ' ').toUpperCase(),
@@ -214,8 +372,16 @@ function computeAllParts(opts: BuildResultOptions): ComputedParts {
     changeScope: ctx.changeScope,
     iterationBudget: ctx.iterationBudget,
     outputMode: ctx.outputMode,
+    rciEnabled: shouldEnableRci(ctx),
+    batchedSmells: toBatchedFollowUp(batchedPlan),
+    blameContext: opts.blameContext,
+    commentCountBefore: countCommentLines(ctx.currentCode),
+    manualInterventionRequired,
   });
-  return { ctx, template, instructions, scorePrediction, uniqueRemaining, colocatedSmells, followUpInstruction };
+  return {
+    ctx, template, instructions, scorePrediction, uniqueRemaining, colocatedSmells,
+    followUpInstruction, editMode, batchedPlan, manualInterventionRequired,
+  };
 }
 
 interface BuildResultOptions {
@@ -224,12 +390,13 @@ interface BuildResultOptions {
   result: ReturnType<typeof analyzeCode>;
   candidate: Smell;
   fn: FunctionResult;
+  opts: AutoRefactorOptions;
 }
 
 /** Builds the complete AutoRefactorResult from the pre-selected candidate and function. */
-function buildAutoRefactorResult(opts: BuildResultOptions): AutoRefactorResult {
-  const { code, filePath, result, candidate, fn } = opts;
-  const p = computeAllParts(opts);
+function buildAutoRefactorResult(buildOpts: BuildResultOptions): AutoRefactorResult {
+  const { filePath, result, candidate, fn, opts } = buildOpts;
+  const p = computeAllParts(buildOpts);
   return {
     // Reasoning-first: instructions and context before the code block.
     followUpInstruction: p.followUpInstruction,
@@ -248,6 +415,12 @@ function buildAutoRefactorResult(opts: BuildResultOptions): AutoRefactorResult {
     remainingSmellTypes: p.uniqueRemaining,
     colocatedSmells: p.colocatedSmells,
     successLikelihood: p.ctx.successLikelihood,
+    // Sprint 52/54 — edit-mode, batching, and abstain-and-validate signals.
+    editMode: p.editMode,
+    batchedPlan: p.batchedPlan,
+    manualInterventionRequired: p.manualInterventionRequired,
+    preActPlanAvailable: opts.preActPlan !== undefined,
+    blameContextSummary: opts.blameContext,
     // Code context last — read after understanding what to do.
     filePath,
     targetFunction: fn.name,

@@ -100,7 +100,39 @@ export type SmellType =
   | 'AbstractionLeakage'
   | 'HardcodedAssumption'
   | 'MissingEdgeCase'
-  | 'StyleInconsistency';
+  | 'StyleInconsistency'
+  // AI-native supply-chain biomarkers (Sprint 57):
+  | 'SlopsquattingRisk'
+  | 'HallucinatedPackageImport'
+  | 'AiAttributedSATD'
+  | 'ComplexityMassConcentration'
+  | 'LlmUnboundedCall'
+  | 'LlmUnpinnedModel'
+  | 'LlmNoSystemMessage'
+  | 'LlmNoStructuredOutput'
+  | 'LlmUnsetTemperature'
+  // Security biomarkers — OWASP 2025 (Sprint 58):
+  | 'SsrfRisk'
+  | 'CryptographicMisuseRisk'
+  | 'ExceptionHandlingAntiPattern'
+  | 'AsyncAntiPattern'
+  | 'DuplicateCode'
+  // Anti-gaming structural smells (Sprint 56):
+  | 'SplitResidue'
+  | 'FragmentedCode';
+
+/**
+ * Per-dimension health subscores (Sprint 56). Each value is in [1.0, 10.0] and is computed by
+ * re-bucketing already-weighted findings into a dimension and applying the same
+ * `10 − Σ(weight × √count)` model. `overall` mirrors the aggregated file score.
+ */
+export interface DimensionSubscores {
+  security: number;
+  complexity: number;
+  maintainability: number;
+  duplication: number;
+  overall: number;
+}
 
 /** A single detected code finding with location, severity, and remediation guidance. */
 export interface Smell {

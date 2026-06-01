@@ -13,6 +13,39 @@ export interface FollowUpParams {
   changeScope: 'function' | 'class' | 'file';
   iterationBudget: number;
   outputMode: 'diff' | 'full';
+  /**
+   * Sprint 54 — when true, append the RCI self-critique checklist (generate → critique →
+   * improve). Skip on trivially easy near-target fixes to avoid token overhead.
+   */
+  rciEnabled?: boolean;
+  /**
+   * Sprint 54 — names of the functions to fix in a single batch pass (all instances of the
+   * heaviest smell type), in fix order. When present, a BATCH-PASS instruction is injected.
+   */
+  batchedSmells?: BatchedFollowUpInstance[];
+  /**
+   * Sprint 54 — pre-summarised git-blame context (< 400 chars) for BrainMethod / GodClass /
+   * KnowledgeLoss. When set, a GIT-KONTEXT block is injected to surface original intent.
+   */
+  blameContext?: string;
+  /**
+   * Sprint 54 — comment-line count of the current code. When set, a comment-count invariant
+   * instruction is injected so the model does not strip comments to game the score.
+   */
+  commentCountBefore?: number;
+  /**
+   * Sprint 54 — when true, predicted CS is structurally too low for a mechanical fix; inject
+   * a MANUAL INTERVENTION REQUIRED note offering split / lighter-smell / accept alternatives.
+   */
+  manualInterventionRequired?: boolean;
+}
+
+/** Minimal shape consumed from a batched-smell plan instance (Sprint 54). */
+export interface BatchedFollowUpInstance {
+  /** Function name to fix in this batch pass. */
+  fnName: string;
+  /** The shared smell type being batched. */
+  smellType: string;
 }
 
 interface FollowUpNotes {
@@ -25,6 +58,11 @@ interface FollowUpNotes {
   preserveNote: string;
   craneNote: string;
   securityNote: string;
+  rciNote: string;
+  batchNote: string;
+  blameNote: string;
+  commentInvariantNote: string;
+  manualInterventionNote: string;
 }
 
 /**
@@ -84,7 +122,59 @@ function assembleFollowUpNotes(p: FollowUpParams): FollowUpNotes {
     // compounds over extended sessions — iterationBudget is the primary mitigation; security stop
     // is the safety valve for drift into vulnerability introduction.
     securityNote: 'SECURITY STOP: if code_health_review shows new SecuritySmells vs. session start, stop immediately — do not continue quality iterations. ',
+    // RCI self-critique (arXiv 2510.26480): generate → critique → improve raises extract-method
+    // pass-rate from ~0.45 to 0.829. Injected as a prompt addition, not an extra API call.
+    rciNote: buildRciNote(p),
+    // Batch the heaviest smell type in one pass (√count diminishing-returns curve).
+    batchNote: buildBatchNote(p),
+    // Git-blame provenance (HAFixAgent arXiv 2511.01047): +38.6% fix-rate for multi-hunk bugs.
+    blameNote: buildBlameNote(p),
+    // Comment-count invariant: LLMs without a stop rule strip inline comments to game the
+    // score (arXiv 2602.21833) — a Goodhart trap. Never let comment count drop.
+    commentInvariantNote: buildCommentInvariantNote(p),
+    // Abstain-and-validate (arXiv 2510.03217): flag structurally low-CS targets for manual fix.
+    manualInterventionNote: buildManualInterventionNote(p),
   };
+}
+
+/** Builds the RCI self-critique checklist note (Sprint 54). Empty when rciEnabled is not set. */
+function buildRciNote(p: FollowUpParams): string {
+  if (!p.rciEnabled) return '';
+  return 'RCI-VERIFY (after writing your proposal, before applying): ' +
+    '1. CRITIQUE: list every free variable in the extracted block — is each one passed as a parameter in the new signature? ' +
+    '2. CRITIQUE: are return values propagated correctly to all call-sites within changeScope? ' +
+    '3. CRITIQUE: does the call-site compile/type-check against the new signature? ' +
+    '4. IMPROVE: if any check fails, write a revised version before applying. ';
+}
+
+/** Builds the BATCH-PASS note listing every function to fix in one pass (Sprint 54). */
+function buildBatchNote(p: FollowUpParams): string {
+  if (!p.batchedSmells || p.batchedSmells.length === 0) return '';
+  const smellType = p.batchedSmells[0].smellType;
+  const names = p.batchedSmells.map(i => i.fnName).join(', ');
+  return `BATCH-PASS: fix all ${p.batchedSmells.length} instances of ${smellType} in one pass, ` +
+    `in order: ${names}. Fixing in this order maximises score delta (the √count curve). `;
+}
+
+/** Builds the git-blame context note (Sprint 54). Empty when no blame context is present. */
+function buildBlameNote(p: FollowUpParams): string {
+  if (!p.blameContext) return '';
+  return `GIT-KONTEXT: ${p.blameContext} ` +
+    'Use this provenance to understand the original intent and avoid repeating the mistake during extraction. ';
+}
+
+/** Builds the comment-count invariant note (Sprint 54). Empty when no baseline count is set. */
+function buildCommentInvariantNote(p: FollowUpParams): string {
+  if (p.commentCountBefore === undefined) return '';
+  return `COMMENT-COUNT INVARIANT: the code currently has ${p.commentCountBefore} comment lines — ` +
+    'never strip inline comments to lower SATD hits; a transformation that drops comment count is rejected as non-progress. ';
+}
+
+/** Builds the manual-intervention note (Sprint 54). Empty unless flagged. */
+function buildManualInterventionNote(p: FollowUpParams): string {
+  if (!p.manualInterventionRequired) return '';
+  return 'MANUAL INTERVENTION REQUIRED: predicted CS is too low for a mechanical fix. ' +
+    'Alternatives: (a) split the file manually, (b) pick a lighter co-located smell, (c) accept the current score. ';
 }
 
 /** Builds the context-focus note based on skipCurrentCode and focusLines availability. */
@@ -111,6 +201,9 @@ function buildNearTargetInstruction(p: FollowUpParams, n: FollowUpNotes): string
   // (arXiv 2511.21788): telling the model which specific refactoring to apply
   // rather than "improve code quality" prevents superficial or wrong transforms.
   return 'NEAR TARGET (score ≥ 9.0) — minimal-diff mode. ' +
+    n.manualInterventionNote +
+    n.blameNote +
+    n.batchNote +
     n.craneNote +
     'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
     `Apply ${p.strategyLabel} (refactoringInstructions) using model ${p.modelNote}. ` +
@@ -118,8 +211,10 @@ function buildNearTargetInstruction(p: FollowUpParams, n: FollowUpNotes): string
     n.diffNote +
     'Never rename — causes oscillation (arXiv 2512.10350) and requires multi-file coordination beyond single-file scope (arXiv 2601.00482). ' +
     n.preserveNote +
+    n.commentInvariantNote +
     n.scopeNote +
     n.focusNote +
+    n.rciNote +
     'Then run code_health_review. ' +
     'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
     `Hard stop after ${p.iterationBudget} total iterations. ` +
@@ -130,14 +225,19 @@ function buildNearTargetInstruction(p: FollowUpParams, n: FollowUpNotes): string
 
 /** Builds the standard (score < 9.0) follow-up instruction in restructuring mode. */
 function buildStandardInstruction(p: FollowUpParams, n: FollowUpNotes): string {
-  return n.craneNote +
+  return n.manualInterventionNote +
+    n.blameNote +
+    n.batchNote +
+    n.craneNote +
     'Step 0: adapt exampleSkeleton to the actual function and write it out as your plan before touching any code. ' +
     `Apply ${p.strategyLabel} (refactoringInstructions) using model ${p.modelNote}. ` +
     n.hardSmellNote +
     'Never rename variables or functions — causes oscillation (arXiv 2512.10350) and requires cross-file coordination out of scope here (arXiv 2601.00482). ' +
     n.preserveNote +
+    n.commentInvariantNote +
     n.scopeNote +
     n.focusNote +
+    n.rciNote +
     'Then run code_health_review. ' +
     'Loop: code_health_auto_refactor → apply → code_health_review until loopComplete: true (score ≥ 9.5). ' +
     `Hard stop after ${p.iterationBudget} iterations. ` +

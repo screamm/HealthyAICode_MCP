@@ -1,0 +1,29 @@
+id: early-return-csharp
+language: CSharp
+# C# tree-sitter does not parse the pattern "if ($COND) { $$$BODY }" correctly
+# (the grammar requires a proper class/method context for if-blocks).
+# Instead we match the if_statement kind and use field selectors to capture the
+# condition and consequence, then strip the braces from the consequence via
+# a transform so the body is emitted inline without a redundant block wrapper.
+rule:
+  all:
+    - kind: if_statement
+    - not:
+        regex: '\belse\b'
+    - has:
+        field: condition
+        pattern: $COND
+    - has:
+        field: consequence
+        pattern: $CONSEQUENCE
+transform:
+  BODY:
+    replace:
+      source: $CONSEQUENCE
+      replace: '^\{\n?([\s\S]*?)\n?\s*\}$'
+      by: '$1'
+fix: |
+  if (!($COND)) { return; }
+  $BODY
+message: "Replace positive if-block with early return guard clause to reduce nesting"
+severity: hint
