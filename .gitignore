@@ -31,6 +31,14 @@ coverage/
 # Defects4J calibration cache (checkouts, labels, predictions, sweep results)
 .calibration-cache/
 
+# BugsInPy calibration data (manifest + fetched Python source files)
+# Regenerated on demand by scripts/validation/python-calibration.mjs
+benchmark-data/bugsinpy/
+
+# TypeScript/JS calibration: raw cloned repos (large, re-cloned on demand)
+# Results JSON is committed; raw repos are not.
+benchmark-data/ts-calibration/raw-repos/
+
 # Test fixtures temporary dirs
 packages/core/tests/fixtures/project-*-tmp/
 
@@ -56,3 +64,24 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Downloaded analysis tool binaries (RefactoringMiner ~157MB, PMD, SpotBugs — re-downloaded on demand)
+tools/
+
+# Benchmark/calibration datasets (MLCQ, Defects4J — regenerated on demand)
+benchmark-data/
+
+# Field-test target repos (nested git clones)
+field-repos/
+
+# Holdout validation source repos (nested git clones)
+holdout-src/
+
+# OS crash dumps
+*.stackdump
+
+# Built VS Code extension package
+vscode-extension/*.vsix
+
+# Runtime telemetry output (generated during calibration runs, not a fixture)
+packages/core/calibration-telemetry.jsonl
