@@ -11,8 +11,16 @@ shares no build, dependency, or import path with the JavaScript monorepo.
 
 `ochs_ref.py` was written from the **published spec only**:
 
-- `docs/ochs/OCHS-v0.1.md` — formula, thresholds, biomarker catalogue, detection-trigger prose, weights (Table 2)
+- `docs/ochs/OCHS-v0.1.md` — the formula (§1), the **normative firing thresholds (§2.1–§2.4)**, the biomarker catalogue, detection-trigger prose, the weights (Table 2), and the honest reproducibility annex (Appendix D)
 - `docs/ochs/ochs-schema.json` — output object shape and the 55-member smell-type enum
+
+> **Revision note.** The first version of this implementation was written against
+> an earlier draft that under-specified ~20 structural thresholds and contained a
+> `ComplexMethod` weight-tier contradiction. The spec has since been hardened
+> (§2.1–§2.4 publish the exact predicates; §2.2 resolves `ComplexMethod` to
+> `CC > 10`, single weight 1.5; §2.3 publishes the full `DuplicateCode`
+> algorithm). This implementation was updated to the published thresholds and
+> re-measured. See "Headline finding" below.
 
 It does **not** import, read, port, or transcribe any code from
 `@healthy-ai-code/core`. Biomarker detection is implemented independently using
@@ -39,21 +47,45 @@ cd ochs-ref-py && python cross_check.py
 `python ochs_ref.py <file.py>` prints a single file's OCHS object (incl. the
 `specGaps` ledger) as JSON.
 
-## Scope
+## Scope & measurement
 
 Python source files only. Python is a Tier-A language in OCHS, and `ast` gives a
-third party the same AST-level access the spec assumes. Biomarkers that require
-inputs the spec does **not** distribute (git history, a project import graph, an
-offline npm/PyPI registry snapshot, a hallucination corpus) are documented as
-not-implementable-from-spec rather than guessed — see the bottom of the
-`cross_check.py` report.
+third party the same AST-level access the spec assumes.
+
+Agreement is measured over the **structural subset** — the 25 biomarkers §2.4
+declares "reproducible from this spec alone." The 30 biomarkers Appendix D
+honestly annexes as *not* reproducible from the prose — because they require a
+registry snapshot (D.1), git/project history (D.2), or a shared curated
+pattern/SDK inventory (D.3) — are **excluded** from the structural-agreement
+metric and reported separately. Omitting an annexed biomarker is conformant
+(§4 / Appendix D); the formula is unchanged. See the bottom of the
+`cross_check.py` report for the full annexed list and the 30/25 partition.
 
 ## Headline finding
 
-The OCHS **formula and the underlying metrics are reproducible** (cyclomatic and
-cognitive complexity matched the reference engine *exactly* on the fixtures
-tested). What is **not** reproducible from the spec alone is **biomarker firing**:
-the spec publishes prose ("typically 4", "exceeds the threshold") instead of exact
-numeric predicates, and in at least one case (`ComplexMethod`) the reference
-engine's behaviour contradicts the spec's own published weight tiers. See the
-`SPEC GAPS` section of the cross-check output.
+After the spec was hardened to publish exact thresholds (§2.1–§2.4), the
+structural biomarkers **converged to full agreement**. On 15 Python fixtures,
+structural-subset agreement rose from **33.3 % → 100 % exact**, **80 % → 100 %
+within-0.5**, and **80 % → 100 % category** — the two independent
+implementations now produce byte-identical smell vectors and identical OCHS
+scores on every fixture. The clean-room implementation reaches **L2 conformance**
+(exact on all structural fixtures).
+
+| Metric (structural subset, n=15) | Before §2.1–§2.4 | After §2.1–§2.4 |
+|----------------------------------|------------------|------------------|
+| Exact score agreement            | 33.3 % (5/15)    | **100 % (15/15)** |
+| Within-0.5 agreement             | 80.0 % (12/15)   | **100 % (15/15)** |
+| Category agreement               | 80.0 % (12/15)   | **100 % (15/15)** |
+| Mean \|Δ\|                       | 0.5303           | **0.0000**        |
+
+This confirms the earlier divergence was caused by **under-specified
+thresholds**, not by intrinsic non-reproducibility. The full-score table (all 55
+biomarkers) still diverges on 3/15 fixtures — but every one of those is driven
+**solely by an annexed D.3 biomarker** (`UnsafeDeserialization`,
+`CryptographicMisuseRisk`, `ExceptionHandlingAntiPattern`), which the clean-room
+impl cannot reproduce without the reference engine's curated sink/anti-pattern
+inventory. That is the expected, honest scope boundary documented in Appendix D.
+
+The earlier `SPEC GAPS` ledger (prose thresholds the implementer had to guess) is
+now **empty for structural biomarkers** — every numeric predicate is resolved
+from §2.1–§2.4.

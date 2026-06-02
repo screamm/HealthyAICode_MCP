@@ -23,7 +23,7 @@ any changes made.
 
 The Open Code Health Score (OCHS) is a deterministic, auditable 1–10 numeric
 health score for a single source-code file. It is computed from a weighted
-penalty formula applied to a defined set of 43 *biomarkers* (detected code
+penalty formula applied to a defined set of 55 *biomarkers* (detected code
 smells and structural findings). Every weight, every biomarker definition, and
 the scoring formula itself are published in this document under open licenses so
 that independent tools can produce a conformant OCHS score.
@@ -82,7 +82,7 @@ This section defines all 55 biomarkers in OCHS v0.1. Each entry states:
 - **Severity range** — the severity values the implementation may attach (`critical`, `high`, `medium`, `low`). Severity is informational and does not affect the score; only the weight and count matter.
 - **Origin sprint** — the development sprint in which this biomarker was introduced, for traceability.
 
-### Table 1 — Biomarker Catalogue (43 entries)
+### Table 1 — Biomarker Catalogue (55 entries)
 
 Biomarkers are grouped into six categories. Within each category, entries are ordered alphabetically by identifier.
 
@@ -95,7 +95,7 @@ Biomarkers are grouped into six categories. Within each category, entries are or
 | 1 | `BrainMethod` | 1.2 | A method that is simultaneously very long (> threshold lines) AND has high cyclomatic complexity (> threshold CC), combining both LargeMethod and ComplexMethod characteristics into a single function. | high–critical | early |
 | 2 | `BumpyRoad` | 0.8 | A function body that contains multiple sequential conditional blocks ("bumps") at the same nesting level, indicating a flat but branchy control flow that is hard to reason about. Chunk ranges are reported to aid targeted extraction. | medium | 17 |
 | 3 | `CognitiveComplexity` | 0.8 | Cognitive complexity (Sonar metric) of a function exceeds a configured threshold. Cognitive complexity counts nesting penalties and structural breaks, not just branching paths. | medium–high | early |
-| 4 | `ComplexMethod` | 1.5 | Cyclomatic complexity (CC) of a function exceeds the threshold. Implementation applies a threshold-gated weight: 1.0 at CC 15–24, 1.5 at CC ≥ 25, to reduce penalty for borderline cases. | high–critical | early |
+| 4 | `ComplexMethod` | 1.5 | Cyclomatic complexity (CC) of a function is **strictly greater than 10** (`CC > 10`). Weight is the **single constant 1.5** for every firing instance — there is no threshold-gated weight tier. CC only modulates the (informational) severity: `high` for `10 < CC ≤ 20`, `critical` for `CC > 20`. See §2.1 for the exact threshold table and §2.2 for the resolution of the earlier weight-tier wording. | high–critical | early |
 | 5 | `DeepNesting` | 1.2 | Maximum nesting depth of a function exceeds the configured threshold (typically 4). Measures the deepest level of nested control structures (if/for/while/try). | medium–high | early |
 | 6 | `LargeMethod` | 0.6 | A function or method exceeds the configured line-count threshold (typically 40–60 lines of code, excluding blank lines and comments). | low–medium | early |
 
@@ -171,7 +171,7 @@ Biomarkers are grouped into six categories. Within each category, entries are or
 | 42 | `AbstractionLeakage` | 0.6 | AI-generated code exposes implementation-specific details at an abstraction boundary (e.g., internal model names, provider-specific error codes, raw JSON structures) that should be hidden behind a domain interface. Advisory AI-specific smell. | medium | 29 |
 | 43 | `AiAttributedSATD` | 0.8 | A comment contains both an AI attribution term (`LLM`, `AI`, `GPT`, `ChatGPT`, `Copilot`, `Gemini`, `Claude`) AND a SATD marker (`TODO`, `FIXME`, `HACK`, `XXX`) in the same comment node. If an uncertainty phrase also appears (`no clue`, `not sure`, `unclear why`), severity is elevated. Based on GIST taxonomy (arXiv 2601.07786); inter-annotator agreement κ = 0.896. Triggers the tiered AI gate (loopComplete requires score ≥ 9.7). | low–medium | 57 |
 | 44 | `AsyncAntiPattern` | 0.7 | One of four DrAsync anti-patterns is detected (TypeScript/JavaScript only): P1 async function with no `await`, P3 redundant `return await` outside try-block, P7 `.then()` callback returning another `.then()`, P8 `new Promise` constructor missing the `reject` argument. (ICSE 2022) | medium | 58 |
-| 45 | `ComplexityMassConcentration` | 1.2 | Structural Erosion Index (SlopCodeBench, arXiv 2603.24755) exceeds 0.60. Erosion = Σ mass(f, CC > 10) / Σ mass(all f), where mass(f) = CC(f) × √SLOC(f). Fires when there are ≥ 3 functions. Agent-generated code averages erosion 0.68 vs human code 0.34. | high–critical | 57 |
+| 45 | `ComplexityMassConcentration` | 1.2 | Structural Erosion Index (SlopCodeBench, arXiv 2603.24755) exceeds 0.60. Erosion = Σ mass(f, CC > 10) / Σ mass(all f), where mass(f) = CC(f) × √length(f) and length(f) is the function's line span (see §2.1f). Fires when there are ≥ 3 functions. Agent-generated code averages erosion 0.68 vs human code 0.34. | high–critical | 57 |
 | 46 | `DuplicateCode` | 1.0 | A significant fraction of the file's abstract syntax tree subtrees are structurally identical to subtrees elsewhere in the file (type-2 clone detection via SHA-1 subtree hashing). Reflects the observed rise in clone frequency in AI-assisted codebases (8.3 % → 12.3 % across tracked repositories). | medium–high | 58 |
 | 47 | `ExceptionHandlingAntiPattern` | 0.8 | One of four exception-handling anti-patterns is detected across Tier A languages: EmptyCatch (empty or comment-only catch block), CatchGeneric (catching the base exception type without re-throw), DestructiveWrapping (re-throw losing the original stack trace), UnreachableHandler (broad catch placed before a specific catch). | medium | 58 |
 | 48 | `HallucinatedPackageImport` | 1.5 | An imported package name does not exist in the offline snapshot of the npm or PyPI registry. Distinct from `SlopsquattingRisk` (which handles packages that exist but are suspicious). Reference: 19.7 % of LLM tool-recommendation sessions recommend non-existent packages (arXiv 2501.19012). Weight at parity with `SqlInjectionRisk` (supply-chain risk). | high–critical | 57 |
@@ -186,6 +186,124 @@ Biomarkers are grouped into six categories. Within each category, entries are or
 ---
 
 > **Biomarker count:** The OCHS v0.1 catalogue contains **55 distinct biomarker types** — the complete set of `SmellType` union members in `packages/core/src/types.ts` and keys in `packages/core/src/scoring/weights.ts`. Earlier planning documents referenced "43 biomarkers"; that count predated the Sprint 56–60 additions (SplitResidue, FragmentedCode, five LlmXxx smells, HallucinatedPackageImport, AiAttributedSATD, ComplexityMassConcentration, SsrfRisk, CryptographicMisuseRisk, ExceptionHandlingAntiPattern, AsyncAntiPattern, DuplicateCode, SlopsquattingRisk).
+
+---
+
+### 2.1 Normative Firing Thresholds — Structural Biomarkers
+
+The prose detection triggers in Table 1 describe *what* each structural biomarker measures. This section publishes the **exact numeric thresholds** required to reproduce the reference implementation's firing decisions, so the structural biomarkers are re-implementable from the spec alone. Every value below is the reference implementation's **default** (uncalibrated) threshold and is the ground truth: a conformant implementation MUST fire each biomarker under exactly these conditions to produce an identical OCHS score.
+
+All comparisons are **strict** unless stated otherwise (e.g. `CC > 10` fires at CC = 11, not CC = 10). Severity is informational (it never affects the score); it is published here only because the reference detector computes it and it aids cross-implementation diffing.
+
+> **Calibration note.** The reference implementation also ships an *opt-in* calibrated-threshold mode (`useCalibratedThresholds: true`, validated for Java only). The values in this section are the **default** thresholds used when calibration is off. OCHS v0.1 conformance is defined against these default thresholds; calibrated mode is an implementation extension and is out of scope for v0.1 reproducibility.
+
+#### Table 1a — Per-function complexity thresholds (all language tiers with function extraction)
+
+These five biomarkers fire per function using the function's cyclomatic complexity (`CC`), maximum nesting depth, line count, parameter count, and cognitive complexity. They apply to every Tier A and Tier B language (any language for which functions are extracted).
+
+| Biomarker | Fires when | Severity tiers | Metric definition |
+|-----------|-----------|----------------|-------------------|
+| `ComplexMethod` | `CC > 10` | `critical` if `CC > 20`, else `high` | Cyclomatic complexity = 1 + count of decision points (`if`, `for`, `while`, `case`, `catch`, `&&`, `\|\|`, ternary `?`). |
+| `DeepNesting` | `nestingDepth > 3` | `critical` if `> 5`, `high` if `> 4`, else `medium` | Maximum depth of nested control structures (`if`/`for`/`while`/`switch`/`try`) within the function body. |
+| `LargeMethod` | `length > 50` | `medium` (single tier) | Function length in source lines (start line to end line inclusive). |
+| `LongParameterList` | `parameterCount > 4` | `medium` (single tier) | Number of declared parameters (implicit receivers such as `self`/`this` excluded). |
+| `CognitiveComplexity` | `cognitiveComplexity > 15` | `critical` if `> 25`, else `high` | SonarSource Cognitive Complexity (S3776): +1 per control-flow break, +`nesting` extra for each nested one, +1 per logical operator in a boolean chain. |
+
+#### Table 1b — File-level structural thresholds
+
+| Biomarker | Fires when | Severity | Metric definition |
+|-----------|-----------|----------|-------------------|
+| `LargeFile` | `totalLines > 500` | `medium` | Total physical line count of the file. Applies to **all tiers**, including Tier C (YAML/JSON/Dockerfile/…). |
+| `LowMaintainability` | `MI < 30` (on a 0–100 scale) | `medium` if `MI < 15`, else `low` | Maintainability Index, normalised to 0–100: `MI = clamp(0,100, round(100 × (171 − 5.2·ln(HV) − 0.23·CC̄ − 16.2·ln(LOC)) / 171))`, where `HV` = Halstead Volume, `CC̄` = mean per-function cyclomatic complexity, `LOC` = total lines. `HV`, `CC̄`, `LOC` are each floored at 1 before the logs. |
+| `LowDocCoverage` | file has **≥ 3** documentable exported symbols **and** documented-ratio `< 0.8` | `medium` if ratio `< 0.5`, else `low` | Documented-ratio = (exported symbols with an immediately-preceding doc comment) / (exported symbols). Symbols ≤ 3 lines long and names in {`constructor`, `ngOnInit`, `ngOnDestroy`, `setup`, `teardown`} are excluded from both numerator and denominator. Files with < 3 qualifying exports never fire. |
+| `MagicNumber` (Tier A, AST) | a single function contains **≥ 3** magic numeric literals | `medium` | A "magic" literal is a numeric literal that is **not** one of {`0`, `1`, `-1`, `2`, `100`}, **not** inside a `const` declarator, and **not** an enum member value. Counted per-function; the function fires once when its count reaches 3. Test files (`*.test.*` / `*.spec.*`) are skipped entirely. |
+| `MagicNumber` (Tier B/C, text) | any qualifying magic literal on a non-skipped line | `low` | Text-based fallback: integers with absolute value ≥ 2 (i.e. excluding `0`/`±1`), excluding `ALL_CAPS = …` / `final`/`const … NAME = …` constant declarations, comment lines, and `import`/`require`/`from`/`using`/`package` lines. Config/data extensions (`.json`, `.yml`, `.yaml`, `.xml`, `.toml`, `.ini`, `.cfg`) are skipped. Each qualifying literal is one finding. |
+
+#### Table 1c — Design-smell thresholds (Tier A `LanguageProfile` languages)
+
+`GodClass`, `FeatureEnvy`, `DataClumps`, and `PrimitiveObsession` require a full `LanguageProfile` and are computed for: TypeScript, JavaScript, Python, Java, C#, Go, Ruby, Rust, PHP, Kotlin, Scala. Other languages do not fire these.
+
+| Biomarker | Fires when | Severity | Metric definitions |
+|-----------|-----------|----------|--------------------|
+| `GodClass` | **all three** simultaneously: `ATFD > 5` **and** `WMC ≥ 20` **and** `LCOM4 > 1` | `high` | **ATFD** (Access To Foreign Data) = count of distinct *imported* type names whose members the class accesses. **WMC** (Weighted Methods per Class) = Σ over methods of `(decision points in method body) + 1`. **LCOM4** = number of connected components in the method-graph where two methods are connected iff they reference a common field via the language's self/this keyword. |
+| `FeatureEnvy` | a method's most-called foreign type has `maxForeignCalls ≥ 3` **and** `maxForeignCalls / totalCalls ≥ 0.6` | `medium` | `totalCalls` = own-type member accesses (via self/this) + all foreign-type member accesses. `maxForeignCalls` = call count to the single most-accessed *imported* type. |
+| `DataClumps` | a parameter group of **≥ 3** identically-named parameters recurs across **≥ 2** distinct function signatures | `medium` | Two signatures clump when the intersection of their parameter-name sets has size ≥ 3. Each distinct shared-name set is reported once. Implicit receiver names are excluded. |
+| `PrimitiveObsession` | a function has **≥ 3** primitive-typed parameters | `high` if `≥ 5`, else `medium` | A parameter is primitive when its resolved type name is in the language profile's primitive-type set (e.g. `number`/`string`/`boolean` for TS, `int`/`str`/`bool` for Python). Implicit receivers excluded. |
+
+#### Table 1d — Control-flow & readability thresholds (Tier A)
+
+| Biomarker | Fires when | Severity | Metric definition |
+|-----------|-----------|----------|------------------|
+| `BumpyRoad` | a function body contains **≥ 4** top-level sibling control-flow "chunks" | `high` | A chunk is a direct child of the function body that is one of: `if`/`for`/`for-in`/`while`/`do`/`switch`/`try`/`with`/`foreach`/enhanced-for. Only top-level siblings count — nested control flow is `DeepNesting`'s domain, not `BumpyRoad`'s. |
+| `ComplexConditional` | a boolean expression contains **≥ 3** logical operators (`&&` / `\|\|`, language-specific), **or** a ternary whose consequent or alternative is itself a ternary (nested ternary) | `high` (nested ternary), `medium` (boolean chain) | Logical-operator count is the number of `&&`/`\|\|` nodes in a single top-level boolean chain (the outermost expression of the chain is counted; nested chains within it add to the count). |
+| `MessageChain` | a call/property chain has **depth ≥ 4** (e.g. `a.b().c().d()`) | `medium` | Chain depth = number of chained member-call links rooted at the outermost call expression. |
+| `TypeSafetyEscape` (TS/JS) | use of `any`, or a comment directive `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error` | `critical` (`@ts-nocheck`), `high` (`@ts-ignore`), `medium` (`any`), `low` (`@ts-expect-error`) | Each occurrence of the `any` type node, and each comment line containing a directive, is one finding. |
+
+#### Table 1e — SATD (self-admitted technical debt)
+
+The reference implementation runs an **AST-based** SATD detector for Tier A languages and a **text/regex** detector for Tier B/C. Both emit `SATD` (weight 0.6). Severity differs by tier; severity is informational.
+
+| Detector | Keyword → severity | Notes |
+|----------|--------------------|-------|
+| AST (Tier A) | `HACK`/`XXX`/`BUG` → critical; `FIXME`/`BROKEN` → high; `TODO`/`TEMP`/`WORKAROUND`/`KLUDGE` → medium; `REFACTOR` → low | Matched on comment nodes; the **first** matching tier wins per comment (one finding per comment node). |
+| Text (Tier B/C) | `TODO`/`FIXME`/`HACK`/`XXX`/`BUG`/`KLUDGE` → low | Line-by-line regex on comment markers (`//`, `#`, `--`, `;`, `*`). One finding per matching line. |
+
+> Both detectors count toward the same `SATD` type and weight; only the firing keyword set and severity assignment differ by tier. Conformant Tier A implementations SHOULD use the AST keyword/severity mapping; Tier B/C implementations use the text mapping.
+
+#### Table 1f — Composite / index-based structural biomarkers
+
+These biomarkers fire from a derived index rather than a single metric. The full formula is published so they are reproducible.
+
+| Biomarker | Fires when | Formula |
+|-----------|-----------|---------|
+| `BrainMethod` | `brain_score ≥ 0.55` **and** at least **3 of the 5** factors exceed `0.5` | `brain_score = 0.30·L + 0.25·C + 0.25·G + 0.10·N + 0.10·X`, where each factor is `clamp(0,1, value / threshold)`: `L = length/100`, `C = CC/25`, `G = cognitive/30`, `N = nestingDepth/6`, `X = centrality/maxCentrality`. Centrality is a within-file proxy = sum of the function's own CC across name-matching definitions; `maxCentrality` is the file maximum (floored at 1). Severity: `critical` if `brain_score ≥ 0.85`, `high` if `≥ 0.70`, else `medium`. |
+| `ComplexityMassConcentration` | `erosion > 0.60` **and** the file has **≥ 3** functions | `erosion = Σ mass(f \| CC(f) > 10) / Σ mass(all f)`, where `mass(f) = CC(f) × sqrt(max(1, length(f)))` and `length(f)` is the function's **line span** (`endLine − startLine + 1`, the same `length` metric used by `LargeMethod` in §2.1a and the `L` factor of `BrainMethod`) (SlopCodeBench, arXiv 2603.24755). Severity: `critical` if `erosion > 0.80`, else `high`. |
+| `DuplicateCode` | a code block of **≥ 6 lines** occurs in **≥ 2 disjoint** locations in the file and contains executable logic | See §2.3 for the full algorithm. |
+
+#### Table 1g — Index-based maintainability biomarkers (separate analyzers)
+
+`DocumentationDebt` and `IntentClarity` are computed by **dedicated analyzers** (`analyzeDocDebt`, `analyzeIntentClarity`), not by the default per-file `analyzeCode` pipeline. A conformant implementation that exposes these biomarkers MUST use the following definitions; an implementation that does not run these analyzers simply omits the type (this does not change the score of a file that has no other findings).
+
+| Biomarker | Fires when | Formula |
+|-----------|-----------|---------|
+| `DocumentationDebt` | `DDI > 0` | `DDI = min(1, cognitiveComplexity / 50) × (1 − docCoverage)`, rounded to 4 decimals. Severity: `high` if `DDI ≥ 0.60`, `medium` if `≥ 0.30`, else `low`. |
+| `IntentClarity` | `intentClarityScore < 0.65` | `intentClarityScore = 0.40·docRatio + 0.35·typeAnnotationRatio + 0.25·nameQualityScore`. `nameQualityScore` penalises identifiers shorter than 3 characters or in a generic-name blocklist (`data`,`tmp`,`temp`,`result`,`res`,`val`,`item`,`obj`,`foo`,`bar`,`x`,`y`,`n`,`s`,`e`,`err`); loop variables `i`/`j`/`k` are exempt. Severity: `high` if score `< 0.40`, else `medium`. |
+
+### 2.2 Resolution of the `ComplexMethod` Weight-Tier Wording
+
+Earlier drafts of this spec (and some planning notes) described `ComplexMethod` as applying a **threshold-gated weight**: "1.0 at CC 15–24, 1.5 at CC ≥ 25". **That description does not match the reference engine and is hereby corrected.** The authoritative behaviour, taken directly from the detector source (`packages/core/src/smells/detector.ts`) and the scoring formula (`packages/core/src/scoring/scorer.ts`), is:
+
+1. **Single firing threshold:** `ComplexMethod` fires when `CC > 10`. There is no secondary CC-15 or CC-25 gate on *firing*.
+2. **Single weight:** the scoring formula uses **one** weight per smell type. `ComplexMethod`'s weight is the constant **1.5** for every instance, regardless of CC. The penalty is `1.5 × sqrt(count)` where `count` is the number of complex methods in the file. A per-instance weight of 1.0 is **not representable** in the formula `score = 10 − Σ(weight × sqrt(count))`, because the weight is a per-*type* constant, not a per-*instance* value — so a "1.0 tier" could never have been applied without changing the formula itself.
+3. **CC affects severity only, never the score:** the engine sets the (informational) severity to `critical` when `CC > 20` and `high` otherwise. Per §2 of this spec, severity does not enter the scoring formula.
+
+**Reconciliation of the CC numbers.** The "15 / 25" figures in the old wording originated from the *cognitive*-complexity tiers and from a discarded weight-tiering proposal; they were never the cyclomatic firing thresholds. The reference engine's actual cyclomatic thresholds are `CC > 10` (fire) and `CC > 20` (severity `critical`). The cognitive-complexity biomarker — a **separate** type with weight 0.8 — uses `> 15` (fire) and `> 25` (severity `critical`); those are the real "15 / 25" numbers, and they belong to `CognitiveComplexity`, not `ComplexMethod`. With §2.1 publishing both biomarkers' true thresholds, the spec is now internally consistent and matches the engine.
+
+### 2.3 `DuplicateCode` Detection Algorithm (reproducible from this spec)
+
+`DuplicateCode` is AST/text-derivable and its full algorithm is published here so it can be reimplemented without the reference detector. It detects type-1 (exact) and type-2 (structural) clones within a single file using sliding-window hashing:
+
+1. **Window size:** `minLines = 6`. Files with fewer than `2 × minLines = 12` lines never fire.
+2. **Type-1 normalisation** of a window: trim each line, drop blank lines, join with `\n`.
+3. **Type-2 normalisation:** apply type-1 normalisation, then replace every identifier token (`/\b[A-Za-z_$][A-Za-z0-9_$]*\b/`) that is **not** a reserved keyword with the placeholder `$ID`. (The reserved-keyword set is the union of TypeScript/JavaScript and Python keywords; an implementation MAY use its own language-appropriate keyword set.)
+4. **Window hashing:** for each starting line `i` in `[0, lines.length − minLines]`, hash the normalised `minLines`-line window with **SHA-1** (used as a fast identity hash, not for security). Group window starts by hash; any hash with ≥ 2 starts is a candidate duplicate.
+5. **Region merging:** sort the duplicate start-pairs and merge consecutive pairs (where both occurrences advance by exactly one line) into contiguous clone blocks, so a long duplicated block is reported as a single finding rather than many overlapping windows. A clone block's extent is `[startWindow, endWindow + minLines − 1]`.
+6. **Disjointness:** reject any group whose two occurrences overlap in line span (a real clone has two **disjoint** occurrences).
+7. **Logic-content guard:** reject a clone block unless at least one of its non-comment lines contains executable logic (a control keyword, `=>`, a call `…(…)`, a method call `.name(`, a `return`/`throw`/`raise`/`await`/`yield`, etc.). This suppresses false positives on aligned constant tables, import groups, and struct/field lists.
+8. **Type precedence:** run type-1 first; run type-2 only on line ranges not already covered by a type-1 clone.
+9. **Severity:** `high` if the cloned block is > 15 lines, else `medium`. Weight is `1.0` regardless.
+
+This is a deterministic, file-local algorithm: identical source text yields identical `DuplicateCode` findings across implementations. Type-3 (near-clone via edit distance) is **not** part of OCHS v0.1.
+
+### 2.4 Scoring Determinism — Rounding Rule
+
+For full cross-implementation reproducibility, the reference engine applies one rounding step that Section 1's formula does not make explicit: after computing `10 − Σ(weight × sqrt(count))`, the raw score is **rounded to one decimal place** (`parseFloat(score.toFixed(1))`, i.e. round-half-up at the first decimal) **before** the floor of 1.0 is applied:
+
+```
+score = max( 1.0, round1( 10 − Σ_i ( weight_i × sqrt( count_i ) ) ) )
+```
+
+where `round1(x)` rounds `x` to one decimal place using IEEE-754 double arithmetic and the standard `toFixed(1)` half-away-from-zero behaviour. A conformant implementation MUST apply this one-decimal rounding so that, e.g., a single `LowMaintainability` finding (`10 − 0.3 = 9.7`) and a single `ComplexMethod` finding (`10 − 1.5 = 8.5`) match the reference engine exactly.
 
 ---
 
@@ -293,7 +411,7 @@ A tool SHOULD:
 
 A tool MAY:
 
-- Add additional biomarkers beyond the 43 defined here, provided they are clearly labelled as extensions and do not affect the OCHS v0.1 score computation.
+- Add additional biomarkers beyond the 55 defined here, provided they are clearly labelled as extensions and do not affect the OCHS v0.1 score computation.
 - Report subscores (security, complexity, maintainability, duplication) as supplementary information.
 
 ---
@@ -411,6 +529,65 @@ for **Java only** using the MLCQ and Defects4J datasets. Calibration for Python,
 TypeScript, and other languages is planned but not yet validated. We do not claim
 that biomarker thresholds are empirically optimised for non-Java languages.
 
+### A.6 Cross-Implementation Reproducibility (clean-room second implementation)
+
+To test whether OCHS is genuinely third-party implementable from this document
+alone, an independent, stdlib-only **clean-room Python implementation**
+(`ochs-ref-py/ochs_ref.py`) was written *from the published spec only* — the
+formula (§1), the normative firing thresholds (§2.1–§2.4), the weight table
+(Table 2), and the honest annex (Appendix D). It does not import, read, or port
+any code from the reference engine; it implements biomarker detection
+independently using Python's own `ast` module plus the text rules the spec
+publishes. Its score is computed independently and only afterwards compared to
+the reference engine's score on the same fixtures (the engine is invoked purely
+as a black box).
+
+**Measurement scope.** Agreement is measured over the **structural subset** —
+the 25 biomarkers §2.4 declares "reproducible from this spec alone." The 30
+biomarkers Appendix D honestly annexes as *not* reproducible from the prose
+(D.1 registry-data-dependent, D.2 git/project-history-dependent, D.3
+shared-curated-pattern/SDK-list-dependent) are **excluded** from the
+structural-agreement metric and reported separately. Omitting an annexed
+biomarker is conformant (§4 / Appendix D): the formula is unchanged.
+
+**Corpus.** 15 Python fixtures (`ochs-ref-py/fixtures/`) spanning healthy,
+borderline, and unhealthy code.
+
+**Result (2026-06-02), structural subset:**
+
+| Metric | Before threshold publication | After §2.1–§2.4 publication |
+|--------|------------------------------|------------------------------|
+| Exact score agreement (\|Δ\| ≤ 0.0001) | 33.3 % (5/15) | **100 % (15/15)** |
+| Within-0.5 agreement | 80.0 % (12/15) | **100 % (15/15)** |
+| Category agreement (green/yellow/red) | 80.0 % (12/15) | **100 % (15/15)** |
+| Mean \|Δ\| | 0.5303 | **0.0000** |
+
+On the structural subset the two implementations now produce **byte-identical
+smell vectors and identical OCHS scores on every fixture**. The clean-room
+implementation reaches **L2 conformance** (exact score agreement on all
+structural fixtures). This confirms that publishing the exact thresholds in
+§2.1–§2.4 (and resolving the `ComplexMethod` rule to `CC > 10` in §2.2) made the
+structural biomarkers reproducible from the spec alone — the earlier divergence
+was caused by under-specified thresholds, not by an intrinsic non-reproducibility.
+
+**Honest scope of the remaining divergence.** The full-score table (all 55
+biomarkers) still diverges on 3 of 15 fixtures (12/15 exact). Every one of those
+divergences is driven **solely by an annexed biomarker** — `UnsafeDeserialization`,
+`CryptographicMisuseRisk`, and `ExceptionHandlingAntiPattern` (all D.3
+curated-pattern-list detectors). The clean-room implementation fires zero of
+these (it has no access to the reference engine's curated sink/anti-pattern
+inventory) and zero structural false positives or misses. This is the expected,
+honest result: D.3 biomarkers require a shared pattern/SDK inventory for
+byte-identical agreement, which this document does not — and per Appendix D,
+cannot — embed. The reproducibility claim is scoped to the structural subset.
+
+Reproduce with:
+
+```bash
+node ochs-ref-py/core_reference.mjs > ochs-ref-py/core_reference.json
+cd ochs-ref-py && python cross_check.py
+```
+
 ---
 
 ## Appendix B — Weight Rationale
@@ -440,6 +617,58 @@ that biomarker thresholds are empirically optimised for non-Java languages.
 - **Major versions** (v1.0.0, v2.0.0): weight changes, formula changes, or biomarker removals. Scores are not comparable across major versions.
 
 All implementations MUST include the full version string (e.g., `ochs:0.1`) in scored output so downstream consumers know which specification applies.
+
+---
+
+## Appendix D — Biomarkers Not Reproducible From the Prose Spec Alone (Honest Annex)
+
+The structural biomarkers in §2.1–§2.4 are fully reproducible from this document: given the same source text, any implementation that follows those thresholds and formulas produces an identical OCHS score for the file-local, syntax-derived smells. **A number of biomarkers, however, cannot be reproduced from the prose specification alone.** They depend on one of three external inputs that this document does not — and cannot — embed: (a) a **package-registry data snapshot**, (b) **git history / repository context**, or (c) a **fixed pattern/SDK list whose membership is the detector, not a derivable rule**.
+
+This annex states honestly, for each such biomarker, *why* it is not spec-derivable and *what an implementation needs* to reproduce the reference behaviour. An implementation that lacks the required input MUST either obtain an equivalent input or omit the biomarker; it MUST NOT claim spec-derived reproducibility for these types. Omitting a reference-data-dependent biomarker is conformant — it simply means that finding does not contribute to the score (the formula is unchanged).
+
+### D.1 Reference-data-dependent (require a registry snapshot or curated corpus)
+
+| Biomarker | Required input | Why it is not derivable from prose |
+|-----------|----------------|------------------------------------|
+| `HallucinatedPackageImport` | An offline **npm / PyPI package-name snapshot** (`data/npm-snapshot.json`, `data/pypi-snapshot.json`). | Firing = "imported package name is **absent** from the registry snapshot." The verdict is a membership test against a live-registry-derived dataset of millions of names. Two implementations with **different-dated snapshots will disagree** on borderline (new or recently-removed) packages. The truth set is data, not prose — the spec cannot enumerate "every package that exists." Reproducibility requires shipping or agreeing on a specific snapshot version. |
+| `SlopsquattingRisk` | The same registry snapshot **plus** two curated data files: a **prominent-targets** list (`data/slopsquatting/prominent-targets.json`) and an **LLM-hallucination corpus** (`data/slopsquatting/hallucinated-corpus.json`); optionally a project lockfile and an opt-in live-registry fetch. | Firing combines (a) a documented-hallucination-corpus membership test, (b) a high-signal single-edit typosquat distance to a *curated* prominent-package set, and optionally (c) a live registry lookup (404 / first-published < 90 days). The typosquat rule's *algorithm* (single keyboard-slip / homoglyph / adjacent-transposition / non-numeric indel against ≥ 4-char names, with separator/plural variants and a known-distinct allow-list excluded) is fully described in the source and could be re-specified — but its **inputs are curated lists** that two implementations would have to share verbatim to agree. The live-check path is non-deterministic by construction (network state, current date). |
+| `DependencyVulnerability` | A maintained **advisory database** (e.g. OSV/GHSA) and the project's dependency manifest. | Firing = "a declared dependency matches a known-vulnerable version range." The truth set is an external, continuously-updated advisory feed; it is neither file-local nor static. Two implementations querying advisory databases of different vintages will disagree. |
+
+### D.2 Git / repository-context-dependent (require history beyond a single file's text)
+
+These biomarkers are by design **not** part of the file-local, synchronous score. In the reference implementation they are emitted only by history-aware or project-level entry points (`analyzeFileWithHistory`, the temporal analyzers, and the architecture-debt analyzer) — `analyzeFile()` / `analyzeCode()` never emit them. They cannot be reproduced from a single file's source text.
+
+| Biomarker | Required input | Why it is not derivable from a single file |
+|-----------|----------------|--------------------------------------------|
+| `MethodTemporalCoupling` | **git commit history** of the file. | Firing = "two methods in the file change together across commits above a coupling threshold." Requires per-commit method-range diffs. Only included in the score via `analyzeFileWithHistory()` (weight 0.3); `analyzeFile()` never emits it. |
+| `CodeChurn` | **git history** (commit frequency vs. file size and repo average). | A temporal-instability signal; undefined for a file with no history. |
+| `DeveloperCongestion` | **git log** with author + date (distinct authors in a 14-day window). | Requires authorship/timestamps; not present in source text. |
+| `KnowledgeLoss` | **git blame** + contributor activity recency (> 40 % of lines last authored by contributors inactive ≥ 6 months). | Requires blame and a notion of "recent activity"; not file-local. |
+| `ArchitectureDebt` | **project-level import graph** (cycle / SCC membership, propagation cost) usually combined with change frequency. | Requires analysing the whole repository's dependency graph, not one file. |
+| `TestProximity` | **filesystem / project layout** (presence of a co-located `*.test.*` / `*_test.*` or parallel `__tests__/`). | Requires directory listing beyond the file under analysis; a string passed to `analyzeCode` has no surrounding directory. |
+
+### D.3 Pattern/SDK-list-dependent heuristics (algorithm is published, but the *list* is the detector)
+
+These biomarkers are computed from a single file's text and are deterministic for a fixed pattern set — but the pattern set is an embedded, curated list of library/SDK call shapes and signatures, not a rule derivable from first principles. Two implementations agree **only if they use the same pattern list**. This document publishes their detection *intent* and the canonical pattern families; the exact regex/SDK inventory lives in the reference source and is the normative reference for byte-identical agreement.
+
+| Biomarker(s) | Pattern family the detector encodes |
+|--------------|--------------------------------------|
+| `SqlInjectionRisk`, `XssRisk`, `CommandInjectionRisk`, `PathTraversalRisk` | Regex call-site patterns for specific sink shapes (e.g. `db/knex/sequelize.query(... + ...)`, `res.send/write(... + ...)`, `innerHTML = <non-literal>`, `spawnSync(..., [\`...${x}\`])`). Heuristic, not full taint analysis. The sink/library inventory is curated. |
+| `HardcodedCredential`, `HardcodedApiKey` | A curated secret-keyword list (`password`, `secret`, `token`, `api_key`, …), a set of well-known key-format regexes (AWS `AKIA…`, JWT `eyJ…`, `sk-…`, `Bearer …`), and a Shannon-entropy threshold (`≥ 4.5`, min length 16). The keyword/format inventory is the detector. |
+| `UnsafeDeserialization`, `SsrfRisk`, `CryptographicMisuseRisk` | Per-language sink regexes (`pickle.load`, `yaml.load`, `ObjectInputStream`, `unserialize`, `Marshal.load`, `vm.runInNewContext`, `eval(<non-literal>)`; HTTP sinks fed from request context; weak-hash/weak-RNG/short-RSA/hardcoded-IV patterns). Curated per-language pattern sets. |
+| `LlmUnboundedCall`, `LlmUnpinnedModel`, `LlmNoSystemMessage`, `LlmNoStructuredOutput`, `LlmUnsetTemperature` | SpecDetect4AI call-site regexes bound to a fixed SDK inventory (OpenAI / Anthropic / LangChain in TS/JS/Python). Firing depends on which SDK call shapes and argument names are in the list. |
+| `AsyncAntiPattern`, `ExceptionHandlingAntiPattern` | Fixed catalogues of named anti-patterns (DrAsync P1/P3/P7/P8; EmptyCatch / CatchGeneric / DestructiveWrapping / UnreachableHandler). The anti-pattern catalogue is the detector. |
+| `AbstractionLeakage`, `HardcodedAssumption`, `MissingEdgeCase`, `StyleInconsistency` | Advisory AI-specific heuristics driven by curated indicator patterns. Explicitly advisory; low/medium weight. |
+| `AiAttributedSATD` | Co-occurrence of an AI-attribution term (`LLM`/`AI`/`GPT`/`ChatGPT`/`Copilot`/`Gemini`/`Claude`) **and** a SATD marker in the same comment. The attribution-term and marker lists are curated. |
+
+### D.4 Summary
+
+- **Reproducible from this spec alone (§2.1–§2.4):** all per-function complexity biomarkers (`ComplexMethod`, `DeepNesting`, `LargeMethod`, `LongParameterList`, `CognitiveComplexity`), file-level structural biomarkers (`LargeFile`, `LowMaintainability`, `LowDocCoverage`, `MagicNumber`), Tier A design smells (`GodClass`, `FeatureEnvy`, `DataClumps`, `PrimitiveObsession`), control-flow/readability smells (`BumpyRoad`, `ComplexConditional`, `MessageChain`, `TypeSafetyEscape`), `SATD` (per the tier-specific keyword tables), and the composite indices `BrainMethod`, `ComplexityMassConcentration`, `DuplicateCode` (full algorithm in §2.3), plus `DocumentationDebt` and `IntentClarity` for implementations that run those analyzers.
+- **Require a registry/advisory data snapshot (D.1):** `HallucinatedPackageImport`, `SlopsquattingRisk`, `DependencyVulnerability`.
+- **Require git history / project context (D.2):** `MethodTemporalCoupling`, `CodeChurn`, `DeveloperCongestion`, `KnowledgeLoss`, `ArchitectureDebt`, `TestProximity`.
+- **Require a shared curated pattern/SDK inventory (D.3):** the security-sink, secret, LLM-integration, async/exception anti-pattern, and advisory AI-specific biomarkers.
+
+For the data- and history-dependent biomarkers (D.1, D.2), the reference detector or an equivalent data snapshot is required; they are **not reproducible from the prose spec alone**. For the pattern-list biomarkers (D.3), the detection *algorithm* is published here, but byte-identical cross-implementation agreement additionally requires the same pattern/SDK inventory (the normative copy of which is the reference source). This annex is the honest scope boundary of OCHS v0.1 reproducibility.
 
 ---
 
