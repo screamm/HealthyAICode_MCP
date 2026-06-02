@@ -13,6 +13,16 @@
 export { evaluateGate, newlyIntroducedSmells } from './evaluate-gate';
 export type { ProposedEdit } from './evaluate-gate';
 
+/**
+ * Optional behaviour-equivalence signal (async, Python/TS/JS only). An ADDITIONAL
+ * blocking signal a caller can combine with the deterministic `evaluateGate`
+ * decision; blocks ONLY on a real dynamic `divergence`. Never blocks on
+ * `unverified`/`equivalent`, so unsupported-language edits are never wrongly
+ * denied. Measured detection 80% (see docs/benchmarks/behavior-equivalence-results.md).
+ */
+export { evaluateBehaviorEquivalence } from './behavior-equiv-signal';
+export type { BehaviorEquivSignal } from './behavior-equiv-signal';
+
 /** Gate decision contract (structurally identical to core's contracts/gate-types). */
 export {
   DEFAULT_FLOOR,

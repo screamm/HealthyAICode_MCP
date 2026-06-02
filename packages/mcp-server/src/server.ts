@@ -22,6 +22,7 @@ import { registerSecurityAudit } from './tools/security-audit';
 import { registerArchitectureReport } from './tools/architecture-report';
 import { registerValidateDataset } from './tools/validate-dataset';
 import { registerDebtGoalsTools } from './tools/debt-goals';
+import { registerVerifyRefactor } from './tools/verify-refactor';
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer({
@@ -53,6 +54,7 @@ export async function createServer(): Promise<McpServer> {
   registerArchitectureReport(server);
   registerValidateDataset(server);
   registerDebtGoalsTools(server);
+  registerVerifyRefactor(server);
 
   return server;
 }

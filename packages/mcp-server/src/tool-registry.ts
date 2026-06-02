@@ -77,8 +77,11 @@ export const DEFERRED_TOOLS: readonly string[] = [
 
   // Export formatters (SARIF / GitLab / ISO 5055) — useful for CI/CD pipelines, not during the loop
   'code_health_format_output',
+
+  // Behaviour-equivalence verification (Python / TS / JS dynamic, advisory elsewhere)
+  'code_health_verify_refactor',
 ] as const;
-// NOTE: total registered tools = LOOP_TOOLS.length + DEFERRED_TOOLS.length (currently 5 + 24 = 29).
+// NOTE: total registered tools = LOOP_TOOLS.length + DEFERRED_TOOLS.length (currently 5 + 25 = 30).
 
 /**
  * Returns the list of tool names that should be marked `defer_loading: true`.

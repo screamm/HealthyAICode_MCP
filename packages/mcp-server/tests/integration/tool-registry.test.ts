@@ -22,7 +22,7 @@ import {
  * The complete set of tool names registered by server.ts.
  * Update this list when new register* calls are added to server.ts.
  *
- * Current count: 29 tools (5 loop + 24 deferred).
+ * Current count: 30 tools (5 loop + 25 deferred).
  */
 const ALL_REGISTERED_TOOL_NAMES = new Set<string>([
   // ── Loop-critical tools (5) ──────────────────────────────────────────
@@ -70,6 +70,9 @@ const ALL_REGISTERED_TOOL_NAMES = new Set<string>([
 
   // Export formatters (Sprint 59)
   'code_health_format_output',
+
+  // Behaviour-equivalence verification (Sprint 51–60)
+  'code_health_verify_refactor',
 ]);
 
 describe('tool-registry: LOOP_TOOLS and DEFERRED_TOOLS are disjoint', () => {
