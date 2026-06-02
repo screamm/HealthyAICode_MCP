@@ -1,0 +1,11 @@
+{
+  "ochsVersion": "0.1",
+  "score": 9.0,
+  "filePath": "unhealthy/entity-god-class.ts",
+  "language": "typescript",
+  "category": "green",
+  "loopComplete": false,
+  "smells": [
+    { "type": "DuplicateCode" }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "engine": "core",
+  "ochsVersion": "0.1",
+  "results": [
+    {
+      "file": "01_healthy_simple.py",
+      "score": 10,
+      "category": "green",
+      "smellCounts": {}
+    },
+    {
+      "file": "02_healthy_simple_math.py",
+      "score": 9.5,
+      "category": "green",
+      "smellCounts": {
+        "PrimitiveObsession": 1
+      }
+    },
+    {
+      "file": "03_healthy_string_utils.py",
+      "score": 9.5,
+      "category": "green",
+      "smellCounts": {
+        "PrimitiveObsession": 1
+      }
+    },
+    {
+      "file": "04_healthy_validators.py",
+      "score": 9.5,
+      "category": "green",
+      "smellCounts": {
+        "PrimitiveObsession": 1
+      }
+    },
+    {
+      "file": "05_borderline_complex_validator.py",
+      "score": 5.9,
+      "category": "red",
+      "smellCounts": {
+        "MagicNumber": 4,
+        "BumpyRoad": 1,
+        "DuplicateCode": 1,
+        "ComplexMethod": 1
+      }
+    },
+    {
+      "file": "06_borderline_nested_config.py",
+      "score": 10,
+      "category": "green",
+      "smellCounts": {}
+    },
+    {
+      "file": "07_borderline_data_processor.py",
+      "score": 9.6,
+      "category": "green",
+      "smellCounts": {
+        "MagicNumber": 1
+      }
+    },
+    {
+      "file": "08_unhealthy_complex.py",
+      "score": 5.8,
+      "category": "red",
+      "smellCounts": {
+        "MagicNumber": 2,
+        "DeepNesting": 1,
+        "LongParameterList": 1,
+        "CognitiveComplexity": 1,
+        "BrainMethod": 1
+      }
+    },
+    {
+      "file": "09_unhealthy_complex_nested.py",
+      "score": 4.2,
+      "category": "red",
+      "smellCounts": {
+        "MagicNumber": 3,
+        "ComplexMethod": 1,
+        "DeepNesting": 1,
+        "LongParameterList": 1,
+        "CognitiveComplexity": 1,
+        "BrainMethod": 1
+      }
+    },
+    {
+      "file": "10_unhealthy_deep_nesting.py",
+      "score": 4.9,
+      "category": "red",
+      "smellCounts": {
+        "MagicNumber": 1,
+        "ComplexMethod": 1,
+        "DeepNesting": 1,
+        "CognitiveComplexity": 1,
+        "BrainMethod": 1
+      }
+    },
+    {
+      "file": "11_unhealthy_insecure_deser.py",
+      "score": 8.3,
+      "category": "yellow",
+      "smellCounts": {
+        "UnsafeDeserialization": 2
+      }
+    },
+    {
+      "file": "12_unhealthy_crypto_misuse.py",
+      "score": 7.6,
+      "category": "yellow",
+      "smellCounts": {
+        "MagicNumber": 1,
+        "CryptographicMisuseRisk": 4
+      }
+    },
+    {
+      "file": "13_unhealthy_exception_ap.py",
+      "score": 8.6,
+      "category": "yellow",
+      "smellCounts": {
+        "LowDocCoverage": 1,
+        "ExceptionHandlingAntiPattern": 2
+      }
+    },
+    {
+      "file": "14_unhealthy_hallucinated.py",
+      "score": 10,
+      "category": "green",
+      "smellCounts": {}
+    },
+    {
+      "file": "15_real_requests_internal_utils.py",
+      "score": 9.6,
+      "category": "green",
+      "smellCounts": {
+        "MagicNumber": 1
+      }
+    }
+  ]
+}

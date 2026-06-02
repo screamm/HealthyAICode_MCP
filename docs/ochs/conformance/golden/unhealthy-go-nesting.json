@@ -1,0 +1,15 @@
+{
+  "ochsVersion": "0.1",
+  "score": 6.434314575050762,
+  "filePath": "unhealthy/deep-nesting.go",
+  "language": "go",
+  "category": "yellow",
+  "loopComplete": false,
+  "smells": [
+    { "type": "MagicNumber" },
+    { "type": "MagicNumber" },
+    { "type": "LowDocCoverage" },
+    { "type": "ComplexMethod" },
+    { "type": "DeepNesting" }
+  ]
+}

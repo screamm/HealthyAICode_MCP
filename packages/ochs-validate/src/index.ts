@@ -29,3 +29,16 @@ export {
   PROBLEMATIC_THRESHOLD,
   ALL_SMELL_TYPES,
 } from './weights';
+
+export {
+  runConformanceSuite,
+  loadOutputsFromDirectory,
+  getCorpusFixtureIds,
+  type ConformanceLevel,
+  type AssertionStatus,
+  type AssertionResult,
+  type FixtureConformanceResult,
+  type ConformanceSuiteResult,
+  type SpecGap,
+  type ConformanceOptions,
+} from './conformance';

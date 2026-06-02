@@ -1,0 +1,27 @@
+{
+  "ochsVersion": "0.1",
+  "score": 1.0,
+  "filePath": "unhealthy/complex.ts",
+  "language": "typescript",
+  "category": "red",
+  "loopComplete": false,
+  "smells": [
+    { "type": "LowDocCoverage" },
+    { "type": "PrimitiveObsession" },
+    { "type": "PrimitiveObsession" },
+    { "type": "ComplexityMassConcentration" },
+    { "type": "ComplexMethod" },
+    { "type": "DeepNesting" },
+    { "type": "LongParameterList" },
+    { "type": "CognitiveComplexity" },
+    { "type": "ComplexMethod" },
+    { "type": "DeepNesting" },
+    { "type": "LongParameterList" },
+    { "type": "CognitiveComplexity" },
+    { "type": "DeepNesting" },
+    { "type": "LongParameterList" },
+    { "type": "CognitiveComplexity" },
+    { "type": "BrainMethod" },
+    { "type": "BrainMethod" }
+  ]
+}

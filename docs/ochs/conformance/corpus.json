@@ -1,9 +1,11 @@
 {
   "ochsVersion": "0.1",
-  "generatedAt": "2026-06-01T00:00:00Z",
-  "scoringFormula": "score = 10 - sum(avgEffectiveWeight * sqrt(count)) per smell type; floor = 1.0",
+  "generatedAt": "2026-06-02T00:00:00Z",
+  "scoringFormula": "score = max(1.0, 10 − Σ(weight × sqrt(count))) per smell type; IEEE 754 double-precision; floor = 1.0",
+  "note": "expectedScore is the EXACT formula result (unrounded) except for floor cases. tolerance covers legitimate 1-decimal rounding that implementations may emit. All golden values were produced by the reference implementation (@healthy-ai-code/core) and independently verified by re-applying the formula to the smell vector.",
   "thresholds": {
     "aiReady": 9.5,
+    "aiReadyWithAiSatd": 9.7,
     "healthy": 9.0,
     "problematic": 6.0
   },
@@ -12,21 +14,35 @@
       "id": "healthy-ts-simple",
       "path": "healthy/simple.ts",
       "language": "typescript",
-      "description": "Minimal TypeScript: 7 pure functions, no complexity, no nesting.",
+      "description": "Minimal TypeScript: 7 pure functions, no complexity, no nesting. All docs present.",
       "expectedScore": 10.0,
       "expectedCategory": "green",
+      "expectedLoopComplete": true,
       "expectedSmellCount": 0,
-      "tolerance": 0.0
+      "expectedSmellTypes": [],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {},
+        "penalty": 0.0,
+        "derivedExact": 10.0
+      }
     },
     {
       "id": "healthy-py-simple",
       "path": "healthy/simple.py",
       "language": "python",
-      "description": "Minimal Python: 3 one-liner functions.",
+      "description": "Minimal Python: 3 one-liner functions with docstrings.",
       "expectedScore": 10.0,
       "expectedCategory": "green",
+      "expectedLoopComplete": true,
       "expectedSmellCount": 0,
-      "tolerance": 0.0
+      "expectedSmellTypes": [],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {},
+        "penalty": 0.0,
+        "derivedExact": 10.0
+      }
     },
     {
       "id": "healthy-java-simple",
@@ -35,8 +51,15 @@
       "description": "Minimal Java: single class with 3 trivial methods.",
       "expectedScore": 10.0,
       "expectedCategory": "green",
+      "expectedLoopComplete": true,
       "expectedSmellCount": 0,
-      "tolerance": 0.0
+      "expectedSmellTypes": [],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {},
+        "penalty": 0.0,
+        "derivedExact": 10.0
+      }
     },
     {
       "id": "healthy-go-simple",
@@ -45,48 +68,157 @@
       "description": "Minimal Go: single-function package.",
       "expectedScore": 10.0,
       "expectedCategory": "green",
+      "expectedLoopComplete": true,
       "expectedSmellCount": 0,
-      "tolerance": 0.0
+      "expectedSmellTypes": [],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {},
+        "penalty": 0.0,
+        "derivedExact": 10.0
+      }
     },
     {
       "id": "unhealthy-ts-complex",
       "path": "unhealthy/complex.ts",
       "language": "typescript",
-      "description": "TypeScript with ComplexMethod, DeepNesting, LongParameterList, BrainMethod, CognitiveComplexity, PrimitiveObsession, LowDocCoverage, and ComplexityMassConcentration (Sprint 57 Structural Erosion) — saturates at floor 1.0.",
+      "description": "TypeScript with 8 distinct biomarker types (17 total findings). Score saturates at floor 1.0. penalty = 10.182 > 9.0 so floor applies.",
       "expectedScore": 1.0,
       "expectedCategory": "red",
+      "expectedLoopComplete": false,
       "expectedSmellCount": 17,
-      "tolerance": 0.0
+      "expectedSmellTypes": [
+        "LowDocCoverage",
+        "PrimitiveObsession",
+        "ComplexityMassConcentration",
+        "ComplexMethod",
+        "DeepNesting",
+        "LongParameterList",
+        "CognitiveComplexity",
+        "BrainMethod"
+      ],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {
+          "LowDocCoverage": 1,
+          "PrimitiveObsession": 2,
+          "ComplexityMassConcentration": 1,
+          "ComplexMethod": 2,
+          "DeepNesting": 3,
+          "LongParameterList": 3,
+          "CognitiveComplexity": 3,
+          "BrainMethod": 2
+        },
+        "contributionBreakdown": [
+          { "type": "LowDocCoverage",            "count": 1, "weight": 0.3, "contribution": 0.3 },
+          { "type": "PrimitiveObsession",         "count": 2, "weight": 0.5, "contribution": 0.7071067811865476 },
+          { "type": "ComplexityMassConcentration", "count": 1, "weight": 1.2, "contribution": 1.2 },
+          { "type": "ComplexMethod",               "count": 2, "weight": 1.5, "contribution": 2.121320343559643 },
+          { "type": "DeepNesting",                 "count": 3, "weight": 1.2, "contribution": 2.0784609690826528 },
+          { "type": "LongParameterList",           "count": 3, "weight": 0.4, "contribution": 0.6928203230275509 },
+          { "type": "CognitiveComplexity",         "count": 3, "weight": 0.8, "contribution": 1.3856406460551018 },
+          { "type": "BrainMethod",                 "count": 2, "weight": 1.2, "contribution": 1.6970562748477143 }
+        ],
+        "penalty": 10.182405337759208,
+        "derivedExact": 1.0,
+        "floorApplied": true
+      }
     },
     {
       "id": "unhealthy-py-complex",
       "path": "unhealthy/complex.py",
       "language": "python",
-      "description": "Python with DeepNesting, CognitiveComplexity, BrainMethod, MagicNumber.",
-      "expectedScore": 5.8,
+      "description": "Python with DeepNesting, CognitiveComplexity, BrainMethod, MagicNumber x2, LongParameterList. Exact formula gives 5.8343...; implementations may round to 1 decimal place.",
+      "expectedScore": 5.834314575050762,
       "expectedCategory": "red",
+      "expectedLoopComplete": false,
       "expectedSmellCount": 6,
-      "tolerance": 0.0
+      "expectedSmellTypes": [
+        "MagicNumber",
+        "DeepNesting",
+        "LongParameterList",
+        "CognitiveComplexity",
+        "BrainMethod"
+      ],
+      "tolerance": 0.05,
+      "formulaDerivation": {
+        "smellCounts": {
+          "MagicNumber": 2,
+          "DeepNesting": 1,
+          "LongParameterList": 1,
+          "CognitiveComplexity": 1,
+          "BrainMethod": 1
+        },
+        "contributionBreakdown": [
+          { "type": "MagicNumber",         "count": 2, "weight": 0.4, "contribution": 0.5656854249492380 },
+          { "type": "DeepNesting",         "count": 1, "weight": 1.2, "contribution": 1.2 },
+          { "type": "LongParameterList",   "count": 1, "weight": 0.4, "contribution": 0.4 },
+          { "type": "CognitiveComplexity", "count": 1, "weight": 0.8, "contribution": 0.8 },
+          { "type": "BrainMethod",         "count": 1, "weight": 1.2, "contribution": 1.2 }
+        ],
+        "penalty": 4.165685424949238,
+        "derivedExact": 5.834314575050762,
+        "floorApplied": false
+      }
     },
     {
       "id": "unhealthy-ts-godclass",
       "path": "unhealthy/entity-god-class.ts",
       "language": "typescript",
-      "description": "TypeScript class with 22 trivial single-line accessor methods. WMC≈22 but ATFD=0 and LCOM4=1, so it does NOT meet the LCOM4/ATFD-based GodClass threshold (ATFD>5, WMC>=20, LCOM4>1). The 22 methods are structurally identical one-line clones (`x() { return 'y'; }`), so the Sprint 58 in-file DuplicateCode detector correctly fires once (type-2 clone) — green but no longer perfect.",
+      "description": "TypeScript class with 22 trivial single-line accessor methods. WMC=22 but ATFD=0 and LCOM4=1 — does NOT meet GodClass thresholds. DuplicateCode fires once (in-file type-2 clones). Score = 10 - 1.0*sqrt(1) = 9.0 exactly.",
       "expectedScore": 9.0,
       "expectedCategory": "green",
+      "expectedLoopComplete": false,
       "expectedSmellCount": 1,
-      "tolerance": 0.0
+      "expectedSmellTypes": [
+        "DuplicateCode"
+      ],
+      "tolerance": 0.0,
+      "formulaDerivation": {
+        "smellCounts": {
+          "DuplicateCode": 1
+        },
+        "contributionBreakdown": [
+          { "type": "DuplicateCode", "count": 1, "weight": 1.0, "contribution": 1.0 }
+        ],
+        "penalty": 1.0,
+        "derivedExact": 9.0,
+        "floorApplied": false
+      }
     },
     {
       "id": "unhealthy-go-nesting",
       "path": "unhealthy/deep-nesting.go",
       "language": "go",
-      "description": "Go with DeepNesting, ComplexMethod, MagicNumber, LowDocCoverage — yellow zone.",
-      "expectedScore": 6.4,
+      "description": "Go with DeepNesting, ComplexMethod, MagicNumber x2, LowDocCoverage. Exact formula gives 6.4343...; implementations may round to 1 decimal place. Yellow zone.",
+      "expectedScore": 6.434314575050762,
       "expectedCategory": "yellow",
+      "expectedLoopComplete": false,
       "expectedSmellCount": 5,
-      "tolerance": 0.0
+      "expectedSmellTypes": [
+        "MagicNumber",
+        "LowDocCoverage",
+        "ComplexMethod",
+        "DeepNesting"
+      ],
+      "tolerance": 0.05,
+      "formulaDerivation": {
+        "smellCounts": {
+          "MagicNumber": 2,
+          "LowDocCoverage": 1,
+          "ComplexMethod": 1,
+          "DeepNesting": 1
+        },
+        "contributionBreakdown": [
+          { "type": "MagicNumber",    "count": 2, "weight": 0.4, "contribution": 0.5656854249492380 },
+          { "type": "LowDocCoverage", "count": 1, "weight": 0.3, "contribution": 0.3 },
+          { "type": "ComplexMethod",  "count": 1, "weight": 1.5, "contribution": 1.5 },
+          { "type": "DeepNesting",    "count": 1, "weight": 1.2, "contribution": 1.2 }
+        ],
+        "penalty": 3.565685424949238,
+        "derivedExact": 6.434314575050762,
+        "floorApplied": false
+      }
     }
   ]
 }

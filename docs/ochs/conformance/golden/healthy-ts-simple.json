@@ -1,0 +1,9 @@
+{
+  "ochsVersion": "0.1",
+  "score": 10.0,
+  "filePath": "healthy/simple.ts",
+  "language": "typescript",
+  "category": "green",
+  "loopComplete": true,
+  "smells": []
+}

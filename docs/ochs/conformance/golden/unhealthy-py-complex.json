@@ -1,0 +1,16 @@
+{
+  "ochsVersion": "0.1",
+  "score": 5.834314575050762,
+  "filePath": "unhealthy/complex.py",
+  "language": "python",
+  "category": "red",
+  "loopComplete": false,
+  "smells": [
+    { "type": "MagicNumber" },
+    { "type": "MagicNumber" },
+    { "type": "DeepNesting" },
+    { "type": "LongParameterList" },
+    { "type": "CognitiveComplexity" },
+    { "type": "BrainMethod" }
+  ]
+}

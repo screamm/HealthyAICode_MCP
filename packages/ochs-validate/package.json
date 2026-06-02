@@ -22,7 +22,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ochs-validate": "dist/cli.js"
+    "ochs-validate": "dist/cli.js",
+    "ochs-conformance": "dist/conformance-cli.js"
   },
   "files": [
     "dist/",
