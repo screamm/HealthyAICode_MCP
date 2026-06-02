@@ -1,0 +1,163 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024-2026 David Rydgren (screamm) and Healthy AI Code contributors.
+#
+# OCHS Conformance CI
+# -------------------
+# Runs on every PR and push to master/main to verify that:
+#   1. The reference implementation (@healthy-ai-code/core) passes the full OCHS
+#      conformance corpus (docs/ochs/conformance/corpus.json).
+#   2. The standalone validator CLI (ochs-validate) exits 0 on the corpus.
+#   3. The JSON schema (docs/ochs/ochs-schema.json) is valid against the published
+#      JSON Schema draft.
+#
+# This workflow is the CI gate required for OpenSSF Sandbox conformance testing.
+# Third-party OCHS implementations can run an equivalent check by installing
+# ochs-validate and pointing it at their own output.
+
+name: OCHS Conformance
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - 'feat/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Job 1: Reference implementation conformance
+  # Verifies that @healthy-ai-code/core produces scores that match the golden
+  # corpus within the declared tolerance (±0.05 for 1-decimal rounding).
+  # -----------------------------------------------------------------------
+  reference-impl-conformance:
+    name: Reference implementation — corpus conformance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Run OCHS conformance test suite (ochs-validate)
+        run: pnpm --filter ochs-validate test
+        # vitest exits non-zero on any failure; CI fails automatically.
+
+      - name: Run full project test suite
+        run: pnpm test
+
+  # -----------------------------------------------------------------------
+  # Job 2: ochs-validate CLI smoke test
+  # Installs the published CLI (or the local build) and runs it against the
+  # conformance corpus to verify the CLI contract is intact.
+  # -----------------------------------------------------------------------
+  ochs-validate-cli:
+    name: ochs-validate CLI — corpus smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build ochs-validate
+        run: pnpm --filter ochs-validate build
+
+      - name: Validate conformance corpus via CLI
+        run: |
+          node packages/ochs-validate/dist/cli.js \
+            docs/ochs/conformance/corpus.json
+        # CLI exits 0 on full pass, non-zero on any conformance failure.
+        # Output is human-readable; failures include case name + delta.
+
+  # -----------------------------------------------------------------------
+  # Job 3: JSON Schema validation
+  # Confirms the published ochs-schema.json is itself valid JSON Schema
+  # (draft-07 / 2020-12) so that third-party tooling can import it safely.
+  # -----------------------------------------------------------------------
+  schema-validity:
+    name: OCHS JSON Schema — meta-validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install ajv-cli for meta-validation
+        run: npm install -g ajv-cli@5
+
+      - name: Validate ochs-schema.json against JSON Schema meta-schema
+        run: |
+          ajv validate \
+            --spec=draft2020 \
+            -s docs/ochs/ochs-schema.json \
+            -d docs/ochs/conformance/corpus.json
+        # ajv exits non-zero if the schema is malformed or if the corpus
+        # document does not validate against the schema.
+
+  # -----------------------------------------------------------------------
+  # Job 4: TypeScript type check (all packages)
+  # Keeps the repo type-safe after any governance/CI-file-adjacent changes.
+  # -----------------------------------------------------------------------
+  typecheck:
+    name: TypeScript — type check all packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript type check
+        run: pnpm -r typecheck

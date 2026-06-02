@@ -140,7 +140,7 @@ Complete map of OCHS artifacts as of 2026-06-02.
 | Unhealthy fixtures (4 files) | `docs/ochs/conformance/unhealthy/` | MIT | Published |
 | Standalone validator CLI | `packages/ochs-validate/` | MIT | Published (npm: `ochs-validate`) |
 | Reference implementation | `packages/core/` | MIT | Published (npm: `@healthy-ai-code/core`) |
-| Python clean-room impl | `ochs-ref-py/` | MIT | In progress — NOT complete |
+| Python clean-room impl | `ochs-ref-py/` | MIT | Published — structural subset reproduces the reference engine exactly (100 % exact score agreement on 15 fixtures; L2 conformance). See OCHS-v0.1.md §A.6. |
 | Governance docs | `docs/ochs/governance/` | MIT | This directory |
 | SECURITY.md | (repository root) | — | ❌ Missing — must be created |
 | MAINTAINERS.md | (repository root or spec repo) | — | ❌ Missing — must be created |
