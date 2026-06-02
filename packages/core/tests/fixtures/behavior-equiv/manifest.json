@@ -1,0 +1,326 @@
+{
+  "description": "Behavior-equivalence test corpus for code_health_verify_refactor. Each pair has a `before` (original) and `after` (refactored) function. `expected: 'divergent'` pairs are silently non-equivalent (the refactoring changed behavior — these are true positives the detector must catch). `expected: 'equivalent'` pairs are semantics-preserving refactorings (true negatives — must NOT be flagged). Provenance: spike corpus from scripts/spikes/behavior-equiv/corpus/ (21 pairs, 100% detection, 0% FP verified 2026-06-01) plus 14 additional pairs crafted from failure modes in arXiv:2602.15761 and arXiv:2502.18454.",
+  "sourceUrls": [
+    "https://arxiv.org/abs/2602.15761",
+    "https://arxiv.org/abs/2502.18454",
+    "scripts/spikes/behavior-equiv/corpus/index.json"
+  ],
+  "pairs": [
+    {
+      "id": "py-01-clamp-boundary",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "boundary-condition",
+      "description": "Lower-bound clamp returns lo+1 instead of lo at x===lo. Off-by-one at boundary.",
+      "file": "nonequivalent/python/py-01-clamp-boundary.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py",
+      "provenanceNote": "Spike TN relabelled; boundary injection retained for detection corpus."
+    },
+    {
+      "id": "py-02-range-offbyone",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "off-by-one",
+      "description": "sum_range: range(1, n) skips index 0, dropping first element.",
+      "file": "nonequivalent/python/py-02-range-offbyone.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-03-mutable-default",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "mutable-default-arg",
+      "description": "append_item: mutable list default accumulates across calls (classic Python pitfall).",
+      "file": "nonequivalent/python/py-03-mutable-default.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-04-integer-truncation",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "integer-truncation",
+      "description": "halve: // floor-division changes result for odd integers and negatives.",
+      "file": "nonequivalent/python/py-04-integer-truncation.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-05-truthy-coercion",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "falsy-coercion",
+      "description": "pick: `val or fallback` fires on 0 and '' where `val if val is not None else fallback` would not.",
+      "file": "nonequivalent/python/py-05-truthy-coercion.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-06-slice-offbyone",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "off-by-one",
+      "description": "head(a, k): slice a[:k-1] instead of a[:k] drops the kth element.",
+      "file": "nonequivalent/python/py-06-slice-offbyone.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-07-dict-default",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "dropped-edge-case",
+      "description": "count_get: d[key] raises KeyError on missing key; d.get(key, 0) returns 0.",
+      "file": "nonequivalent/python/py-07-dict-default.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-08-comparator-sign",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "comparator-sign-swap",
+      "description": "top_n: sort key reversed; ascending instead of descending returns wrong top elements.",
+      "file": "nonequivalent/python/py-08-comparator-sign.py",
+      "sourceUrl": "arXiv:2602.15761 Table 2 pattern: sort key sign flip"
+    },
+    {
+      "id": "py-09-dropped-return",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "dropped-return-value",
+      "description": "accumulate: early-return path removed; now always returns None instead of partial result.",
+      "file": "nonequivalent/python/py-09-dropped-return.py",
+      "sourceUrl": "arXiv:2502.18454 finding: LLM drops guard-clause return"
+    },
+    {
+      "id": "py-10-reordered-sideeffect",
+      "language": "python",
+      "expected": "divergent",
+      "bugClass": "reordered-side-effects",
+      "description": "log_and_compute: logging moved after computation; when computation raises, log is now skipped.",
+      "file": "nonequivalent/python/py-10-reordered-sideeffect.py",
+      "sourceUrl": "arXiv:2602.15761 pattern: observable reordering of side effects"
+    },
+    {
+      "id": "ts-01-boundary-condition",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "boundary-condition",
+      "description": "inRange: inclusive upper bound <= becomes exclusive <; exact upper value now excluded.",
+      "file": "nonequivalent/typescript/ts-01-boundary-condition.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-02-sum-offbyone",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "off-by-one",
+      "description": "sumRange: loop `i < a.length - 1` drops last element.",
+      "file": "nonequivalent/typescript/ts-02-sum-offbyone.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-03-dropped-default",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "dropped-default-arg",
+      "description": "greet: default parameter `name = 'world'` removed; undefined call now yields 'hi undefined'.",
+      "file": "nonequivalent/typescript/ts-03-dropped-default.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-04-integer-truncation",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "integer-truncation",
+      "description": "avg: Math.floor() added to (a+b)/2; truncates midpoints and negative averages.",
+      "file": "nonequivalent/typescript/ts-04-integer-truncation.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-05-nullish-vs-or",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "falsy-coercion",
+      "description": "pickLabel: ?? replaced by || so 0 and '' now fall through to fallback.",
+      "file": "nonequivalent/typescript/ts-05-nullish-vs-or.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-06-sort-comparator",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "comparator-sign-swap",
+      "description": "topTwo: (y-x) becomes (x-y) flipping sort to ascending; wrong top-2 returned.",
+      "file": "nonequivalent/typescript/ts-06-sort-comparator.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-07-empty-guard",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "dropped-edge-case",
+      "description": "firstOr: empty-array guard removed; returns undefined instead of default on [].",
+      "file": "nonequivalent/typescript/ts-07-empty-guard.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-08-async-await-drop",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "async-semantics",
+      "description": "fetchUser: await dropped inside async function; caller receives Promise<T> instead of T.",
+      "file": "nonequivalent/typescript/ts-08-async-await-drop.ts",
+      "sourceUrl": "arXiv:2602.15761 pattern: async/await semantic change"
+    },
+    {
+      "id": "ts-09-mutation-vs-copy",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "mutation-vs-immutable",
+      "description": "addItem: spread-copy [...arr, item] replaced by push(item); mutates caller's array.",
+      "file": "nonequivalent/typescript/ts-09-mutation-vs-copy.ts",
+      "sourceUrl": "arXiv:2502.18454 finding: LLM changes immutable operation to mutation"
+    },
+    {
+      "id": "ts-10-exception-swallow",
+      "language": "typescript",
+      "expected": "divergent",
+      "bugClass": "exception-handling",
+      "description": "parseNum: catch now returns 0 instead of re-throwing; error is silently swallowed.",
+      "file": "nonequivalent/typescript/ts-10-exception-swallow.ts",
+      "sourceUrl": "arXiv:2602.15761 pattern: changed exception propagation"
+    },
+    {
+      "id": "py-eq-01-recursive-to-iterative",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "factorial: recursive implementation replaced by iterative loop. Semantics identical.",
+      "file": "equivalent/python/py-eq-01-recursive-to-iterative.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-eq-02-comprehension",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "evens: explicit for-loop replaced by list comprehension. Semantics identical.",
+      "file": "equivalent/python/py-eq-02-comprehension.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-eq-03-guard-clause",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "safe_div: try/except ZeroDivisionError replaced by explicit guard `if b == 0`. Same result.",
+      "file": "equivalent/python/py-eq-03-guard-clause.py",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/py/pairs.py"
+    },
+    {
+      "id": "py-eq-04-extract-method",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "normalize: inline expression extracted to named local variables. Semantics unchanged.",
+      "file": "equivalent/python/py-eq-04-extract-method.py",
+      "sourceUrl": "arXiv:2602.15761 extract-method class"
+    },
+    {
+      "id": "py-eq-05-early-return",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "find_positive: nested if-else flattened to early return. Behavior unchanged.",
+      "file": "equivalent/python/py-eq-05-early-return.py",
+      "sourceUrl": "arXiv:2602.15761 guard-clause / early-return class"
+    },
+    {
+      "id": "py-eq-06-rename-variable",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "weighted_avg: loop variable `i` renamed to `idx`. Pure rename, semantics identical.",
+      "file": "equivalent/python/py-eq-06-rename-variable.py",
+      "sourceUrl": "arXiv:2602.15761 rename class"
+    },
+    {
+      "id": "py-eq-07-use-builtin",
+      "language": "python",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "max_val: explicit max-tracking loop replaced by `max()` builtin. Semantics identical.",
+      "file": "equivalent/python/py-eq-07-use-builtin.py",
+      "sourceUrl": "arXiv:2602.15761 use-library-function class"
+    },
+    {
+      "id": "ts-eq-01-recursive-to-iterative",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "factorial: recursive -> iterative. Semantics identical.",
+      "file": "equivalent/typescript/ts-eq-01-recursive-to-iterative.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-eq-02-extract-method",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "normalize: extract intermediate step to local const. Semantics identical.",
+      "file": "equivalent/typescript/ts-eq-02-extract-method.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-eq-03-switch-to-map",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "classify: switch statement replaced by ternary chain. Semantics identical.",
+      "file": "equivalent/typescript/ts-eq-03-switch-to-map.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs"
+    },
+    {
+      "id": "ts-eq-04-for-to-foreach",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "sumArray: for-loop replaced by reduce(). Semantics identical for finite numeric arrays.",
+      "file": "equivalent/typescript/ts-eq-04-for-to-foreach.ts",
+      "sourceUrl": "arXiv:2602.15761 loop-to-higher-order class"
+    },
+    {
+      "id": "ts-eq-05-optional-chain",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "getName: explicit null check replaced by optional chaining `?.`. Semantics identical.",
+      "file": "equivalent/typescript/ts-eq-05-optional-chain.ts",
+      "sourceUrl": "arXiv:2602.15761 simplify-null-check class"
+    },
+    {
+      "id": "ts-eq-06-early-return",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "describeNum: nested if-else refactored to guard-clause early returns. Same outputs.",
+      "file": "equivalent/typescript/ts-eq-06-early-return.ts",
+      "sourceUrl": "arXiv:2602.15761 guard-clause / early-return class"
+    },
+    {
+      "id": "ts-eq-07-rename-internal",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "buildSlug: internal variable `tmp` renamed to `cleaned`. Pure rename, behavior unchanged.",
+      "file": "equivalent/typescript/ts-eq-07-rename-internal.ts",
+      "sourceUrl": "arXiv:2602.15761 rename class"
+    },
+    {
+      "id": "ts-eq-08-clamp-boundary",
+      "language": "typescript",
+      "expected": "equivalent",
+      "bugClass": "none",
+      "description": "clamp: x >= hi vs x > hi — at x===hi both branches return hi. Provably equivalent despite apparent difference. From spike relabelling.",
+      "file": "equivalent/typescript/ts-eq-08-clamp-boundary.ts",
+      "sourceUrl": "scripts/spikes/behavior-equiv/corpus/ts/pairs.mjs (ts-clamp-boundary relabelled TN)"
+    }
+  ]
+}

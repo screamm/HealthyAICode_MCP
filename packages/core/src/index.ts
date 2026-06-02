@@ -173,6 +173,19 @@ export type { JsDocResult } from './refactor/jsdoc-generator';
 /** Sprint 34: Iterative improvement loop — applies smell fixes and JSDoc until the health target is reached. */
 export { runRefactoringLoop } from './refactor/refactoring-loop';
 export type { RefactoringStep, RefactoringLoopResult } from './refactor/refactoring-loop';
+/**
+ * Sprint 51–60 (behavior-equivalence track): dynamic differential-execution
+ * verification that a refactoring preserved observable behaviour. Returns a
+ * dynamic `equivalent`/`divergence` verdict for Python and TS/JS, and an honest
+ * `unverified` static-only advisory for all other languages.
+ * Measured on the labelled corpus (real run, 2026-06-02): 80% detection
+ * (16/20 divergent pairs caught), with documented gaps (default-arg, dropped
+ * await, in-place mutation, slice off-by-one coverage). See
+ * docs/benchmarks/behavior-equivalence-results.md. Do NOT interpret an
+ * `equivalent` verdict as a proof — it is differential evidence within the input budget.
+ */
+export { verifyRefactor } from './refactor/behavior-equiv/index';
+export type { VerifyResult, Verdict, VerifyMode } from './refactor/behavior-equiv/index';
 /** Detects the source language from a file path extension (Sprint 32: exposed for MCP tool use). */
 export { detectLanguage } from './language-detect';
 
