@@ -432,8 +432,13 @@ _EDGE_STRS = ["", "x", "Hello World", "  pad  ", "a b c", "0"]
 
 
 def _kind_from_annotation(ann):
-    """Map a type-hint string to a synthesis kind, or None when the hint is unhelpful."""
-    a = (ann or "").lower()
+    """Map a type-hint string to a synthesis kind, or None when the hint is unhelpful.
+
+    Handles exact scalars, container hints, AND union types ('str | bytes', 'Optional[int]',
+    'int | None'). Honoring unions matters: a param annotated 'str | bytes' must NOT be fed
+    None/ints — doing so makes a genuinely-equivalent pair diverge on an input the function can
+    never receive (the documented false-positive cause). A union with None → 'optional'."""
+    a = (ann or "").lower().strip()
     if not a:
         return None
     if a in ("int",):
@@ -442,6 +447,8 @@ def _kind_from_annotation(ann):
         return "float"
     if a in ("str", "string"):
         return "str"
+    if a in ("bytes", "bytearray"):
+        return "str"  # synthesise text/edge strings — bytes-vs-str share the string edge set
     if a in ("bool",):
         return "bool"
     if a.startswith("list") or a.startswith("sequence") or a.startswith("tuple") \
@@ -449,7 +456,25 @@ def _kind_from_annotation(ann):
         return "list"
     if a.startswith("dict") or a.startswith("mapping") or a in ("dict", "mapping"):
         return "dict"
-    if "optional" in a or "none" in a:
+    # Union types: split on '|' and the Optional[...]/Union[...] wrappers.
+    if "|" in a or a.startswith("optional[") or a.startswith("union["):
+        inner = a.replace("optional[", "").replace("union[", "").rstrip("]")
+        parts = [p.strip() for p in inner.replace(",", "|").split("|") if p.strip()]
+        nonnull = [p for p in parts if p not in ("none", "nonetype")]
+        has_none = len(nonnull) != len(parts)
+        # A scalar | None union is the falsy/nullish edge → 'optional'.
+        if has_none:
+            return "optional"
+        # str | bytes union → feed BOTH text and bytes (so isinstance/decode branches diverge),
+        # never None. A pure str|string union → plain string edge set.
+        if all(p in ("str", "string", "bytes", "bytearray") for p in nonnull) and nonnull:
+            return "strbytes" if any(p in ("bytes", "bytearray") for p in nonnull) else "str"
+        # int | float etc. → numeric.
+        if all(p in ("int", "float", "complex", "number", "bool") for p in nonnull) and nonnull:
+            return "int"
+        # mixed/unknown union: fall through to usage/name heuristics.
+        return None
+    if "optional" in a or a == "none":
         return "optional"
     return None
 
@@ -657,6 +682,17 @@ def _gen_value(kind, rng):
         return rng.choice([True, False])
     if kind == "str":
         return rng.choice(_EDGE_STRS)
+    if kind == "strbytes":
+        # A 'str | bytes' param: feed BOTH text and bytes so type-dispatch branches
+        # (isinstance(x, str) vs isinstance(x, bytes), .decode vs str()) are exercised on
+        # the values the function actually accepts — never None/ints (which it never receives).
+        s = rng.choice(_EDGE_STRS)
+        if rng.random() < 0.5:
+            try:
+                return s.encode("utf-8")
+            except Exception:  # noqa: BLE001
+                return b""
+        return s
     if kind == "list":
         size = rng.choice([0, 0, 1, 1, 2, 3, 5])  # bias to empty/singleton
         return [rng.choice(_EDGE_INTS) for _ in range(size)]
@@ -679,6 +715,8 @@ def _hypothesis_strategy(kind):
         return st.booleans()
     if kind == "str":
         return st.text(max_size=8)
+    if kind == "strbytes":
+        return st.one_of(st.text(max_size=8), st.binary(max_size=8))
     if kind == "list":
         return st.lists(st.integers(min_value=-50, max_value=50), max_size=6)
     if kind == "dict":
@@ -729,13 +767,39 @@ def _jsonsafe(x):
         return repr(x)
 
 
+import types
+
+
+def _materialize(result):
+    """Make a return value comparable. Generators / non-list iterators yield different object
+    identities (repr includes a memory address) on the before/after sides, so comparing the
+    OBJECTS is meaningless. Instead we drain a generator / iterator to a bounded list of its
+    produced values — the observable output a caller would actually see. The cap guards against
+    an accidentally-infinite generator; both sides are capped identically so a divergence within
+    the cap is real, and hitting the cap is recorded so it is never mistaken for equivalence."""
+    if isinstance(result, types.GeneratorType) or (
+        hasattr(result, "__next__") and hasattr(result, "__iter__")
+        and not isinstance(result, (list, tuple, set, dict, str, bytes, bytearray))
+    ):
+        out = []
+        capped = False
+        cap = 10000
+        for i, item in enumerate(result):
+            if i >= cap:
+                capped = True
+                break
+            out.append(_jsonsafe(item))
+        return {"__iter__": out, "__capped__": capped}
+    return _jsonsafe(result)
+
+
 def _observe(fn, args):
     """Run fn on a deep copy of args; capture outcome, value/error, and post-call arg state."""
     local = copy.deepcopy(args)
     try:
         _freeze_nondeterminism()
         result = fn(*local)
-        return {"outcome": "value", "value": _jsonsafe(result),
+        return {"outcome": "value", "value": _materialize(result),
                 "argsAfter": [_jsonsafe(a) for a in local]}
     except Exception as e:  # noqa: BLE001 - exception type IS observable behaviour
         return {"outcome": "error", "error": type(e).__name__,

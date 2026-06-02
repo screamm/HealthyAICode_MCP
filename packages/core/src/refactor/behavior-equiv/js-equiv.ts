@@ -154,10 +154,40 @@ function pick<T>(rng: () => number, items: readonly T[]): T {
 // arrays, null/undefined) where the dominant LLM-refactor failure classes live.
 // ---------------------------------------------------------------------------
 
-type ParamKind = 'number' | 'string' | 'boolean' | 'numberArray' | 'stringArray' | 'object' | 'nullable' | 'any';
+type ParamKind =
+  | 'number'
+  | 'string'
+  | 'boolean'
+  | 'numberArray'
+  | 'stringArray'
+  | 'object'
+  | 'nullable'
+  | 'date'
+  | 'dateArray'
+  | 'interval'
+  | 'any';
 
 const BOUNDARY_INTS: readonly number[] = [0, 1, -1, 2, -2, 5, 10, -10, 100, -100];
-const BOUNDARY_STRS: readonly string[] = ['', 'x', 'Hello World', '  pad  ', 'a b c', 'name', 'ABC'];
+const BOUNDARY_STRS: readonly string[] = [
+  '',
+  'x',
+  'Hello World',
+  '  pad  ',
+  'a b c',
+  'name',
+  'ABC',
+  // Structured/delimited strings exercise tokenising parsers (header/query/CSV-style code)
+  // where the dominant bugs are off-by-one index advances and missing terminators — e.g. an
+  // `index = endIndex` (instead of `endIndex + 1`) infinite loop only surfaces on input that
+  // actually contains the `;` / `=` delimiters the loop scans for.
+  'text/html;q=0.9',
+  'a=1;b=2;c=3',
+  'key=value',
+  'a;b;c',
+  'x=1;',
+  ';;',
+  'a, b, c',
+];
 
 // Numeric synthesis is INTEGER-DOMAIN by default. Rationale: the dominant LLM-refactor
 // bug classes (off-by-one, boundary, truncation, falsy-coercion, comparator-swap,
@@ -193,6 +223,53 @@ function synthObject(rng: () => number): object {
   return pick(rng, [{}, { a: 1 }, { a: 0, b: 2 }, { x: null }, { value: 0, name: '' }]);
 }
 
+// Date / DateArg synthesis. `toDate` accepts Date instances, numeric timestamps, and strings,
+// so we draw from all three. Values are boundary-biased toward the calendar edges where the
+// dominant date-refactor bugs live: month/year boundaries (clamping bugs), DST transition days,
+// epoch, and negative/leap-day timestamps. A second arg in a date function is usually ANOTHER
+// date or a small amount; this kind covers the date case, and the engine's numeric kind covers
+// the amount case (inferred separately per param).
+// Boundary dates are anchored in LOCAL calendar time (via the `Date(y,m,d,…)` constructor) as
+// well as a few UTC/epoch points. Local anchoring matters: date-fns functions like addMonths /
+// addDays use LOCAL-time accessors (getMonth/getDate/setMonth/setDate), so the month-overflow
+// clamping bug (Jan 31 + 1mo → Feb 28 vs Mar 3) and DST-transition bug only surface when the
+// input lands on the relevant LOCAL calendar position. UTC-anchored timestamps can miss these.
+const BOUNDARY_DATES: readonly number[] = [
+  new Date(2021, 0, 31, 12).getTime(), // local Jan 31 — month-overflow clamping edge (addMonths)
+  new Date(2021, 2, 31, 12).getTime(), // local Mar 31 → April clamping
+  new Date(2020, 1, 29, 12).getTime(), // local Feb 29 leap day
+  new Date(2021, 1, 28, 12).getTime(), // local Feb 28
+  new Date(2021, 2, 14, 2, 30).getTime(), // ~US spring-forward DST window (local)
+  new Date(2021, 10, 7, 1, 30).getTime(), // ~US fall-back DST window (local)
+  new Date(2021, 11, 31, 23).getTime(), // local year boundary
+  new Date(2021, 5, 15, 0).getTime(), // mid-year
+  Date.UTC(1970, 0, 1), // epoch
+  Date.UTC(2000, 0, 1), // Y2K
+  -86400000, // pre-epoch (negative timestamp)
+];
+
+function synthDate(rng: () => number): unknown {
+  const ts = pick(rng, BOUNDARY_DATES) + pick(rng, [0, 1, -1, 1000, 86400000, -86400000]);
+  // We synthesise numeric timestamps and ISO strings only — NOT live `Date` instances.
+  // Rationale: `toDate`/`+new Date(x)` accept all three forms and route through the same
+  // coercion logic, so timestamps exercise the identical code paths; meanwhile a host `Date`
+  // passed into the `node:vm` realm would (a) confuse cross-realm `instanceof Date` checks and
+  // (b) be flattened to `{}` by the structural deep-clone — both of which would inject
+  // artefacts. Strings/numbers clone and compare faithfully across the realm boundary.
+  return randInt(rng, 0, 1) === 0 ? ts : new Date(ts).toISOString();
+}
+
+function synthDateArray(rng: () => number): unknown[] {
+  const n = pick(rng, [0, 1, 1, 2, 3, 5]);
+  return Array.from({ length: n }, () => synthDate(rng));
+}
+
+// date-fns `Interval` = { start: DateArg, end: DateArg }. Synthesise both bounds as dates,
+// occasionally inverted (start > end) so interval-validation branches are exercised.
+function synthInterval(rng: () => number): object {
+  return { start: synthDate(rng), end: synthDate(rng) };
+}
+
 function synthByKind(kind: ParamKind, rng: () => number): unknown {
   switch (kind) {
     case 'number':
@@ -207,6 +284,12 @@ function synthByKind(kind: ParamKind, rng: () => number): unknown {
       return synthStringArray(rng);
     case 'object':
       return synthObject(rng);
+    case 'date':
+      return synthDate(rng);
+    case 'dateArray':
+      return synthDateArray(rng);
+    case 'interval':
+      return synthInterval(rng);
     case 'nullable':
       // nullable slot: over-sample the falsy/nullish edges that drive ?? vs || bugs,
       // mixed with real numbers/strings so the non-null path is exercised too.
@@ -295,11 +378,59 @@ interface ParamInfo {
   readonly defaulted: boolean;
 }
 
+/**
+ * Extract the balanced parameter-list text for a `function NAME <generics?> ( params )`
+ * declaration, correctly SKIPPING a TS generic clause (`<…>`) between the name and the
+ * param parens and BALANCING nested `()`/`<>`/`{}` inside parameter type annotations
+ * (e.g. `DateArg<DateType>`, `(x: number) => void`, `T & {}`). Returns the raw param text,
+ * or null when no matching `function NAME` is found at a usable position.
+ */
+function extractBalancedParamText(source: string, fnName: string): string | null {
+  const anchorRe = new RegExp(`function\\s+${escapeRe(fnName)}\\b`, 'g');
+  let am: RegExpExecArray | null;
+  while ((am = anchorRe.exec(source)) !== null) {
+    let i = am.index + am[0].length;
+    const n = source.length;
+    // Skip an optional generic clause <…> (balance angle brackets).
+    while (i < n && /\s/.test(source[i])) i++;
+    if (source[i] === '<') {
+      let depth = 0;
+      for (; i < n; i++) {
+        if (source[i] === '<') depth++;
+        else if (source[i] === '>') {
+          depth--;
+          if (depth === 0) {
+            i++;
+            break;
+          }
+        }
+      }
+    }
+    while (i < n && /\s/.test(source[i])) i++;
+    if (source[i] !== '(') continue; // not the form we expect; try next anchor
+    // Balance the parameter list, capturing its inner text.
+    let depth = 0;
+    const start = i + 1;
+    for (; i < n; i++) {
+      const c = source[i];
+      if (c === '(' || c === '[' || c === '{' || c === '<') depth++;
+      else if (c === ')' || c === ']' || c === '}' || c === '>') {
+        depth--;
+        if (depth === 0 && c === ')') return source.slice(start, i);
+      }
+    }
+  }
+  return null;
+}
+
 /** Pull the raw parameter list (names + optional TS annotations) for `fnName`. */
 function extractParamList(source: string, fnName: string): ParamInfo[] {
-  // Match `function fnName(...)`, `const fnName = (...) =>`, or default-export function.
+  // `function fnName <generics?> (...)` — handled by the balancing extractor (skips generics).
+  const balanced = extractBalancedParamText(source, fnName);
+  if (balanced !== null) return parseParams(balanced);
+
+  // Arrow / function-expression / default-export forms.
   const patterns = [
-    new RegExp(`function\\s+${escapeRe(fnName)}\\s*\\(([^)]*)\\)`),
     new RegExp(`${escapeRe(fnName)}\\s*=\\s*(?:async\\s*)?\\(([^)]*)\\)\\s*=>`),
     new RegExp(`${escapeRe(fnName)}\\s*=\\s*(?:async\\s*)?function\\s*\\(([^)]*)\\)`),
   ];
@@ -335,7 +466,15 @@ function kindFromAnnotation(annotation: string | null): ParamKind | null {
   if (!annotation) return null;
   const a = annotation.toLowerCase();
   const nullable = /\b(?:null|undefined)\b/.test(a) && /\|/.test(a);
-  // Arrays first (most specific). A nullable array (`number[] | null`) is still synthesised
+  // Date-typed params first: `Date`, `DateArg<…>`, `DateValue`, `Interval` (date-fns). These are
+  // the locus of date-arithmetic refactor bugs (DST, getFullYear vs getUTCFullYear, month
+  // clamping). Feeding objects (`{}`) makes `+toDate({})` → NaN on both sides, masking real
+  // divergence; feeding actual dates/timestamps exposes it. Arrays of dates → dateArray.
+  if (/\binterval\b/.test(a)) return 'interval';
+  const isDate = /\bdate(?:arg|value)?\b/.test(a);
+  if (isDate && /\[\s*\]|\barray<|readonlyarray</.test(a)) return 'dateArray';
+  if (isDate) return 'date';
+  // Arrays next (most specific). A nullable array (`number[] | null`) is still synthesised
   // as an array — array params are rarely the locus of ?? vs || nullish bugs, and feeding a
   // bare null/undefined to a function that immediately does `.length` would be a type-
   // confusion artifact (false positive), not a refactoring bug.
@@ -357,24 +496,44 @@ function kindFromUsage(source: string, name: string): ParamKind | null {
   if (!name || !/^[A-Za-z_$][\w$]*$/.test(name)) return null;
   const id = escapeRe(name);
   const has = (re: RegExp): boolean => re.test(source);
-  const arrayUse = has(new RegExp(`\\b${id}\\s*\\.\\s*(length|map|filter|reduce|slice|push|sort|forEach|join|indexOf|includes)\\b`))
-    || has(new RegExp(`\\b${id}\\s*\\[`))
+  // STRING-ONLY methods (unambiguous).
+  const stringOnly = has(new RegExp(`\\b${id}\\s*\\.\\s*(trim|toLowerCase|toUpperCase|charAt|charCodeAt|codePointAt|split|replace|replaceAll|padStart|padEnd|startsWith|endsWith|substring|substr|normalize|localeCompare|match|matchAll|search|trimStart|trimEnd)\\b`));
+  // Methods SHARED by strings and arrays (slice/indexOf/lastIndexOf/includes/concat). When the
+  // argument to indexOf/lastIndexOf/includes is a STRING LITERAL, it is a string (you cannot
+  // search an array for a substring); that disambiguates a parser like `str.indexOf(';')`.
+  const sharedWithStringLitArg = has(
+    new RegExp(`\\b${id}\\s*\\.\\s*(?:indexOf|lastIndexOf|includes)\\s*\\(\\s*['"\`]`),
+  );
+  // ARRAY-ONLY methods (mutators / iteration that strings lack).
+  const arrayOnly = has(new RegExp(`\\b${id}\\s*\\.\\s*(map|filter|reduce|reduceRight|push|pop|shift|unshift|sort|forEach|flat|flatMap|fill|splice|every|some|find|findIndex|entries|keys|values)\\b`))
     || has(new RegExp(`\\[\\s*\\.\\.\\.\\s*${id}\\s*[\\],]`));
-  const stringUse = has(new RegExp(`\\b${id}\\s*\\.\\s*(trim|toLowerCase|toUpperCase|charAt|charCodeAt|split|replace|padStart|padEnd|startsWith|endsWith|substring|substr)\\b`));
-  const numericUse = has(new RegExp(`\\b${id}\\s*(?:[*/%+\\-]|[<>]=?|===?\\s*\\d|\\+\\+|--)`))
-    || has(new RegExp(`[*/%\\-]\\s*${id}\\b`))
+  // SEQUENCE signals shared by strings AND arrays but NOT plain objects: `.length` and numeric
+  // indexing `x[i]`. These are strong evidence the value is indexable (array/string), so they
+  // must outrank the generic `objectUse` (`.length` is a property access that would otherwise be
+  // mis-read as an object field — the `sum(xs)` regression). Default such a value to an array.
+  const lengthUse = has(new RegExp(`\\b${id}\\s*\\.\\s*length\\b`));
+  const indexed = has(new RegExp(`\\b${id}\\s*\\[`));
+  const sequenceUse = lengthUse || indexed;
+  const numericUse = has(new RegExp(`\\b${id}\\s*(?:[*/%]|[<>]=?|===?\\s*\\d|\\+\\+|--)`))
+    || has(new RegExp(`[*/%]\\s*${id}\\b`))
     || has(new RegExp(`Math\\.[a-z]+\\([^)]*\\b${id}\\b`));
-  const objectUse = has(new RegExp(`\\b${id}\\s*\\.\\s*[A-Za-z_$][\\w$]*`)) && !stringUse && !arrayUse;
+  // Object use = a NAMED property access other than `length` (e.g. `x.start`, `x.foo`), with no
+  // string/array/sequence evidence.
+  const namedProp = has(new RegExp(`\\b${id}\\s*\\.\\s*(?!length\\b)[A-Za-z_$][\\w$]*`));
+  const objectUse = namedProp && !stringOnly && !arrayOnly && !sequenceUse;
   const nullableUse = has(new RegExp(`\\b${id}\\s*(\\?\\?|\\|\\|)`)) || has(new RegExp(`${id}\\s*===?\\s*(null|undefined)`));
 
-  if (arrayUse) {
-    // distinguish string vs number element use is hard; default to number array (most common)
-    return stringUse ? 'stringArray' : 'numberArray';
+  // Decide. String evidence (explicit string methods OR a substring search) wins over the
+  // shared-method ambiguity; ARRAY-ONLY methods then force an array kind; sequence signals
+  // (`.length`/indexing) force an array before the generic object/number fallbacks.
+  if (stringOnly || sharedWithStringLitArg) {
+    return arrayOnly ? 'stringArray' : 'string';
   }
-  if (stringUse) return 'string';
+  if (arrayOnly) return 'numberArray';
+  if (sequenceUse && !objectUse) return 'numberArray';
   if (nullableUse) return 'nullable';
-  if (numericUse) return 'number';
   if (objectUse) return 'object';
+  if (numericUse) return 'number';
   return null;
 }
 
@@ -862,8 +1021,30 @@ function canonicalize(v: unknown): string {
   });
 }
 
+/**
+ * Duck-typed Date detection that works ACROSS the `node:vm` realm boundary. A Date returned
+ * from the sandbox is a `FrozenDate` (a subclass living in the vm realm), so a host
+ * `instanceof Date` would be false. We instead probe for a callable `getTime`. Returns the
+ * timestamp (a number, possibly NaN for Invalid Date) or `null` when `v` is not date-like.
+ */
+function dateTimeOf(v: unknown): number | null {
+  if (v && typeof v === 'object' && typeof (v as { getTime?: unknown }).getTime === 'function') {
+    try {
+      const t = (v as { getTime: () => number }).getTime();
+      if (typeof t === 'number') return t;
+    } catch {
+      /* not a real date-like */
+    }
+  }
+  return null;
+}
+
 /** Recursively replace -0 with 0 and sort object keys for order-independent compare. */
 function normalize(v: unknown): unknown {
+  // Dates canonicalise to a tagged timestamp so Date returns (addDays/clamp/…) compare by value
+  // instead of collapsing to `{}` (Dates have no own enumerable keys).
+  const ts = dateTimeOf(v);
+  if (ts !== null) return Number.isNaN(ts) ? '__InvalidDate__' : `__Date__${ts}`;
   if (Array.isArray(v)) return v.map(normalize);
   if (v && typeof v === 'object') {
     const out: Record<string, unknown> = {};
@@ -878,6 +1059,13 @@ function normalize(v: unknown): unknown {
 
 /** Float-tolerant structural equality between two observed values. */
 function valuesEqual(a: unknown, b: unknown): boolean {
+  // Date-like values compare by timestamp across the realm boundary (NaN==NaN for Invalid Date).
+  const ta = dateTimeOf(a);
+  const tb = dateTimeOf(b);
+  if (ta !== null || tb !== null) {
+    if (ta === null || tb === null) return false;
+    return (Number.isNaN(ta) && Number.isNaN(tb)) || ta === tb;
+  }
   if (typeof a === 'number' && typeof b === 'number') return numbersEqual(a, b);
   if (a === null || b === null) return a === b;
   if (typeof a !== typeof b) return false;

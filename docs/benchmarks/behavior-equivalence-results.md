@@ -1,7 +1,7 @@
 # Behavior-Equivalence Gate — Corpus Measurement
 
-Generated: 2026-06-02T17:05:22.685Z (real engine run, no fabricated numbers)
-Duration: 60314 ms
+Generated: 2026-06-02T18:17:43.104Z (real engine run, no fabricated numbers)
+Duration: 59643 ms
 Corpus: `packages/core/tests/fixtures/behavior-equiv/` (35 pairs)
 Engines: Python (`verifyPythonEquivalence`, 2000 inputs/pair) + TS/JS (`checkJsEquivalence`, 2000 inputs/pair)
 
@@ -46,7 +46,7 @@ Confusion matrix (divergent = positive class):
 | TP | ts-02-sum-offbyone | typescript | off-by-one | divergent | divergent | 3 | Observable behaviour diverged on input #3: before=11 after=13. The refactoring is NOT behaviour-preserving for this input. |
 | TP | ts-03-dropped-default | typescript | dropped-default-arg | divergent | divergent | 1 | Observable behaviour diverged on input #1: before="hi world" after="hi undefined". The refactoring is NOT behaviour-preserving for this input. |
 | TP | ts-04-integer-truncation | typescript | integer-truncation | divergent | divergent | 2 | Observable behaviour diverged on input #2: before=3.5 after=3. The refactoring is NOT behaviour-preserving for this input. |
-| TP | ts-05-nullish-vs-or | typescript | falsy-coercion | divergent | divergent | 1 | Observable behaviour diverged on input #1: before="__NaN__" after="  pad  ". The refactoring is NOT behaviour-preserving for this input. |
+| TP | ts-05-nullish-vs-or | typescript | falsy-coercion | divergent | divergent | 1 | Observable behaviour diverged on input #1: before="__NaN__" after="ABC". The refactoring is NOT behaviour-preserving for this input. |
 | TP | ts-06-sort-comparator | typescript | comparator-sign-swap | divergent | divergent | 3 | Observable behaviour diverged on input #3: before=[10,5] after=[-7,-2]. The refactoring is NOT behaviour-preserving for this input. |
 | TP | ts-07-empty-guard | typescript | dropped-edge-case | divergent | divergent | 1 | Observable behaviour diverged on input #1: before=100 after="__undef__". The refactoring is NOT behaviour-preserving for this input. |
 | FN | ts-08-async-await-drop | typescript | async-semantics | divergent | equivalent | 2000 | No divergence found across 2000 synthesized inputs (seed=1337). This is differential evidence of equivalence, not a proof. |
