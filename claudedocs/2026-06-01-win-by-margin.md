@@ -408,3 +408,68 @@ Den gate-kausala tesen har nu misslyckats eller försvagats över **tre** oberoe
 `pnpm -r typecheck` grönt för alla 5 paket. Gate-tester **96/96 gröna**. Core-tester **1649/1650 gröna**: den enda röda är `tests/refactor/ast-grep-runner-regression.test.ts > canUseAstGrep() returns true ... (resolves .cmd on Windows)` — en **miljö-/paketerings-artefakt** (`sg` finns som `sg.ps1`, inte `sg.cmd`, i denna Windows-PATH, så `canUseAstGrep()` returnerar false). Den är **file-disjoint från detta increment** (ast-grep-binärresolution, inte behavior-equiv/gate) och är inte introducerad av detta arbete. Den ska ändå inte mörkas: core är 1649/1650, inte 1650/1650, tills ast-grep-CLI:s `.cmd`-wrapper finns i test-miljön. Behavior-equiv-tester alla gröna: `slice-extract` (10), `index` (24), `python-equiv` (26), `js-equiv` (43).
 
 **Avgränsningar, inget överclaim:** 68 %-siffran är på 25 hand-extraherade funktioner ur 4 repos, gynnsamt biased mot rena beräkningsfunktioner — inte en slumpmässig fält-mängd. Korpus-etiketterna justerades under körningen (motorn fångade 6 felmärkta varianter), så 93,75 %-detektionen är på en under-körning-korrigerad korpus. Dynamisk täckning är fortfarande 2 av ~46 språk. Och den korrekt inkopplade gaten blockerar bara där den kan verifiera — den löser instrument-hål 2, inte det strukturella taket att de flesta IO-/state-tunga funktioner förblir advisory.
+
+---
+
+## Increment 2026-06-02 — OCHS som verklig standard (pivot-moat #1)
+
+**Ton:** Senior, brutalt ärlig, noll hype. Pivot-rekommendationen i förra incrementet (§ Instrument-hålen, punkt 4) uppgraderade **Spel 2 — den öppna OCHS-standarden** till en primär marginal-moat. Men en standard med *en enda implementation* är, med vår egen formulering, "ett proprietärt format med ett vänligt namn" — inte en standard. Detta increment angriper exakt den svagheten genom att försöka det enda test som kan avgöra frågan: **kan en oberoende tredje part återimplementera OCHS v0.1 enbart ur specen, och håller de två implementationerna med på samma poäng?** Svaret är nyanserat och redovisas oförskönat nedan. **Detta gör oss inte världsbäst, och det gör ännu inte OCHS till en de facto-standard** — men det förvandlar "kan specen ens reimplementeras?" från ett antagande till en mätt siffra med en konkret gap-lista.
+
+### 0. Den verifierade siffran först — håller två oberoende implementationer med på poängen?
+
+Detta är den load-bearing frågan för hela standard-tesen. Den är nu mätt. En **clean-room Python-implementation** (`ochs-ref-py/ochs_ref.py`) byggdes enbart ur specen (`docs/ochs/OCHS-v0.1.md` + viktabell + biomarkör-prosa); den importerar **endast Python-stdlib** (`ast, json, math, re, sys, dataclasses, pathlib, typing`) och detekterar biomarkörer oberoende via Pythons egna `ast`. Noll funktionella imports av `@healthy-ai-code/core` (oberoende verifierat med grep — enda träffen är en proveniens-kommentar). Referensmotorn anropas strikt som black-box i en separat fil (`core_reference.mjs`) vars JSON läses *efter* att Python-poängen räknats.
+
+**Verifierad cross-implementation-agreement (oberoende re-körd: byggde om `core_reference.json` från live-motorn och körde `cross_check.py` på 15 delade Python-fixturer, inga fabricerade tal):**
+
+| Mått | Värde |
+|---|---|
+| Exakt agreement (Δ ≤ 0,0001) | **5/15 = 33,3 %** |
+| Inom-0,5 agreement | **12/15 = 80,0 %** |
+| Kategori-agreement (green/yellow/red) | **12/15 = 80,0 %** |
+| Divergenta (Δ > 0,5) | **3/15**, värsta Δ = **3,41** (fixture 05) |
+| Medel \|Δ\| | **0,53** |
+
+**Den ärliga läsningen: formeln är reproducerbar, biomarkör-detektionen är det inte (ännu).** Varje fixture passerade `L2:formula-consistent` — dvs Python-poängen = formeln `max(1.0, 10 − Σ(weight × √count))` applicerad på Pythons *egna* funna smells. Alla 55 vikter transkriberades verbatim och stämmer exakt mot core (`SMELL_WEIGHTS`) och spec-Tabell 2 (0 avvikelser, oberoende verifierat). Divergenserna kommer **uteslutande** från att specen under-specificerar *när* biomarkörer tänder — inte från buggar eller kopiering. Det är ett ärligt fynd, inte ett fel.
+
+### 1. Spec-gapen som ytan — detta ÄR resultatet, inte en bieffekt
+
+Den avgörande roten till värsta divergensen (fixture 05, Δ=3,41): specen publicerar bara `ComplexMethod`-viktnivåer ("CC 15–24 → 1.0, CC ≥ 25 → 1.5") men **aldrig bas-tröskeln för när biomarkören tänder**. Motorn tänder faktiskt vid `CC > 10` (`detector.ts: COMPLEX_METHOD_THRESHOLD = 10`), och specens egen nivåtext (vikt 1.0 vid CC 15–24) är **inte ens representerbar** i den publicerade formeln, som använder en enda fast vikt (1.5) per typ. Clean-room-författaren läste "15" (det enda publicerade talet) och fick andra fynd på CC=13/14-funktioner. Övriga divergenser (`LowDocCoverage`, `BrainMethod`, `PrimitiveObsession`, samt count-skillnader i `MagicNumber`/`UnsafeDeserialization`/`CryptographicMisuseRisk`/`ExceptionHandlingAntiPattern`) spårar alla till **opublicerade trösklar/undantag** — t.ex. exemptar motorn ≤3-radiga "triviala" funktioner från `LowDocCoverage` och använder en 0.8-tröskel; specen publicerar ingendera, så Python-impl flaggar trivialt-hälsosam kod (`01_healthy_simple.py`: 3 one-liners → Python 9,70 vs core 10,00).
+
+Cross-check-harnessen producerar en **maskinläsbar gap-lista** med ~20 underspecificerade biomarkörer (`BrainMethod`, `CognitiveComplexity`, `ComplexConditional`, `DeepNesting`, `LowDocCoverage`, `MagicNumber`, `PrimitiveObsession`, `SqlInjectionRisk`, m.fl.) plus 9 biomarkörer som är **icke-implementerbara ur specen allena** därför att de kräver odistribuerade externa data: `HallucinatedPackageImport` och `SlopsquattingRisk` (specen nämner en "offline-snapshot av PyPI/npm" men distribuerar den inte), `DuplicateCode` (ingen fraktion/minsta-subträd-tröskel), samt alla git-/projekt-beroende (`ArchitectureDebt`, `CodeChurn`, `KnowledgeLoss`, `DeveloperCongestion`, `DependencyVulnerability`, `MethodTemporalCoupling`). **Att specen inte räcker för att reimplementera dessa är precis den finding standard-arbetet behövde — en standard måste vara self-sufficient, och OCHS v0.1 är det ännu inte för biomarkör-detektion.**
+
+### 2. Vad som nu är byggt — andra-impl, conformance-kit, submission-paket
+
+- **Andra (clean-room) implementation:** `ochs-ref-py/` (top-level, disjoint från JS-monorepo). `ochs_ref.py` (clean-room scorer), `core_reference.mjs`/`.json` (black-box-referens), `cross_check.py` (agreement-harness), 15 delade fixturer, `README.md` med proveniens-uttalande. Inga JS-källor rörda → monorepo-typecheck/tester opåverkade; Python `py_compile`-rent; cross-check reproducerbart.
+- **Conformance-kit:** `packages/ochs-validate` definierar tre nivåer — **L1 Schema Valid** (required fields, score-range, version, kategori), **L2 Formula Correct** (poäng = formeln inom tolerans, golden-match, determinism), **L3 Biomarker Complete** (biomarkör-typmängd + total count matchar golden). **123/123 tester gröna** (98 validate + 25 conformance, oberoende re-körda). Kört mot **båda** implementationerna: core når **L1/L2/L3 = PASS** (genuint L3 via golden-set och live-output). Python clean-room når **L1 + `L2:formula-consistent`**, men **inte full L2** (`L2:expected-score`/`L2:category-matches` faller eftersom biomarkör-detektionen avviker från golden-vektorn). Ärligt svar på "minst L1/L2": **L1 + formel-korrekthet, ej full L2** — för att detektionen inte är reproducerbar ur specen.
+- **Submission-paket:** `docs/ochs/governance/` — `incubation-proposal.md` (329 rader, §8.1 märker single-implementation som **CRITICAL gap** i klartext), `requirements-checklist.md` (167 rader), `submission-steps.md` (261 rader, exakta OpenSSF- och OWASP-steg).
+
+### 3. Den honesta domen — dödar detta "en implementation"-svagheten? Hur nära är submittable?
+
+**Nej, svagheten är inte dödad — men den är nu mätt, lokaliserad och försedd med en åtgärdslista, vilket är en kvalitativt annan position än "ett antagande".** Tre fakta måste resa med varje citering:
+
+1. **Två implementationer existerar och håller med på FORMELN exakt, men på 33 % av FYNDEN.** Inom-0,5-agreement på 80 % är reellt men inte "samma standard"-nivå — och korpusen är 15 hand-valda Python-fixturer, inte en slumpmässig fält-mängd. En tredje-part *kan* idag bygga en formel-konform OCHS-scorer ur specen; den kan **inte** bygga en biomarkör-konform sådan utan att gissa ~20 trösklar och sakna 9 data-beroende biomarkörer helt.
+2. **Single-implementation-svagheten är reducerad, inte eliminerad.** Vi har nu en andra, oberoende, formel-konform implementation — det är mer än "ett proprietärt format med ett vänligt namn" var. Men en *clean-room-impl byggd av samma projekt* är inte en *extern adopter*. Den verkliga svaghetskilen — "ingen tredjepart utanför projektet har implementerat eller antagit OCHS" — kvarstår orörd.
+3. **Submittable till OpenSSF Sandbox är nära men blockerat på icke-kod-arbete.** `submission-steps.md` listar PREREQ-blockerare som ännu inte är gjorda: `SECURITY.md`, `MAINTAINERS.md`, SPDX-headers, och — avgörande — **en TAC-sponsor** (2–6 veckor, kräver mänsklig outreach). OWASP Incubator är lägre tröskel (gratis medlemskap + projekt-request-formulär) men kräver fortfarande en inloggad ägare som fyller i formuläret. **Kod-artefakterna för en trovärdig submission finns; submissionen i sig är inte gjord och kan inte göras autonomt.**
+
+### 4. TAKET SOM BARA ÄGAREN KAN LYFTA — explicit
+
+De avgörande stegen för denna moat ligger **utanför vad en agent kan göra** och kräver ägaren (David Rydgren, @screamm) personligen. Exakt lista, så det inte är någon tvekan om vad som väntar på dig:
+
+1. **Lämna faktiskt in till OpenSSF Sandbox.** Kräver: en TAC-sponsor (posta i OpenSSF Slack #tac eller närvara på ett bi-veckomöte — 2–6 v), forka `ossf/tac`, skriva lifecycle-dokumentet, öppna PR, trigga LF IP-review. Ingen agent kan skaffa en sponsor eller agera som projektledare.
+2. **Lämna in till OWASP Incubator (parallellt).** Kräver: gratis OWASP-medlemskonto i ditt namn, projekt-request via Contact Us-formuläret, populera `OWASP/www-project-ochs`.
+3. **Rekrytera externa implementatörer/adopters.** Minst en tredjepartsimplementation och ≥2 externa adopters (mål: CodeClimate/Codacy/DeepSource dev-rel, eller en akademisk forskare). Detta är relationsarbete — ingen agent kan etablera adoption.
+4. **Onboarda ≥2 maintainers från ≥2 organisationer** (OpenSSF Incubating-krav; vi har 1). Kräver mänsklig värvning och förtroende.
+5. **Publicera paketen** (`ochs-validate` till npm/PyPI under ditt konto) och **publicera blogginlägg/outreach** i ditt namn — registrering på bestpractices.dev, dev.to/OpenSSF-blogg.
+6. **Skriva under på governance/IP-besluten** (DCO, MIT + CC BY 4.0, steering-committee-säten). Dessa är ägarbeslut, inte tekniska.
+
+**Allt ovan kräver en mänsklig ägare med konton, identitet och förhandlingsmandat. Det autonoma arbetet kan göra paketet submission-redo; det kan inte trycka på "skicka".**
+
+### 5. Nästa autonomt-görbara increment vs där runwayn tar slut
+
+**Fortfarande autonomt görbart (stänger spec-gapen, höjer Python-impl mot full L2):**
+- **Skriv "implementors guide" + härda specen** så de ~20 underspecificerade biomarkörerna får publicerade numeriska trösklar (`ComplexMethod` bas-CC=10, `LowDocCoverage` 0.8 + ≤3-rads-exemption, `MagicNumber` config-kontext-regeln, etc.) — direkt härlett ur `detector.ts`-konstanterna. Detta är det enda arbetet som faktiskt kan höja cross-impl-agreement från 33 %/80 % mot full L2-konformans, och det är en ren spec/dokumentations-uppgift.
+- **Lös v0.1-formel-vs-nivå-motsägelsen** för `ComplexMethod` (publicerad nivåvikt 1.0 är inte representerbar i enkel-vikt-formeln) — antingen ta bort nivåtexten eller specificera en v0.2-formel som stödjer variabel vikt. Honesty-fynd som måste lösas innan v1.0.
+- **Lägg till `SECURITY.md`, `MAINTAINERS.md`, SPDX-headers, `pnpm audit`-CI-steg** — de kod-/repo-PREREQ från `submission-steps.md` som inte kräver en människa.
+- **Distribuera de saknade referensdata** som gör de 9 icke-implementerbara biomarkörerna reproducerbara (offline PyPI/npm-snapshot för `HallucinatedPackageImport`/`SlopsquattingRisk`, `DuplicateCode`-tröskelparametrar) — eller märk dem explicit som "kräver out-of-band-data" i specen så att en konform implementation honestly kan utelämna dem.
+
+**Där den autonoma runwayn tar slut:** vid varje steg som kräver en *extern part* eller ett *ägarkonto* — TAC-sponsor, OWASP/OpenSSF-inlämning, npm/PyPI-publicering, adopter-rekrytering, maintainer-värvning. Den autonoma loopen kan göra OCHS *tekniskt self-sufficient och submission-redo*; den kan inte göra OCHS *adopterad*, och adoption är vad som faktiskt skiljer en standard från ett välbeskrivet format. **Det är den ärliga gränsen för detta moat: kod-tak nått snart, marknadstak kräver ägaren.**
