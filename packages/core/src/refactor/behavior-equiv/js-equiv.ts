@@ -65,8 +65,13 @@ interface Observation {
   /** Raw value retained for float-tolerant comparison and reporting. */
   readonly raw: unknown;
   /** True when the RAW return value was a thenable (distinguishes T from Promise<T>,
-   *  i.e. catches a dropped `await`). */
+   *  i.e. catches a dropped `await`). Equivalent to `thenDepth > 0`. */
   readonly thenable: boolean;
+  /** Promise-nesting depth of the RAW return value: 0 = plain synchronous value,
+   *  1 = `Promise<T>`, 2 = `Promise<Promise<T>>`, … A dropped `await` adds a level that the
+   *  language does not auto-unwrap, so comparing depth catches an async-semantics change even
+   *  when the fully-resolved payloads are identical. */
+  readonly thenDepth: number;
 }
 
 /** A diverging input together with both sides' outcomes. */
@@ -905,26 +910,50 @@ function loadFunction(source: string, fnName: string, timeoutMs: number): Loaded
   // Load script: defines the function and captures it.
   const loadSrc = `${code}\n;globalThis.__captured__ = ${captureExpr};`;
   // Call harness: invokes __captured__ with __args__ and settles the result into __out__.
+  //
+  // ASYNC-AWARE OBSERVATION (catches dropped \`await\`). A dropped \`await\` does not merely
+  // change a value — it changes the RETURN TYPE by adding a layer of Promise nesting. A
+  // correctly-awaited path yields a settled value/Promise<T>; a path that forgot to await an
+  // intermediate Promise that the language does NOT auto-unwrap yields a Promise<Promise<T>>.
+  // A single \`Promise.resolve(r).then(...)\` auto-flattens ALL nesting levels (the JS thenable
+  // adoption spec), so a one-shot resolve makes \`Promise<Promise<T>>\` and \`Promise<T>\`
+  // indistinguishable — the exact reason a value-only differential misses ts-08.
+  //
+  // We instead unwrap ONE level at a time and COUNT the nesting depth (\`thenDepth\`). The
+  // observed depth is part of the observation: two sides that resolve to the same final payload
+  // but at different Promise-nesting depths DIVERGE (a dropped/added await is an observable
+  // type difference, not noise). Depth 0 = plain synchronous value; depth ≥ 1 = thenable. A
+  // hard cap bounds pathological self-resolving thenables. Real async I/O never settles under
+  // \`microtaskMode:'afterEvaluate'\` and surfaces as the existing pending-async observation.
   const callSrc = `
     (function () {
       var f = globalThis.__captured__;
-      globalThis.__out__ = { state: 'pending', kind: null, value: undefined, thenable: false };
+      globalThis.__out__ = { state: 'pending', kind: null, value: undefined, thenable: false, thenDepth: 0 };
+      var MAX_UNWRAP = 32;
+      function isThenable(v) {
+        return v != null && (typeof v === 'object' || typeof v === 'function') && typeof v.then === 'function';
+      }
+      // Recursively unwrap one Promise level at a time, counting depth, so nested promises
+      // (the signature of a dropped await) are observable instead of being auto-flattened.
+      function settle(v, depth) {
+        if (depth < MAX_UNWRAP && isThenable(v)) {
+          v.then(
+            function (inner) { settle(inner, depth + 1); },
+            function (e) { globalThis.__out__ = { state: 'settled', kind: 'throw', value: (e && e.name) || String(e), thenable: depth + 1 > 0, thenDepth: depth + 1 }; }
+          );
+          return;
+        }
+        globalThis.__out__ = { state: 'settled', kind: 'value', value: v, thenable: depth > 0, thenDepth: depth };
+      }
       try {
         var r = f.apply(null, globalThis.__args__);
-        var isThen = r != null && (typeof r === 'object' || typeof r === 'function') && typeof r.then === 'function';
-        if (isThen) {
-          // Record that the RAW return was a thenable: a dropped \`await\` changes the
-          // return type from T to Promise<T>, an observable behavioural difference. We
-          // still resolve it so the resolved payload can also be compared.
-          Promise.resolve(r).then(
-            function (v) { globalThis.__out__ = { state: 'settled', kind: 'value', value: v, thenable: true }; },
-            function (e) { globalThis.__out__ = { state: 'settled', kind: 'throw', value: (e && e.name) || String(e), thenable: true }; }
-          );
+        if (isThenable(r)) {
+          settle(r, 0);
         } else {
-          globalThis.__out__ = { state: 'settled', kind: 'value', value: r, thenable: false };
+          globalThis.__out__ = { state: 'settled', kind: 'value', value: r, thenable: false, thenDepth: 0 };
         }
       } catch (e) {
-        globalThis.__out__ = { state: 'settled', kind: 'throw', value: (e && e.name) || String(e), thenable: false };
+        globalThis.__out__ = { state: 'settled', kind: 'throw', value: (e && e.name) || String(e), thenable: false, thenDepth: 0 };
       }
     })();`;
 
@@ -962,23 +991,35 @@ function loadFunction(source: string, fnName: string, timeoutMs: number): Loaded
     callScript.runInContext(callCtx, { timeout: tmo });
 
     const out = (
-      sandbox as { __out__?: { state: string; kind: 'value' | 'throw' | null; value: unknown; thenable: boolean } }
+      sandbox as {
+        __out__?: {
+          state: string;
+          kind: 'value' | 'throw' | null;
+          value: unknown;
+          thenable: boolean;
+          thenDepth?: number;
+        };
+      }
     ).__out__;
     const postArgs = argv.map(canonicalize);
 
     if (!out || out.state !== 'settled' || out.kind === null) {
       // A still-pending promise means the function awaited real async I/O, which this
       // pure-function engine does not model. Treat as an unresolvable observation.
-      return { obs: { kind: 'throw', snapshot: '__pending_async__', raw: undefined, thenable: true }, postArgs };
+      return {
+        obs: { kind: 'throw', snapshot: '__pending_async__', raw: undefined, thenable: true, thenDepth: 1 },
+        postArgs,
+      };
     }
+    const thenDepth = typeof out.thenDepth === 'number' ? out.thenDepth : out.thenable ? 1 : 0;
     if (out.kind === 'throw') {
       return {
-        obs: { kind: 'throw', snapshot: String(out.value || 'Error'), raw: out.value, thenable: out.thenable },
+        obs: { kind: 'throw', snapshot: String(out.value || 'Error'), raw: out.value, thenable: out.thenable, thenDepth },
         postArgs,
       };
     }
     return {
-      obs: { kind: 'value', snapshot: canonicalize(out.value), raw: out.value, thenable: out.thenable },
+      obs: { kind: 'value', snapshot: canonicalize(out.value), raw: out.value, thenable: out.thenable, thenDepth },
       postArgs,
     };
   };
@@ -1095,9 +1136,12 @@ function numbersEqual(a: number, b: number): boolean {
 /** True when two observations represent the same observable behaviour. */
 function observationsEqual(x: Observation, y: Observation): boolean {
   if (x.kind !== y.kind) return false;
-  // A dropped `await` makes one side return a thenable (Promise<T>) and the other a plain
-  // T — an observable type difference even when the resolved payloads match.
-  if (x.thenable !== y.thenable) return false;
+  // A dropped (or added) `await` changes the Promise-NESTING DEPTH of the return: a plain T
+  // (depth 0), a `Promise<T>` (depth 1), and a `Promise<Promise<T>>` (depth 2) are observably
+  // distinct return types even when they fully resolve to the same payload. Comparing depth
+  // (not just the thenable boolean) is what makes a dropped await detectable — a one-shot
+  // resolve would auto-flatten the extra level and hide it.
+  if (x.thenDepth !== y.thenDepth) return false;
   if (x.kind === 'throw') return x.snapshot === y.snapshot;
   // Fast path: identical canonical snapshot. Slow path: float-tolerant deep compare.
   if (x.snapshot === y.snapshot) return true;

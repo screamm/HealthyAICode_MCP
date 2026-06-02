@@ -47,16 +47,13 @@ function checkFixturePair(rel: string, runs = 500) {
 describe('checkJsEquivalence — full committed TS corpus', () => {
   const tsPairs = loadManifest().filter((p) => p.language === 'typescript');
 
-  // KNOWN LIMITATION (honest): ts-08 (dropped `await`) is NOT detected. A value-comparison
-  // golden master fully resolves promises, and JS promise auto-flattening makes `await
-  // before(id)` and `await after(id)` resolve to the same payload. Detecting a dropped
-  // await requires modeling the caller's (non-)await behaviour, which is out of scope for a
-  // resolved-value differential. Excluded from the per-pair must-pass set; the aggregate
-  // detection gate below still holds at ≥ 80% without it.
-  const KNOWN_MISSES = new Set(['ts-08-async-await-drop']);
-
+  // ts-08 (dropped `await`) IS now detected. A naive one-shot `Promise.resolve(r).then()`
+  // auto-flattens promise nesting and would miss it, so the engine instead unwraps ONE level
+  // at a time and records the Promise-nesting depth as part of the observation; AND the ts-08
+  // fixture expresses a REAL dropped-await divergence (the unawaited Promise is embedded in the
+  // result object, which async-return does not auto-unwrap) so the embedded value also differs.
+  // Every TS pair — including ts-08 — must therefore land on its labelled verdict.
   for (const p of tsPairs) {
-    if (KNOWN_MISSES.has(p.id)) continue;
     it(`${p.id} → ${p.expected}`, () => {
       const res = checkFixturePair(p.file);
       expect(res.verdict, `${p.id}: ${res.detail}`).toBe(p.expected);
@@ -122,6 +119,50 @@ describe('checkJsEquivalence — specific bug classes', () => {
     const after = `export function scale(x) { return x + x + x; }`;
     const res = checkJsEquivalence(before, after, { beforeFnName: 'scale', afterFnName: 'scale' });
     expect(res.verdict).toBe('equivalent');
+  });
+
+  // ── async-semantics: dropped await (ts-08 bug class) ──────────────────────────
+  // A dropped await on a value that is then USED (here embedded in the returned object) is a
+  // real divergence: the unawaited Promise flows into the result instead of the resolved value.
+  it('catches a dropped await whose unresolved Promise is embedded in the result', () => {
+    const before = `
+      async function fetchUser(id) { return { id, name: 'u' + id }; }
+      export async function load(id) { const u = await fetchUser(id); return { user: u }; }`;
+    const after = `
+      async function fetchUser(id) { return { id, name: 'u' + id }; }
+      export async function load(id) { const u = fetchUser(id); return { user: u }; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'load', afterFnName: 'load' });
+    expect(res.verdict, res.detail).toBe('divergent');
+  });
+
+  // The async-aware harness counts Promise-nesting DEPTH, so a Promise<Promise<T>> diverges
+  // from a Promise<T> even when both resolve to the same payload (a one-shot resolve would
+  // auto-flatten the extra level and miss it). Embedding via an array prevents async-return
+  // auto-unwrap so the dropped await leaves a genuine extra Promise level.
+  it('distinguishes Promise<Promise<T>> from Promise<T> by nesting depth', () => {
+    const before = `
+      async function inner(x) { return x + 1; }
+      export async function f(x) { return [await inner(x)]; }`;
+    const after = `
+      async function inner(x) { return x + 1; }
+      export async function f(x) { return [inner(x)]; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'f', afterFnName: 'f' });
+    expect(res.verdict, res.detail).toBe('divergent');
+  });
+
+  // Honesty guard: two async functions that BOTH correctly await (or whose trailing
+  // `return await p` vs `return p` is spec-equivalent because async-return auto-unwraps a
+  // directly-returned thenable) must NOT be flagged. This is the case the original ts-08
+  // fixture mistakenly encoded; the engine must treat it as equivalent.
+  it('does NOT flag spec-equivalent async return (return await p vs return p, directly returned)', () => {
+    const before = `
+      async function inner(x) { return x + 1; }
+      export async function f(x) { return await inner(x); }`;
+    const after = `
+      async function inner(x) { return x + 1; }
+      export async function f(x) { return inner(x); }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'f', afterFnName: 'f' });
+    expect(res.verdict, res.detail).toBe('equivalent');
   });
 });
 

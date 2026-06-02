@@ -307,4 +307,46 @@ describe('python-equiv: differential behaviour-equivalence engine', () => {
       }
     });
   });
+
+  // ── FIX (slice/index-bound inference): a param used as a SLICE BOUND or SUBSCRIPT INDEX is
+  //    an integer. Previously `head(a, k): a[:k]` left `k` with no usage signal, so the name
+  //    heuristic mis-typed `k` as a string; `a[:'x']` raised TypeError on BOTH sides and the
+  //    off-by-one `a[:k-1]` never executed — the divergence (py-06) was missed.
+  describe('slice/index-bound inference detects off-by-one slice bugs', () => {
+    it('py-06 slice off-by-one (a[:k] vs a[:k-1]) is now DETECTED', async () => {
+      if (!pythonAvailable) return;
+      const r = await verifyFixture('nonequivalent/python/py-06-slice-offbyone.py');
+      expect(r.verdict, r.detail).toBe('divergence');
+      expect(r.divergingInput).toBeDefined();
+      // The witness must show the two slices producing different lists (not a shared TypeError).
+      expect(r.divergingInput!.before.outcome).toBe('value');
+      expect(r.divergingInput!.after.outcome).toBe('value');
+      expect(r.divergingInput!.before.value).not.toEqual(r.divergingInput!.after.value);
+    });
+
+    it('a slice-bound param named like a string (k) is synthesised as an integer', async () => {
+      if (!pythonAvailable) return;
+      // `head(a, k)` slices a[:k]. Even though `k` would name-heuristic to 'str', usage as a
+      // slice bound scopes it to int. The genuinely-equivalent identity refactor must PASS
+      // (proving slice bounds are fed integers, not strings that throw on both sides).
+      const before = 'def f(a, k):\n    return a[:k]\n';
+      const afterEq = 'def f(a, k):\n    out = a[:k]\n    return out\n';
+      const eq = await verifyPythonEquivalence(before, afterEq, 'f', { inputs: 400, timeoutMs: 25_000 });
+      expect(eq.verdict, eq.detail).toBe('pass');
+      // And the genuine off-by-one is caught on the same usage-scoped integer domain.
+      const afterBug = 'def f(a, k):\n    return a[: k - 1]\n';
+      const div = await verifyPythonEquivalence(before, afterBug, 'f', { inputs: 400, timeoutMs: 25_000 });
+      expect(div.verdict, div.detail).toBe('divergence');
+    });
+
+    it('a subscript-index param (m[i]) is synthesised as an integer', async () => {
+      if (!pythonAvailable) return;
+      // `at(m, i): m[i]` indexes with i. Off-by-one on the index is a real divergence; the
+      // index param must be an integer for either side to execute (m['x'] would TypeError both).
+      const before = 'def f(m, i):\n    return m[i]\n';
+      const afterBug = 'def f(m, i):\n    return m[i + 1]\n';
+      const div = await verifyPythonEquivalence(before, afterBug, 'f', { inputs: 400, timeoutMs: 25_000 });
+      expect(div.verdict, div.detail).toBe('divergence');
+    });
+  });
 });

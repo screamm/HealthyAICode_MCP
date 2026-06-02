@@ -604,6 +604,27 @@ def _infer_usage_kinds(file_path, target_name, params):
                 votes[p]["list"] += 1
             else:
                 votes[p]["list"] += 1
+        # A PARAM USED AS A SLICE BOUND / SUBSCRIPT INDEX is an integer, regardless of which
+        # collection it indexes. e.g. a[:k], a[i:j], a[k - 1], m[i]. The index/bound expression
+        # is a numeric position, NOT the indexed collection -- so vote those param names 'num'.
+        # Without this, head(a, k) -> a[:k] left k with no usage signal and the name heuristic
+        # mis-typed k as a string (a[:'x'] raises TypeError on BOTH sides, so the off-by-one
+        # a[:k-1] never executed and the divergence was missed -- py-06).
+        # Exception: a STRING-CONSTANT subscript (d['key']) is a dict access, handled above; we
+        # only walk Name/expression index positions here, never string constants.
+        if isinstance(node, ast.Subscript):
+            if isinstance(node.slice, ast.Slice):
+                index_exprs = [node.slice.lower, node.slice.upper, node.slice.step]
+            else:
+                index_exprs = [node.slice]
+            for ix in index_exprs:
+                if ix is None:
+                    continue
+                # The index position may be a bare Name (a[k]) or an arithmetic expression on
+                # one (a[k - 1], a[i + 1]). Any param Name appearing here is a numeric index.
+                for sub in ast.walk(ix):
+                    if isinstance(sub, ast.Name) and sub.id in votes:
+                        votes[sub.id]["num"] += 1
         # method call p.<method>()
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
                 and isinstance(node.func.value, ast.Name) and node.func.value.id in votes:
