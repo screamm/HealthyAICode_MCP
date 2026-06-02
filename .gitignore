@@ -85,3 +85,7 @@ vscode-extension/*.vsix
 
 # Runtime telemetry output (generated during calibration runs, not a fixture)
 packages/core/calibration-telemetry.jsonl
+
+# Python bytecode
+__pycache__/
+*.pyc
