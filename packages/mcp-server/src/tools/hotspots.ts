@@ -2,6 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeHotspots } from '@healthy-ai-code/core';
+import { resolveSafePath } from './path-safety';
 
 // --- Configuration constants ---
 const DEFAULT_LOOKBACK_DAYS = 90;
@@ -11,26 +12,19 @@ const MIN_LOOKBACK_DAYS = 7;
 const MAX_LOOKBACK_DAYS = 365;
 const MAX_TOP_N = 50;
 
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
-
-const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
+const repoPathSchema = z.string().describe('Absolute path to the git repository root');
 const lookbackInt = z.number().int();
 const lookbackBounded = lookbackInt.min(MIN_LOOKBACK_DAYS).max(MAX_LOOKBACK_DAYS);
 const lookbackDaysWithDefault = lookbackBounded.default(DEFAULT_LOOKBACK_DAYS);
-const lookbackDaysSchema = lookbackDaysWithDefault.describe('Historik-period i dagar (default 90)');
+const lookbackDaysSchema = lookbackDaysWithDefault.describe('History window in days (default 90)');
 const topNInt = z.number().int();
 const topNBounded = topNInt.min(1).max(MAX_TOP_N);
 const topNWithDefault = topNBounded.default(DEFAULT_TOP_N);
-const topNSchema = topNWithDefault.describe('Antal hotspots att returnera (default 10)');
-const packageRootSchema = z.string().optional().describe('Begränsa analys till delsökväg — monorepo-stöd (t.ex. "packages/core")');
+const topNSchema = topNWithDefault.describe('Number of hotspots to return (default 10)');
+const packageRootSchema = z.string().optional().describe('Restrict analysis to a subpath — monorepo support (e.g. "packages/core")');
 const minChurnNum = z.number().int().min(1);
 const minChurnWithDefault = minChurnNum.default(DEFAULT_MIN_CHURN_COMMITS);
-const minChurnCommitsSchema = minChurnWithDefault.describe('Minsta antal commits för att inkludera en fil (default 3)');
+const minChurnCommitsSchema = minChurnWithDefault.describe('Minimum number of commits for a file to be included (default 3)');
 
 const HOTSPOTS_SCHEMA = {
   repoPath: repoPathSchema,
@@ -41,26 +35,39 @@ const HOTSPOTS_SCHEMA = {
 };
 
 export function registerHotspots(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_hotspots',
-    'Identifierar de hetaste koddelarna (hotspots) i ett git-repo: filer med hög komplexitet OCH hög ändringsfrekvens. Kombinerar cyclomatic complexity med churn rate under en konfigurerbar tidsperiod. Top-N hotspots returneras sorterade efter score (0–1).',
-    HOTSPOTS_SCHEMA,
-    async (args) => handleHotspots(args),
+    {
+      title: 'Code Hotspots',
+      description:
+        'Identifies the hottest parts of a git repo: files with BOTH high complexity AND high change ' +
+        'frequency. Combines cyclomatic complexity with churn rate over a configurable time window. ' +
+        'Returns the top-N hotspots sorted by score (0–1).',
+      inputSchema: HOTSPOTS_SCHEMA,
+      annotations: {
+        title: 'Code Hotspots',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleHotspots(args),
   );
 }
 
 async function handleHotspots(args: Record<string, unknown>) {
   try {
-    const results = await analyzeHotspots(args.repoPath as string, {
-      lookbackDays: args.lookbackDays as number,
-      topN: args.topN as number,
-      packageRoot: args.packageRoot as string | undefined,
-      minChurnCommits: args.minChurnCommits as number,
+    const safeRepoPath = resolveSafePath(args['repoPath'] as string);
+    const results = await analyzeHotspots(safeRepoPath, {
+      lookbackDays: args['lookbackDays'] as number,
+      topN: args['topN'] as number,
+      packageRoot: args['packageRoot'] as string | undefined,
+      minChurnCommits: args['minChurnCommits'] as number,
     });
 
     const body = {
-      repoPath: args.repoPath,
-      lookbackDays: args.lookbackDays,
+      repoPath: safeRepoPath,
+      lookbackDays: args['lookbackDays'],
       hotspotCount: results.length,
       hotspots: results.map((h, i) => ({
         rank: i + 1,

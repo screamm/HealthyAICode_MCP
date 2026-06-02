@@ -3,13 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeArchitectureDebt, readProjectFiles } from '@healthy-ai-code/core';
 import type { ModuleDebtProfile, DependencyCycle } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 // --- Configuration constants ---
 const DEFAULT_MAX_FILES = 1000;
@@ -17,15 +11,15 @@ const MAX_FILES_LIMIT = 10000;
 const DEFAULT_DEPTH = 'file' as const;
 const DEFAULT_LANGUAGE = 'all' as const;
 
-const directorySchema = z.string().describe('Absolut sokvaeg till projektets rotkatalog');
+const directorySchema = z.string().describe('Absolute path to the project root directory');
 const languageBase = z.enum(['typescript', 'javascript', 'python', 'all']).default(DEFAULT_LANGUAGE);
-const languageSchema = languageBase.describe('Sprak att analysera (default: all)');
+const languageSchema = languageBase.describe('Language to analyse (default: all)');
 const depthBase = z.enum(['file', 'module']).default(DEFAULT_DEPTH);
-const depthSchema = depthBase.describe('Granularitet (default: file)');
+const depthSchema = depthBase.describe('Granularity (default: file)');
 const maxFilesInt = z.number().int();
 const maxFilesBounded = maxFilesInt.min(1).max(MAX_FILES_LIMIT);
 const maxFilesWithDefault = maxFilesBounded.default(DEFAULT_MAX_FILES);
-const maxFilesSchema = maxFilesWithDefault.describe('Maxantal filer att analysera (default: 1000)');
+const maxFilesSchema = maxFilesWithDefault.describe('Maximum number of files to analyse (default: 1000)');
 
 const ARCHITECTURE_DEBT_SCHEMA = {
   directory: directorySchema,
@@ -35,15 +29,26 @@ const ARCHITECTURE_DEBT_SCHEMA = {
 };
 
 export function registerArchitectureDebt(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_architecture_debt',
-    'Analyserar arkitekturella skulder pa modulniva: FAN-IN/OUT, Propagation Cost (transitiv paverkan), cykliska beroenden via Tarjan SCC och Cost-of-Change score per fil.',
-    ARCHITECTURE_DEBT_SCHEMA,
-    async (args) => handleArchitectureDebt({
-      directory: args.directory as string,
-      language: args.language as string,
-      depth: args.depth as 'file' | 'module',
-      maxFiles: args.maxFiles as number,
+    {
+      title: 'Architecture Debt',
+      description:
+        'Analyses architectural debt at module level: FAN-IN/OUT, propagation cost (transitive impact), ' +
+        'circular dependencies via Tarjan SCC, and a Cost-of-Change score per file.',
+      inputSchema: ARCHITECTURE_DEBT_SCHEMA,
+      annotations: {
+        title: 'Architecture Debt',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleArchitectureDebt({
+      directory: args['directory'] as string,
+      language: args['language'] as string,
+      depth: args['depth'] as 'file' | 'module',
+      maxFiles: args['maxFiles'] as number,
     }),
   );
 }
@@ -136,9 +141,10 @@ interface ArchitectureDebtOptions {
 }
 
 async function handleArchitectureDebt(options: ArchitectureDebtOptions) {
-  const { directory, language, maxFiles } = options;
+  const { language, maxFiles } = options;
   const opts: FileFilterOptions = { language, maxFiles };
   try {
+    const directory = resolveSafePath(options.directory);
     const filesOrError = await resolveAndFilterFiles(directory, opts);
 
     if ('error' in filesOrError) {
@@ -158,7 +164,7 @@ async function handleArchitectureDebt(options: ArchitectureDebtOptions) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return {
-      content: [{ type: 'text' as const, text: JSON.stringify({ error: message, directory }) }],
+      content: [{ type: 'text' as const, text: JSON.stringify({ error: message, directory: options.directory }) }],
       isError: true,
     };
   }

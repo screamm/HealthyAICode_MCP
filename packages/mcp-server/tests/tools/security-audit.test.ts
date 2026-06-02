@@ -22,6 +22,14 @@ class MockMcpServer {
     this.tools.set(name, handler);
   }
 
+  registerTool(
+    name: string,
+    _config: unknown,
+    handler: (args: Record<string, unknown>) => Promise<unknown>,
+  ): void {
+    this.tools.set(name, handler);
+  }
+
   async callTool(name: string, args: Record<string, unknown>): Promise<{
     content: { type: string; text: string }[];
     isError?: boolean;

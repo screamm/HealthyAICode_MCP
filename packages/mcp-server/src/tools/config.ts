@@ -6,7 +6,6 @@ import { homedir } from 'os';
 import { setConfig } from '@healthy-ai-code/core';
 
 const CONFIG_DIR = join(homedir(), '.healthy-ai-code'), CONFIG_FILE = join(CONFIG_DIR, 'config.json');
-type McpToolRegistrar = (n: string, d: string, s: z.ZodRawShape, h: (a: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>) => void;
 
 function readConfig(): Record<string, unknown> {
   if (!existsSync(CONFIG_FILE)) return {};
@@ -42,9 +41,45 @@ async function handleSetConfig({ key, value }: Record<string, unknown>) {
 }
 
 export function registerConfigTools(server: McpServer): void {
-  const tool = server.tool.bind(server) as unknown as McpToolRegistrar;
-  tool('get_config', 'Läser konfigurationsvärden för Healthy AI Code MCP. Utan nyckel returneras hela konfigurationen.',
-    { key: z.string().optional().describe('Konfigurationsnyckel att läsa. Utelämna för att få hela konfigurationen.') }, handleGetConfig);
-  tool('set_config', 'Sparar eller tar bort ett konfigurationsvärde för Healthy AI Code MCP. Tillgängliga nycklar: healthyThreshold (number 1-10), aiReadyThreshold (number 1-10), defaultBranch (string), projectName (string), useCalibratedThresholds (boolean — Enable empirically calibrated thresholds; requires calibration data in calibration/*.json).',
-    { key: z.string().describe('Konfigurationsnyckel att sätta eller ta bort'), value: z.string().optional().describe('Värde att sätta. Utelämna för att ta bort nyckeln.') }, handleSetConfig);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const register = server.registerTool.bind(server) as any;
+  register(
+    'get_config',
+    {
+      title: 'Get Config',
+      description: 'Reads configuration values for Healthy AI Code MCP. Without a key, the entire configuration is returned.',
+      inputSchema: {
+        key: z.string().optional().describe('Configuration key to read. Omit to get the entire configuration.'),
+      },
+      annotations: {
+        title: 'Get Config',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleGetConfig
+  );
+  register(
+    'set_config',
+    {
+      title: 'Set Config',
+      description:
+        'Saves or removes a configuration value for Healthy AI Code MCP. Available keys: ' +
+        'healthyThreshold (number 1-10), aiReadyThreshold (number 1-10), defaultBranch (string), ' +
+        'projectName (string), useCalibratedThresholds (boolean — enable empirically calibrated ' +
+        'thresholds; requires calibration data in calibration/*.json).',
+      inputSchema: {
+        key: z.string().describe('Configuration key to set or remove'),
+        value: z.string().optional().describe('Value to set. Omit to remove the key.'),
+      },
+      annotations: {
+        title: 'Set Config',
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleSetConfig
+  );
 }

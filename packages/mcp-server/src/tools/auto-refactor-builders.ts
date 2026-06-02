@@ -8,7 +8,7 @@ export interface ReadyFileState { filePath: string; score: number; category: Hea
 
 /** Builds the MCP response for a file that needs no refactoring. */
 export function buildReadyResponse(state: ReadyFileState) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify({ filePath: state.filePath, score: state.score, category: state.category, refactoringNeeded: false, message: 'Filen är redan AI-redo (score >= 9.5). Ingen refaktorering krävs.' }, null, 2) }] };
+  return { content: [{ type: 'text' as const, text: JSON.stringify({ filePath: state.filePath, score: state.score, category: state.category, refactoringNeeded: false, message: 'File is already AI-ready (score >= 9.5). No refactoring required.' }, null, 2) }] };
 }
 
 /** Extracts a window of source lines around the target line for context. */
@@ -22,7 +22,7 @@ export function extractCodeContext(fileContent: string, targetLine: number) {
 /** Builds the MCP response containing refactoring instructions and full code context. */
 export function buildRefactorResponse(filePath: string, result: HealthResult, target: Smell | null, source: { fileContent: string; codeContext: { startLine: number; endLine: number; content: string } }) {
   const { fileContent, codeContext } = source;
-  return { content: [{ type: 'text' as const, text: JSON.stringify({ filePath, score: result.score, category: result.category, refactoringNeeded: true, allSmells: result.smells, primaryTarget: target, refactoringInstructions: buildInstructions(target, result.score), codeContext, fullFileContent: fileContent, nextStep: 'Genomför refaktoreringen ovan och kör sedan code_health_review för att mäta förbättringen.' }, null, 2) }] };
+  return { content: [{ type: 'text' as const, text: JSON.stringify({ filePath, score: result.score, category: result.category, refactoringNeeded: true, allSmells: result.smells, primaryTarget: target, refactoringInstructions: buildInstructions(target, result.score), codeContext, fullFileContent: fileContent, nextStep: 'Apply the refactoring above, then run code_health_review to measure the improvement.' }, null, 2) }] };
 }
 
 /** Returns the highest-severity finding from the list, or null if empty. */
@@ -36,35 +36,35 @@ function buildBumpyRoadInstructions(target: Smell): string {
   const ranges = target.chunkRanges ?? [];
   if (ranges.length === 0) return target.suggestion;
 
-  const fnName = target.functionName ?? 'denna funktion';
+  const fnName = target.functionName ?? 'this function';
   const chunkLines = ranges
-    .map((r, i) => `  Chunk ${i + 1}: rader ${r.startLine}–${r.endLine} → extrahera till hjälpfunktion (föreslaget namn: handleChunk${i + 1}Of${fnName.charAt(0).toUpperCase() + fnName.slice(1)})`)
+    .map((r, i) => `  Chunk ${i + 1}: lines ${r.startLine}–${r.endLine} → extract to a helper function (suggested name: handleChunk${i + 1}Of${fnName.charAt(0).toUpperCase() + fnName.slice(1)})`)
     .join('\n');
 
   return [
-    `'${fnName}' innehåller ${ranges.length} sekventiella kontrollflödes-chunks som ska extraheras:`,
+    `'${fnName}' contains ${ranges.length} sequential control-flow chunks that should be extracted:`,
     chunkLines,
     '',
-    'Efter extraktion ska originalfunktionen läsa som en kort sekvens av namngivna anrop — funktionens story blir tydlig och varje chunk testbar isolerat.',
-    'Behåll ordning och sidoeffekter; ändra inte logik inom respektive chunk.',
+    'After extraction, the original function should read as a short sequence of named calls — the function\'s story becomes clear and each chunk is testable in isolation.',
+    'Preserve order and side effects; do not change logic within each chunk.',
   ].join('\n');
 }
 
 /** Formats step-by-step refactoring instructions for the primary target finding. */
 export function buildInstructions(target: Smell | null, currentScore: number): string {
-  if (!target) return 'Inga specifika problem identifierade. Förbättra den generella kodstrukturen.';
+  if (!target) return 'No specific issues found. Improve the general code structure.';
 
   const targetSuggestion = target.type === 'BumpyRoad' && target.chunkRanges
     ? buildBumpyRoadInstructions(target)
     : target.suggestion;
 
   return [
-    `PRIMÄRT MÅL: ${target.type} (${target.severity}) på rad ${target.line}`,
+    `PRIMARY TARGET: ${target.type} (${target.severity}) on line ${target.line}`,
     `Problem: ${target.description}`,
-    `Åtgärd: ${targetSuggestion}`,
+    `Action: ${targetSuggestion}`,
     '',
-    `Nuvarande score: ${currentScore}/10.0`,
-    'Genomför ENBART denna ändring, undvik att ändra annan logik.',
-    'Kör code_health_review efter ändringen för att verifiera förbättringen.',
+    `Current score: ${currentScore}/10.0`,
+    'Apply ONLY this change; avoid touching other logic.',
+    'Run code_health_review after the change to verify the improvement.',
   ].join('\n');
 }

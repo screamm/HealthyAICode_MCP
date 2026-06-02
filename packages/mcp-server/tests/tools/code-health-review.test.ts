@@ -51,7 +51,7 @@ export function validate(data: any): boolean {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.score).toBeDefined();
-    expect(parsed.summary).toContain('Hälsopoäng');
+    expect(parsed.summary).toContain('Health score');
     expect(parsed.summary).toContain(tmpFile);
     expect(parsed.nextAction).toBeDefined();
     expect(['refactor', 'commit_safe']).toContain(parsed.nextAction.action);
@@ -75,7 +75,7 @@ export function validate(data: any): boolean {
 
     expect(parsed.loopComplete).toBe(true);
     expect(parsed.nextAction.action).toBe('commit_safe');
-    expect(parsed.summary).toContain('Inga problem identifierade');
+    expect(parsed.summary).toContain('No issues found');
 
     await fs.unlink(tmpFile);
   });
@@ -117,7 +117,7 @@ export function process(a: any, b: any, c: any, d: any, e: any, f: any): any {
 
     expect(parsed.issues.length).toBeGreaterThan(0);
     if (parsed.issues.some((i: any) => i.severity === 'critical')) {
-      expect(parsed.summary).toContain('[KRITISK]');
+      expect(parsed.summary).toContain('[CRITICAL]');
     }
 
     await fs.unlink(tmpFile);

@@ -2,6 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeComplexityTrend } from '@healthy-ai-code/core';
+import { resolveSafePath } from './path-safety';
 
 // --- Configuration constants ---
 const DEFAULT_LOOKBACK_DAYS = 90;
@@ -12,24 +13,17 @@ const MAX_FILE_PATHS = 20;
 const MIN_SAMPLE_POINTS = 3;
 const MAX_SAMPLE_POINTS = 10;
 
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
-
-const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
+const repoPathSchema = z.string().describe('Absolute path to the git repository root');
 const filePathsBase = z.array(z.string()).min(1).max(MAX_FILE_PATHS);
-const filePathsSchema = filePathsBase.describe('Lista av filsökvägar att analysera (relativt repoPath)');
+const filePathsSchema = filePathsBase.describe('List of file paths to analyse (relative to repoPath)');
 const lookbackInt = z.number().int();
 const lookbackBounded = lookbackInt.min(MIN_LOOKBACK_DAYS).max(MAX_LOOKBACK_DAYS);
 const lookbackDaysWithDefault = lookbackBounded.default(DEFAULT_LOOKBACK_DAYS);
-const lookbackDaysSchema = lookbackDaysWithDefault.describe('Historik-period i dagar (default 90)');
+const lookbackDaysSchema = lookbackDaysWithDefault.describe('History window in days (default 90)');
 const sampleInt = z.number().int();
 const sampleBounded = sampleInt.min(MIN_SAMPLE_POINTS).max(MAX_SAMPLE_POINTS);
 const samplePointsWithDefault = sampleBounded.default(DEFAULT_SAMPLE_POINTS);
-const samplePointsSchema = samplePointsWithDefault.describe('Antal samplingspunkter för complexity trend (default 5)');
+const samplePointsSchema = samplePointsWithDefault.describe('Number of sample points for the complexity trend (default 5)');
 
 const TREND_SCHEMA = {
   repoPath: repoPathSchema,
@@ -39,11 +33,23 @@ const TREND_SCHEMA = {
 };
 
 export function registerTrendAnalysis(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_trend_analysis',
-    'Analyserar hur en fils kodkvalitet förändras över tid. Returnerar complexity trend (slope, rising/stable/declining) och en övergripande health trajectory per fil. Stödjer analys av upp till 20 filer per anrop.',
-    TREND_SCHEMA,
-    async (args) => handleTrendAnalysis(args),
+    {
+      title: 'Code Health Trend Analysis',
+      description:
+        'Analyses how a file\'s code quality changes over time. Returns a complexity trend ' +
+        '(slope, rising/stable/declining) and an overall health trajectory per file. ' +
+        'Supports up to 20 files per call.',
+      inputSchema: TREND_SCHEMA,
+      annotations: {
+        title: 'Code Health Trend Analysis',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleTrendAnalysis(args),
   );
 }
 
@@ -79,9 +85,12 @@ function buildFileResults(
 
 async function handleTrendAnalysis(args: Record<string, unknown>) {
   try {
-    const repoPath = args.repoPath as string;
-    const filePaths = args.filePaths as string[];
-    const samplePoints = args.samplePoints as number;
+    const repoPath = resolveSafePath(args['repoPath'] as string);
+    const filePaths = args['filePaths'] as string[];
+    const samplePoints = args['samplePoints'] as number;
+
+    // Reject any relative file path that escapes the repository root.
+    for (const fp of filePaths) resolveSafePath(fp, repoPath);
 
     const results = await Promise.all(
       filePaths.map(filePath =>
@@ -96,7 +105,7 @@ async function handleTrendAnalysis(args: Record<string, unknown>) {
 
     const body = {
       repoPath,
-      lookbackDays: args.lookbackDays,
+      lookbackDays: args['lookbackDays'],
       filesAnalyzed: fileResults.length,
       summary: {
         deteriorating: deteriorating.length,

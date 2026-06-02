@@ -97,7 +97,7 @@ describe('code_health_calibration_status handler', () => {
   it('returnerar korrekt recommendation för tom katalog (ingen kalibrering)', async () => {
     const result = await handleCalibrationStatus(testDir);
     const data = JSON.parse(result.content[0].text);
-    expect(data.recommendation).toContain('Ingen kalibrering');
+    expect(data.recommendation).toContain('No calibration');
   });
 
   it('returnerar korrekt recommendation när endast placeholder-data finns', async () => {
@@ -125,7 +125,7 @@ describe('code_health_calibration_status handler', () => {
 
     const result = await handleCalibrationStatus(testDir);
     const data = JSON.parse(result.content[0].text);
-    expect(data.recommendation).toContain('Partiell');
+    expect(data.recommendation).toContain('Partial calibration');
   });
 
   it('returnerar korrekt recommendation för stark kalibrering (>= 3 empiriska)', async () => {
@@ -142,7 +142,7 @@ describe('code_health_calibration_status handler', () => {
     const result = await handleCalibrationStatus(testDir);
     const data = JSON.parse(result.content[0].text);
     expect(data.summary.empiricallyCalibrated).toBe(3);
-    expect(data.recommendation).toContain('stark');
+    expect(data.recommendation).toContain('strong');
   });
 
   it('response-content har type text och är valid JSON', async () => {
@@ -161,7 +161,7 @@ describe('code_health_calibration_status handler', () => {
   it('registreras med rätt verktygsnamn via registerCalibrationStatus', () => {
     const registered: string[] = [];
     const mockServer = {
-      tool: (name: string, _desc: string, _schema: unknown, _handler: unknown) => {
+      registerTool: (name: string, _config: unknown, _handler: unknown) => {
         registered.push(name);
       },
     } as any;

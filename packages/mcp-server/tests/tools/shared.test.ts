@@ -104,7 +104,7 @@ describe('buildNextAction — authoritative voice (sprint 15)', () => {
       smells: [{ type: 'ComplexMethod', severity: 'high', suggestion: 'Reducera komplexitet.', line: 1, description: '' }],
     } as any;
     const action = buildNextAction(result, false);
-    expect(action.instruction).toMatch(/ett \(1\)|inte fler ändringar/);
+    expect(action.instruction).toMatch(/one \(1\)|do not make more changes/);
     expect(action.instruction).toMatch(/§4/);
   });
 });
@@ -114,16 +114,16 @@ describe('formatReviewSummary', () => {
     const summary = formatReviewSummary('src/utils.ts', greenResult);
     expect(summary).toContain('src/utils.ts');
     expect(summary).toContain('9.8/10.0');
-    expect(summary).toContain('Inga problem identifierade');
+    expect(summary).toContain('No issues found');
   });
 
   it('formaterar röd fil med smells', () => {
     const summary = formatReviewSummary('src/order.ts', redResult);
     expect(summary).toContain('src/order.ts');
     expect(summary).toContain('3.2/10.0');
-    expect(summary).toContain('[KRITISK]');
+    expect(summary).toContain('[CRITICAL]');
     expect(summary).toContain('ComplexMethod');
-    expect(summary).toContain('[HÖG]');
+    expect(summary).toContain('[HIGH]');
     expect(summary).toContain('DeepNesting');
   });
 });

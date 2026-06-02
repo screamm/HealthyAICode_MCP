@@ -1,71 +1,81 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 
 const CODE_HEALTH_EXPLANATION = `
-# Vad är Code Health?
+# What is Code Health?
 
-Code Health är ett mått (1-10) på hur lätt kod är att förstå, ändra och underhålla.
+Code Health is a measure (1-10) of how easy code is to understand, change, and maintain.
 
-## Skala
-- 9.5-10.0: AI-redo — Säker och effektiv för AI-assisterat arbete
-- 9.0-9.4: Grön (Hälsosam) — Liten risk
-- 4.0-8.9: Gul (Teknisk skuld) — Ökad risk och underhållskostnad
-- 1.0-3.9: Röd (Allvarlig teknisk skuld) — Hög risk, svår att ändra
+## Scale
+- 9.5-10.0: AI-ready — safe and efficient for AI-assisted work
+- 9.0-9.4: Green (Healthy) — low risk
+- 4.0-8.9: Yellow (Technical debt) — increased risk and maintenance cost
+- 1.0-3.9: Red (Severe technical debt) — high risk, hard to change
 
-## Varför spelar det roll för AI?
-Forskning visar att AI-kodassistenter introducerar 60%+ fler buggar i ohälsosam kod.
-Kod med hälsopoäng under 7.0 är inte pålitlig att modifiera med AI.
+## Why does it matter for AI?
+Research shows AI code assistants introduce 60%+ more bugs in unhealthy code.
+Code with a health score below 7.0 is not reliable to modify with AI.
 
-## Vad mäts?
-- Cyklomatisk komplexitet (grenar i kod)
-- Nestningsdjup (nästlade kontrollstrukturer)
-- Funktions- och fillängd
-- Parameterantal
-- Kodlukter (code smells)
+## What is measured?
+- Cyclomatic complexity (branches in the code)
+- Nesting depth (nested control structures)
+- Function and file length
+- Parameter count
+- Code smells
 `.trim();
 
 const PRODUCTIVITY_EXPLANATION = `
-# Code Health och Produktivitet
+# Code Health and Productivity
 
-## Forskningsresultat (CodeScene, peer-reviewed)
-- Att förbättra från industri-genomsnittet 5.15 till 9.1 ger:
-  - ~36% snabbare leveranstid
-  - ~36% färre produktionsdefekter
-  - ~50% lägre token-kostnad för AI-assistans
+## Research findings (CodeScene, peer-reviewed)
+- Improving from the industry average of 5.15 to 9.1 yields:
+  - ~36% faster delivery time
+  - ~36% fewer production defects
+  - ~50% lower token cost for AI assistance
 
-## AI-assistans och kodhälsa
-- 20%: Utan strukturell vägledning fixar frontier-modeller bara 20% av problem
-- 90-100%: Med Code Health-vägledning ökar fix-rate till 90-100%
-- Varje poängs förbättring = ~4% snabbare och ~4% färre defekter
+## AI assistance and code health
+- 20%: Without structural guidance, frontier models fix only 20% of issues
+- 90-100%: With Code Health guidance, the fix rate rises to 90-100%
+- Each point of improvement = ~4% faster and ~4% fewer defects
 
-## Rekommendation
-Sträva efter 9.5+ för AI-redo kod. Refaktorera till 9.5+ innan du låter AI
-modifiera filen — annars riskerar du att AI introducerar buggar.
+## Recommendation
+Aim for 9.5+ for AI-ready code. Refactor to 9.5+ before letting AI
+modify a file — otherwise you risk the AI introducing bugs.
 `.trim();
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
-) => void;
 
 /** Registers the explain_code_health tool on the MCP server. */
 export function registerExplainCodeHealth(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'explain_code_health',
-    'Förklarar vad Code Health-poängen betyder och hur den beräknas.',
-    {},
-    async () => ({ content: [{ type: 'text', text: CODE_HEALTH_EXPLANATION }] })
+    {
+      title: 'Explain Code Health',
+      description: 'Explains what the Code Health score means and how it is calculated.',
+      inputSchema: {},
+      annotations: {
+        title: 'Explain Code Health',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async () => ({ content: [{ type: 'text' as const, text: CODE_HEALTH_EXPLANATION }] })
   );
 }
 
 /** Registers the explain_code_health_productivity tool on the MCP server. */
 export function registerExplainProductivity(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'explain_code_health_productivity',
-    'Förklarar sambandet mellan Code Health och leveranshastighet/defekter.',
-    {},
-    async () => ({ content: [{ type: 'text', text: PRODUCTIVITY_EXPLANATION }] })
+    {
+      title: 'Explain Code Health Productivity Impact',
+      description: 'Explains the relationship between Code Health and delivery speed / defect rates.',
+      inputSchema: {},
+      annotations: {
+        title: 'Explain Code Health Productivity Impact',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async () => ({ content: [{ type: 'text' as const, text: PRODUCTIVITY_EXPLANATION }] })
   );
 }

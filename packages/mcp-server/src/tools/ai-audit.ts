@@ -12,13 +12,7 @@ import {
   analyzeGitSignal,
 } from '@healthy-ai-code/core';
 import type { AiSpecificSmell } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { assertSafeReadableFile, resolveSafePath } from './path-safety';
 
 interface FileAnalysisContext {
   content: string;
@@ -35,14 +29,23 @@ const AI_AUDIT_SCHEMA = {
 };
 
 export function registerAiAudit(server: McpServer): void {
-  const registerTool = server.tool.bind(server) as unknown as McpToolRegistrar;
-  registerTool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_ai_audit',
-    'Runs enhanced health check on a file suspected to be AI-generated. '
-    + 'Returns AI confidence score, standard smells and AI-specific biomarkers '
-    + '(AbstractionLeakage, HardcodedAssumption, MissingEdgeCase, StyleInconsistency).',
-    AI_AUDIT_SCHEMA,
-    async (args) => handleAiAudit(args),
+    {
+      title: 'AI-Generated Code Audit',
+      description:
+        'Runs an enhanced health check on a file suspected to be AI-generated. Returns an AI confidence ' +
+        'score, the standard smells, and AI-specific biomarkers (AbstractionLeakage, HardcodedAssumption, ' +
+        'MissingEdgeCase, StyleInconsistency).',
+      inputSchema: AI_AUDIT_SCHEMA,
+      annotations: {
+        title: 'AI-Generated Code Audit',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleAiAudit(args),
   );
 }
 
@@ -105,16 +108,18 @@ function buildAuditResult(
 async function handleAiAudit(
   args: Record<string, unknown>,
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean }> {
-  const filePath = args.filePath as string;
-  const repoPath = args.repoPath as string | undefined;
-  const language = (args.language as string) ?? 'typescript';
-  const styleConvention = args.style_convention as 'camelCase' | 'snake_case' | 'PascalCase' | undefined;
-  const includeNonAI = (args.includeNonAI as boolean | undefined) ?? false;
+  const filePath = args['filePath'] as string;
+  const repoPath = args['repoPath'] as string | undefined;
+  const language = (args['language'] as string) ?? 'typescript';
+  const styleConvention = args['style_convention'] as 'camelCase' | 'snake_case' | 'PascalCase' | undefined;
+  const includeNonAI = (args['includeNonAI'] as boolean | undefined) ?? false;
 
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
+    const safePath = assertSafeReadableFile(filePath);
+    const safeRepoPath = repoPath ? resolveSafePath(repoPath) : undefined;
+    const content = await fs.readFile(safePath, 'utf-8');
     const ctx: FileAnalysisContext = { content, filePath, language };
-    const { heuristicResult, gitSignal, aiSmells } = await collectAiSignals(ctx, repoPath, styleConvention);
+    const { heuristicResult, gitSignal, aiSmells } = await collectAiSignals(ctx, safeRepoPath, styleConvention);
 
     if (!includeNonAI && heuristicResult.confidence <= 0.3) {
       const body = {

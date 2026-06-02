@@ -3,15 +3,8 @@ import { z } from 'zod';
 import { analyzeForAutoRefactor, detectLanguage, analyzeFile, analyzeCode } from '@healthy-ai-code/core';
 import { applyAutoRefactor } from '@healthy-ai-code/core';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import type { SmellType, Language, AutoRefactorResult } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
-) => void;
+import { assertSafeReadableFile } from './path-safety';
 
 interface HandleAutoRefactorApplyOptions {
   filePath: string;
@@ -47,20 +40,31 @@ const AUTO_REFACTOR_SCHEMA = {
 };
 
 export function registerAutoRefactorApply(server: McpServer): void {
-  const registerTool = server.tool.bind(server) as unknown as McpToolRegistrar;
-  registerTool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_auto_refactor_apply',
-    'Analyzes a source file, applies an automatic mechanical refactoring for the worst smell, ' +
-      'and writes the transformed code back to disk. Returns original score, new score, ' +
-      'what was changed, and a diff. Optionally preserves a .bak backup.',
-    AUTO_REFACTOR_SCHEMA,
-    async ({ filePath, language, targetSmell, strategy, preserveBackup }) =>
+    {
+      title: 'Apply Auto-Refactor (writes to disk)',
+      description:
+        'Analyses a source file, applies an automatic mechanical refactoring for the worst smell, ' +
+        'and writes the transformed code back to disk (OVERWRITES the file). Returns the original score, ' +
+        'new score, what was changed, and a diff. Optionally preserves a .bak backup.',
+      inputSchema: AUTO_REFACTOR_SCHEMA,
+      annotations: {
+        title: 'Apply Auto-Refactor (writes to disk)',
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) =>
       handleAutoRefactorApply({
-        filePath: filePath as string,
-        languageOverride: language as string | undefined,
-        targetSmellArg: targetSmell as string | undefined,
-        _strategyOverride: strategy as string | undefined,
-        preserveBackup: preserveBackup as boolean | undefined,
+        filePath: args['filePath'] as string,
+        languageOverride: args['language'] as string | undefined,
+        targetSmellArg: args['targetSmell'] as string | undefined,
+        _strategyOverride: args['strategy'] as string | undefined,
+        preserveBackup: args['preserveBackup'] as boolean | undefined,
       })
   );
 }
@@ -170,7 +174,8 @@ async function buildRefactorSuccessResponse(ctx: RefactorContext) {
 async function handleAutoRefactorApply(options: HandleAutoRefactorApplyOptions) {
   const { filePath, languageOverride, targetSmellArg, preserveBackup } = options;
   try {
-    const resolvedPath = path.resolve(filePath);
+    // Path-traversal + size guard before reading or writing the file.
+    const resolvedPath = assertSafeReadableFile(filePath);
     const code = await fs.readFile(resolvedPath, 'utf-8');
 
     const language: Language = languageOverride

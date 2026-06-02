@@ -8,6 +8,9 @@ class MockMcpServer {
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
     this.tools.set(name, handler);
   }
+  registerTool(name: string, _config: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
   async callTool(name: string, args: any): Promise<any> {
     const handler = this.tools.get(name);
     if (!handler) throw new Error(`Tool ${name} not found`);

@@ -4,23 +4,28 @@ import { z } from 'zod';
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
-
 export function registerCalibrationStatus(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_calibration_status',
-    'Visar kalibreringsstatus för alla stödda språk — vilka språk som har empirisk kalibrering, version, datasetinformation och om data är en platshållare eller empiriskt validerad.',
     {
-      calibrationDir: z.string().optional().describe(
-        'Sökväg till kalibreringskatalogen. Default: <cwd>/packages/core/calibration/'
-      ),
+      title: 'Calibration Status',
+      description:
+        'Shows calibration status for all supported languages — which languages have empirical ' +
+        'calibration, the version, dataset information, and whether the data is a placeholder or ' +
+        'empirically validated.',
+      inputSchema: {
+        calibrationDir: z.string().optional().describe(
+          'Path to the calibration directory. Default: <cwd>/packages/core/calibration/'
+        ),
+      },
+      annotations: {
+        title: 'Calibration Status',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
     },
-    async (args) => handleCalibrationStatus(args.calibrationDir as string | undefined),
+    async (args: Record<string, unknown>) => handleCalibrationStatus(args['calibrationDir'] as string | undefined),
   );
 }
 
@@ -134,13 +139,13 @@ export async function handleCalibrationStatus(
 
 function buildRecommendation(empirical: number, placeholder: number): string {
   if (empirical >= 3) {
-    return 'Kalibreringen är stark. Aktivera med set_config useCalibratedThresholds true.';
+    return 'Calibration is strong. Enable it with set_config useCalibratedThresholds true.';
   }
   if (empirical >= 1) {
-    return 'Partiell kalibrering tillgänglig. Kör multi-lang-corpus.mjs för fler språk.';
+    return 'Partial calibration available. Run multi-lang-corpus.mjs for more languages.';
   }
   if (placeholder > 0) {
-    return 'Endast placeholder-data tillgänglig. Kör kalibreringspipelinen för empiriska värden.';
+    return 'Only placeholder data available. Run the calibration pipeline for empirical values.';
   }
-  return 'Ingen kalibrering tillgänglig. Hårdkodade defaults används oavsett useCalibratedThresholds.';
+  return 'No calibration available. Hardcoded defaults are used regardless of useCalibratedThresholds.';
 }

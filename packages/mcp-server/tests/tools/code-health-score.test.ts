@@ -9,6 +9,9 @@ class MockMcpServer {
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
     this.tools.set(name, handler);
   }
+  registerTool(name: string, _config: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
   async callTool(name: string, args: any): Promise<any> {
     const handler = this.tools.get(name);
     if (!handler) throw new Error(`Tool ${name} not found`);
@@ -99,7 +102,7 @@ export function processOrder(order: any): string {
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerCodeHealthScore(server);
     expect(registered).toContain('code_health_score');

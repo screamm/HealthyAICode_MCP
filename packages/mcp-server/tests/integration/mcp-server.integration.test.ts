@@ -74,7 +74,7 @@ describe('MCP Server Integration', () => {
       const parsed = JSON.parse(result.content[0].text);
 
       expect(parsed.issues).toHaveLength(0);
-      expect(parsed.summary).toContain('Inga problem identifierade');
+      expect(parsed.summary).toContain('No issues found');
     });
   });
 
@@ -104,7 +104,7 @@ describe('MCP Server Integration', () => {
 
       expect(parsed.improvement).toBeGreaterThan(1);
       expect(parsed.businessCase.developmentSpeedGain).not.toBe('+0%');
-      expect(parsed.businessCase.recommendation).toContain('prioritet');
+      expect(parsed.businessCase.recommendation).toContain('priority');
     });
   });
 
@@ -125,7 +125,7 @@ describe('MCP Server Integration', () => {
       });
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.overallSafe).toBe(false);
-      expect(parsed.message).toContain('STOPPA');
+      expect(parsed.message).toContain('STOP');
     });
   });
 

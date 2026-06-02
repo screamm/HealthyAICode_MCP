@@ -198,11 +198,11 @@ describe('StructuralCache: compact re-review response token-size comparison', ()
 
     // Simulate first-call full response
     const fullSummaryText =
-      `Fil: ${filePath}\n` +
-      `Hälsopoäng: ${score}/10.0  (Röd — Allvarlig teknisk skuld)\n\n` +
-      'Identifierade problem:\n' +
+      `File: ${filePath}\n` +
+      `Health score: ${score}/10.0  (Red — Severe technical debt)\n\n` +
+      'Issues found:\n' +
       REALISTIC_SMELLS.map(s =>
-        `  [HÖG]     ${s.type}: ${s.description}\n             → ${s.suggestion}`
+        `  [HIGH]     ${s.type}: ${s.description}\n             → ${s.suggestion}`
       ).join('\n');
 
     const firstResponse = {

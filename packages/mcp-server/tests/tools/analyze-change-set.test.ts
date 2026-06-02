@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import * as path from 'path';
 import { registerAnalyzeChangeSet } from '../../src/tools/analyze-change-set';
 
 vi.mock('@healthy-ai-code/core', () => ({
@@ -11,6 +12,9 @@ import { analyzeChangeset } from '@healthy-ai-code/core';
 class MockMcpServer {
   private tools: Map<string, Function> = new Map();
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
+  registerTool(name: string, _config: any, handler: Function): void {
     this.tools.set(name, handler);
   }
   async callTool(name: string, args: any): Promise<any> {
@@ -40,7 +44,7 @@ describe('analyze_change_set tool', () => {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.overallSafe).toBe(true);
-    expect(parsed.message).toContain('säkert');
+    expect(parsed.message).toContain('safe');
     expect(parsed.improvements).toHaveLength(1);
     expect(parsed.regressions).toHaveLength(0);
   });
@@ -64,7 +68,7 @@ describe('analyze_change_set tool', () => {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.overallSafe).toBe(false);
-    expect(parsed.message).toContain('VARNING');
+    expect(parsed.message).toContain('WARNING');
     expect(parsed.regressions).toHaveLength(1);
   });
 
@@ -98,13 +102,13 @@ describe('analyze_change_set tool', () => {
 
     await server.callTool('analyze_change_set', { repoPath: '/tmp/repo', baseBranch: 'main' });
 
-    expect(analyzeChangeset).toHaveBeenCalledWith('/tmp/repo', 'main');
+    expect(analyzeChangeset).toHaveBeenCalledWith(path.resolve('/tmp/repo'), 'main');
   });
 
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerAnalyzeChangeSet(server);
     expect(registered).toContain('analyze_change_set');

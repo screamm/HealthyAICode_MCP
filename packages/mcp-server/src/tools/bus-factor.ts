@@ -11,13 +11,7 @@ import type {
   SprintCongestionResult,
   KnowledgeLossIndexResult,
 } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 const maxFilesInt = z.number().int();
 const maxFilesBase = maxFilesInt.min(1).max(500);
@@ -43,21 +37,31 @@ interface BusFactorOptions {
 
 function parseBusFactorOptions(args: Record<string, unknown>): BusFactorOptions {
   return {
-    projectPath: args.projectPath as string,
-    filePattern: (args.filePattern as string | undefined) ?? '**/*.{ts,js,py}',
-    maxFiles: (args.maxFiles as number | undefined) ?? 100,
-    includeSprintCongestion: (args.includeSprintCongestion as boolean | undefined) ?? true,
-    includeKnowledgeLossIndex: (args.includeKnowledgeLossIndex as boolean | undefined) ?? true,
+    projectPath: args['projectPath'] as string,
+    filePattern: (args['filePattern'] as string | undefined) ?? '**/*.{ts,js,py}',
+    maxFiles: (args['maxFiles'] as number | undefined) ?? 100,
+    includeSprintCongestion: (args['includeSprintCongestion'] as boolean | undefined) ?? true,
+    includeKnowledgeLossIndex: (args['includeKnowledgeLossIndex'] as boolean | undefined) ?? true,
   };
 }
 
 export function registerBusFactor(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_bus_factor',
-    'Analyses bus factor, sprint-level developer congestion, and knowledge loss index for a project. ' +
-    'Uses Shannon entropy to measure knowledge concentration and identifies files at risk if key contributors leave.',
-    schema,
-    async (args) => handleBusFactor(parseBusFactorOptions(args)),
+    {
+      title: 'Bus Factor & Knowledge Risk',
+      description:
+        'Analyses bus factor, sprint-level developer congestion, and knowledge loss index for a project. ' +
+        'Uses Shannon entropy to measure knowledge concentration and identifies files at risk if key contributors leave.',
+      inputSchema: schema,
+      annotations: {
+        title: 'Bus Factor & Knowledge Risk',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleBusFactor(parseBusFactorOptions(args)),
   );
 }
 
@@ -153,6 +157,8 @@ function buildBusFactorBody(input: BusFactorBodyInput): object {
 
 async function handleBusFactor(opts: BusFactorOptions) {
   try {
+    // Validate the project path (NUL bytes / workspace jail) before any fs/git access.
+    opts = { ...opts, projectPath: resolveSafePath(opts.projectPath) };
     const files = await resolveFiles(opts);
     if (!files) {
       return {

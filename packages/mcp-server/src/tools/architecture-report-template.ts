@@ -208,16 +208,16 @@ export function buildHtmlBodyHeader(): string {
 
 <div id="controls">
   <span style="font-size:12px;color:#8b949e;font-weight:600">Filter:</span>
-  <button class="filter-btn active" id="btn-all" onclick="setFilter('all')">Visa alla</button>
-  <button class="filter-btn" id="btn-high" onclick="setFilter('high')">Bara High Risk</button>
-  <button class="filter-btn" id="btn-cycles" onclick="setFilter('cycles')">Bara Cykler</button>
+  <button class="filter-btn active" id="btn-all" onclick="setFilter('all')">Show all</button>
+  <button class="filter-btn" id="btn-high" onclick="setFilter('high')">High risk only</button>
+  <button class="filter-btn" id="btn-cycles" onclick="setFilter('cycles')">Cycles only</button>
   <label>
     <input type="checkbox" id="chk-labels" onchange="toggleLabels()" checked>
-    Filnamn
+    File names
   </label>
   <label style="margin-left:8px">
     <input type="checkbox" id="chk-links" onchange="toggleLinks()" checked>
-    Kanter
+    Edges
   </label>
 </div>
 `;
@@ -228,19 +228,19 @@ export function buildHtmlBodyMain(): string {
   return `<div id="main">
   <div id="canvas-container">
     <canvas id="graph-canvas"></canvas>
-    <div id="empty-state">Inga noder matchar filtret</div>
+    <div id="empty-state">No nodes match the filter</div>
     <div id="zoom-controls">
-      <button class="zoom-btn" onclick="zoomIn()" title="Zooma in">+</button>
+      <button class="zoom-btn" onclick="zoomIn()" title="Zoom in">+</button>
       <div id="zoom-label">100%</div>
-      <button class="zoom-btn" onclick="zoomOut()" title="Zooma ut">-</button>
-      <button class="zoom-btn" onclick="resetView()" title="Återställ" style="font-size:12px">&#x21BA;</button>
+      <button class="zoom-btn" onclick="zoomOut()" title="Zoom out">-</button>
+      <button class="zoom-btn" onclick="resetView()" title="Reset" style="font-size:12px">&#x21BA;</button>
     </div>
   </div>
   <div id="sidebar">
     <div id="sidebar-content">
-      <div class="section-title">Vald nod</div>
+      <div class="section-title">Selected node</div>
       <div id="node-detail">
-        <div id="node-detail-placeholder">Klicka på en nod för detaljer</div>
+        <div id="node-detail-placeholder">Click a node for details</div>
         <div id="node-detail-content" style="display:none;width:100%">
           <div class="node-name" id="detail-name"></div>
           <div class="node-metrics">
@@ -253,7 +253,7 @@ export function buildHtmlBodyMain(): string {
               <div class="m-value val-blue" id="detail-fanout"></div>
             </div>
             <div class="metric-item">
-              <div class="m-label">Instabilitet</div>
+              <div class="m-label">Instability</div>
               <div class="m-value" id="detail-inst"></div>
             </div>
             <div class="metric-item">
@@ -276,7 +276,7 @@ export function buildHtmlBodyMain(): string {
         </div>
       </div>
 
-      <div class="section-title">Legenden</div>
+      <div class="section-title">Legend</div>
       <div class="legend-item">
         <div class="legend-dot" style="background:#f85149"></div>
         <span>High severity (CoC &gt; 0.66)</span>
@@ -291,21 +291,21 @@ export function buildHtmlBodyMain(): string {
       </div>
       <div class="legend-item" style="margin-top:6px">
         <div style="width:12px;height:12px;border-radius:50%;background:#3fb950;border:2px solid #f85149;flex-shrink:0"></div>
-        <span>I cirkulärt beroende</span>
+        <span>In a circular dependency</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="background:#484f58"></div>
-        <span>Normal beroende</span>
+        <span>Normal dependency</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="background:#f85149"></div>
-        <span>Cykelberoende</span>
+        <span>Cycle dependency</span>
       </div>
       <div style="font-size:11px;color:#8b949e;margin-top:4px">
-        Nodstorlek = ändringsfrekvens (churn)
+        Node size = change frequency (churn)
       </div>
 
-      <div class="section-title" id="cycles-title">Cykler (0)</div>
+      <div class="section-title" id="cycles-title">Cycles (0)</div>
       <div id="cycles-list"></div>
     </div>
   </div>
@@ -316,7 +316,7 @@ export function buildHtmlBodyMain(): string {
   <div class="tt-grid">
     <span class="tt-label">FAN-IN</span><span class="tt-val" id="tt-fanin"></span>
     <span class="tt-label">FAN-OUT</span><span class="tt-val" id="tt-fanout"></span>
-    <span class="tt-label">Instabilitet</span><span class="tt-val" id="tt-inst"></span>
+    <span class="tt-label">Instability</span><span class="tt-val" id="tt-inst"></span>
     <span class="tt-label">Prop. Cost</span><span class="tt-val" id="tt-prop"></span>
     <span class="tt-label">Cost-of-Change</span><span class="tt-val" id="tt-coc"></span>
     <span class="tt-label">Churn (12m)</span><span class="tt-val" id="tt-churn"></span>
@@ -394,7 +394,7 @@ function updateStats() {
 
 function renderCyclesList() {
   const list = document.getElementById('cycles-list');
-  document.getElementById('cycles-title').textContent = 'Cykler (' + GRAPH_DATA.cycles.length + ')';
+  document.getElementById('cycles-title').textContent = 'Cycles (' + GRAPH_DATA.cycles.length + ')';
 
   // Clear existing children
   while (list.firstChild) list.removeChild(list.firstChild);
@@ -403,7 +403,7 @@ function renderCyclesList() {
     const msg = document.createElement('div');
     msg.style.fontSize = '12px';
     msg.style.color = '#3fb950';
-    msg.textContent = 'Inga cirkulara beroenden hittades';
+    msg.textContent = 'No circular dependencies found';
     list.appendChild(msg);
     return;
   }

@@ -6,6 +6,7 @@ import { detectLanguage } from '@healthy-ai-code/core';
 import * as fs from 'fs/promises';
 import type { SmellType, Language } from '@healthy-ai-code/core';
 import { autoRefactorOutputZodShape } from '../schemas/auto-refactor-output.schema';
+import { assertSafeReadableFile } from './path-safety';
 
 interface AutoRefactorOptions {
   filePath: string;
@@ -67,6 +68,11 @@ export function registerAutoRefactor(server: McpServer): void {
           ),
       },
       outputSchema: autoRefactorOutputZodShape,
+      annotations: {
+        title: 'Auto-Refactor Plan',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
     },
     async (args: Record<string, unknown>) =>
       handleAutoRefactor({
@@ -80,15 +86,16 @@ export function registerAutoRefactor(server: McpServer): void {
 export async function handleAutoRefactor(opts: AutoRefactorOptions) {
   try {
     const { filePath, languageOverride, targetSmellArg } = opts;
-    const code = await fs.readFile(filePath, 'utf-8');
+    const safePath = assertSafeReadableFile(filePath);
+    const code = await fs.readFile(safePath, 'utf-8');
     const language: Language = languageOverride
       ? (languageOverride as Language)
-      : detectLanguage(filePath);
+      : detectLanguage(safePath);
     const targetSmell = targetSmellArg as SmellType | undefined;
-    const refactorResult = analyzeForAutoRefactor(code, language, filePath, targetSmell);
+    const refactorResult = analyzeForAutoRefactor(code, language, safePath, targetSmell);
 
     if (!refactorResult) {
-      return buildHealthyResponse(filePath);
+      return buildHealthyResponse(safePath);
     }
 
     // Attach discriminator and surface Sprint 52/54 fields in structuredContent

@@ -9,14 +9,9 @@ import {
   analyzeFile,
 } from '@healthy-ai-code/core';
 import type { GoalType, DebtGoal } from '@healthy-ai-code/core';
+import { resolveSafePath } from './path-safety';
 
 type ToolResponse = { content: { type: string; text: string }[]; isError?: boolean };
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<ToolResponse>
-) => void;
 
 async function handleList({ filePath, status }: Record<string, unknown>): Promise<ToolResponse> {
   try {
@@ -41,7 +36,7 @@ async function handleList({ filePath, status }: Record<string, unknown>): Promis
 
 async function handleSet({ filePath, goalType, targetScore, expiresAt, note }: Record<string, unknown>): Promise<ToolResponse> {
   try {
-    const goal = setGoal(filePath as string, {
+    const goal = setGoal(resolveSafePath(filePath as string), {
       goalType: goalType as GoalType,
       targetScore: targetScore !== undefined ? Number(targetScore) : undefined,
       expiresAt: (expiresAt as string) ?? undefined,
@@ -59,7 +54,7 @@ async function handleSet({ filePath, goalType, targetScore, expiresAt, note }: R
 
 async function handleRemove({ filePath }: Record<string, unknown>): Promise<ToolResponse> {
   try {
-    const removed = removeGoal(filePath as string);
+    const removed = removeGoal(resolveSafePath(filePath as string));
     return {
       content: [
         { type: 'text', text: JSON.stringify({ removed, filePath: filePath as string }, null, 2) },
@@ -140,9 +135,58 @@ const REPORT_SCHEMA = {
 };
 
 export function registerDebtGoalsTools(server: McpServer): void {
-  const tool = server.tool.bind(server) as unknown as McpToolRegistrar;
-  tool('code_health_debt_goals_list', 'Lists tracked debt goals. Optionally filter by filePath or status.', LIST_SCHEMA, handleList);
-  tool('code_health_debt_goal_set', 'Creates or updates a debt goal for a file.', SET_SCHEMA, handleSet);
-  tool('code_health_debt_goal_remove', 'Removes a debt goal for a file.', REMOVE_SCHEMA, handleRemove);
-  tool('code_health_debt_goals_report', 'Generates a report of all tracked debt goals with current health scores.', REPORT_SCHEMA, handleReport);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const register = server.registerTool.bind(server) as any;
+  register(
+    'code_health_debt_goals_list',
+    {
+      title: 'List Debt Goals',
+      description: 'Lists tracked debt goals. Optionally filter by filePath or status.',
+      inputSchema: LIST_SCHEMA,
+      annotations: { title: 'List Debt Goals', readOnlyHint: true, openWorldHint: false },
+    },
+    handleList
+  );
+  register(
+    'code_health_debt_goal_set',
+    {
+      title: 'Set Debt Goal',
+      description: 'Creates or updates a debt goal for a file.',
+      inputSchema: SET_SCHEMA,
+      annotations: {
+        title: 'Set Debt Goal',
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleSet
+  );
+  register(
+    'code_health_debt_goal_remove',
+    {
+      title: 'Remove Debt Goal',
+      description: 'Removes a debt goal for a file.',
+      inputSchema: REMOVE_SCHEMA,
+      annotations: {
+        title: 'Remove Debt Goal',
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleRemove
+  );
+  register(
+    'code_health_debt_goals_report',
+    {
+      title: 'Debt Goals Report',
+      description: 'Generates a report of all tracked debt goals with current health scores.',
+      inputSchema: REPORT_SCHEMA,
+      annotations: { title: 'Debt Goals Report', readOnlyHint: true, openWorldHint: false },
+    },
+    handleReport
+  );
 }

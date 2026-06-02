@@ -4,13 +4,7 @@ import { collectProjectFiles, analyzeAllFiles, filterRisks, buildResponseBody } 
 import { analyzeDocDebt, analyzeIntentClarity } from '@healthy-ai-code/core';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[] }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 const MAX_ANALYSIS_FILES = 100;
 const DOC_DEBT_CRITICAL_THRESHOLD = 0.60;
@@ -62,21 +56,36 @@ async function analyzeDocAndIntent(files: string[]) {
 }
 
 export function registerKnowledgeMap(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_knowledge_map',
-    'Analyserar kunskapsfördelning, bus factor och temporär koppling i ett projekt. Visar vem som äger vilka filer och vilka filer som förändras ihop.',
-    { projectPath: z.string().describe('Sökväg till projektets rotkatalog') },
-    async ({ projectPath }) => handleKnowledgeMap(projectPath as string)
+    {
+      title: 'Knowledge Map',
+      description:
+        'Analyses knowledge distribution, bus factor, and temporal coupling across a project. ' +
+        'Shows who owns which files and which files tend to change together, plus documentation ' +
+        'debt and intent-clarity hotspots.',
+      inputSchema: {
+        projectPath: z.string().describe('Path to the project root directory'),
+      },
+      annotations: {
+        title: 'Knowledge Map',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleKnowledgeMap(args['projectPath'] as string)
   );
 }
 
 async function handleKnowledgeMap(projectPath: string) {
   try {
-    const files = await collectProjectFiles(projectPath);
-    const [congestionResults, knowledgeResults, coupledPairs] = await analyzeAllFiles(projectPath, files);
+    const safeProjectPath = resolveSafePath(projectPath);
+    const files = await collectProjectFiles(safeProjectPath);
+    const [congestionResults, knowledgeResults, coupledPairs] = await analyzeAllFiles(safeProjectPath, files);
     const { highCongestion, singleOwner, highCoupling } = filterRisks(congestionResults, knowledgeResults, coupledPairs);
 
-    const base = buildResponseBody(projectPath, files, { highCongestion, singleOwner, highCoupling });
+    const base = buildResponseBody(safeProjectPath, files, { highCongestion, singleOwner, highCoupling });
     const docAndIntent = await analyzeDocAndIntent(files);
 
     return { content: [{ type: 'text' as const, text: JSON.stringify({ ...base, ...docAndIntent }, null, 2) }] };

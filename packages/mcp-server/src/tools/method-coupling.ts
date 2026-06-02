@@ -2,13 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeMethodCoupling } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 // --- Configuration constants ---
 const DEFAULT_COUPLING_THRESHOLD = 0.5;
@@ -23,30 +17,41 @@ interface HandleMethodCouplingOptions {
   maxCommits: number;
 }
 
-const repoPathSchema = z.string().describe('Absolut sökväg till git-repots rotkatalog');
-const filePathSchema = z.string().describe('Sökväg till filen, relativt repoPath');
+const repoPathSchema = z.string().describe('Absolute path to the git repository root');
+const filePathSchema = z.string().describe('Path to the file, relative to repoPath');
 const thresholdNum = z.number().min(0).max(1);
 const thresholdWithDefault = thresholdNum.default(DEFAULT_COUPLING_THRESHOLD);
-const thresholdSchema = thresholdWithDefault.describe('Minsta co-change-styrka för att rapportera ett par (default 0.5)');
+const thresholdSchema = thresholdWithDefault.describe('Minimum co-change strength to report a pair (default 0.5)');
 const maxCommitsNum = z.number().int().min(1).max(MAX_COMMITS_LIMIT);
 const maxCommitsWithDefault = maxCommitsNum.default(DEFAULT_MAX_COMMITS);
-const maxCommitsSchema = maxCommitsWithDefault.describe('Maxantal commits att analysera (default 200)');
+const maxCommitsSchema = maxCommitsWithDefault.describe('Maximum number of commits to analyse (default 200)');
 
 export function registerMethodCoupling(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_method_coupling',
-    'Analyserar metodnivå temporal coupling i en fil — visar par av metoder som tenderar att ändras tillsammans över git-historiken (X-Ray-light).',
     {
-      repoPath: repoPathSchema,
-      filePath: filePathSchema,
-      threshold: thresholdSchema,
-      maxCommits: maxCommitsSchema,
+      title: 'Method Temporal Coupling',
+      description:
+        'Analyses method-level temporal coupling in a single file — pairs of methods that tend to ' +
+        'change together across git history (X-Ray-light). Useful for spotting hidden dependencies.',
+      inputSchema: {
+        repoPath: repoPathSchema,
+        filePath: filePathSchema,
+        threshold: thresholdSchema,
+        maxCommits: maxCommitsSchema,
+      },
+      annotations: {
+        title: 'Method Temporal Coupling',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
     },
-    async (args) => handleMethodCoupling({
-      repoPath: args.repoPath as string,
-      filePath: args.filePath as string,
-      threshold: args.threshold as number,
-      maxCommits: args.maxCommits as number,
+    async (args: Record<string, unknown>) => handleMethodCoupling({
+      repoPath: args['repoPath'] as string,
+      filePath: args['filePath'] as string,
+      threshold: args['threshold'] as number,
+      maxCommits: args['maxCommits'] as number,
     }),
   );
 }
@@ -54,7 +59,10 @@ export function registerMethodCoupling(server: McpServer): void {
 async function handleMethodCoupling(options: HandleMethodCouplingOptions) {
   const { repoPath, filePath, threshold, maxCommits } = options;
   try {
-    const result = await analyzeMethodCoupling(repoPath, filePath, { threshold, maxCommits });
+    // Validate repoPath and ensure the relative filePath does not escape it.
+    const safeRepoPath = resolveSafePath(repoPath);
+    resolveSafePath(filePath, safeRepoPath);
+    const result = await analyzeMethodCoupling(safeRepoPath, filePath, { threshold, maxCommits });
     const body = {
       filePath: result.filePath,
       commitsAnalyzed: result.commitsAnalyzed,

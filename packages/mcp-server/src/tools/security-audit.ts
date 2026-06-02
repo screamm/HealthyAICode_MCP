@@ -8,13 +8,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { auditSecurity, estimateScanCost, formatAsSarif } from '@healthy-ai-code/core';
 import type { ScanDepth, SecurityAuditFileResult } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
   '.ts': 'typescript',
@@ -192,11 +186,24 @@ const securityAuditSchema = {
 };
 
 export function registerSecurityAudit(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_security_audit',
-    'Runs a static security analysis against a directory. Detects SQL injection, XSS, command injection, path traversal, hardcoded secrets and API keys. Returns findings with SARIF-compatible JSON output and a risk score per file. In dry_run mode returns only cost estimates without running analysis.',
-    securityAuditSchema,
-    async (args) => handleSecurityAudit(args),
+    {
+      title: 'Security Audit',
+      description:
+        'Runs a static security analysis against a directory. Detects SQL injection, XSS, command ' +
+        'injection, path traversal, hardcoded secrets and API keys. Returns findings with ' +
+        'SARIF-compatible JSON output and a risk score per file. In dry_run mode returns only cost ' +
+        'estimates without running analysis.',
+      inputSchema: securityAuditSchema,
+      annotations: {
+        title: 'Security Audit',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleSecurityAudit(args),
   );
 }
 
@@ -243,6 +250,7 @@ async function runAuditAndFormat(
 async function handleSecurityAudit(args: Record<string, unknown>) {
   try {
     const auditArgs = parseAuditArgs(args);
+    auditArgs.directory = resolveSafePath(auditArgs.directory);
 
     const validationError = await validateDirectory(auditArgs.directory);
     if (validationError) return errorResponse(validationError);

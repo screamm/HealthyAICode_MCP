@@ -6,41 +6,44 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { detectLanguage, runValidation, loadDefects4JFromJson, createSyntheticBenchmark } from '@healthy-ai-code/core';
 import type { BugRecord, ValidationReport } from '@healthy-ai-code/core';
+import { resolveSafePath } from './path-safety';
 
 const execFileAsync = promisify(execFile);
 
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
-
 export function registerValidateDataset(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_validate_against_dataset',
-    [
-      'Validerar att hälsopoängen korrelerar med kända buggar.',
-      'Tre lägen:',
-      '  1. useSyntheticBenchmark: true  — använd inbyggt TypeScript-benchmark (5 buggy + 5 clean)',
-      '  2. datasetPath                  — ladda Defects4J-format JSON med buggy/clean kodpar',
-      '  3. directory                    — analysera en katalog och heuristik-märk bugg-filer via git log',
-      'Returnerar AUROC, Pearson-r, Spearman-ρ, medelvärdes-separation och tolkning.',
-    ].join('\n'),
     {
-      datasetPath: z.string().optional().describe('Sökväg till Defects4J-format JSON-fil'),
-      useSyntheticBenchmark: z
-        .boolean()
-        .default(false)
-        .describe('Kör inbyggt benchmark (5 buggy + 5 clean TypeScript-funktioner)'),
-      directory: z
-        .string()
-        .optional()
-        .describe(
-          'Analysera alla källfiler i katalogen; git log används som proxy: filer med "fix" eller "bug" i commit-meddelanden märks som buggy',
-        ),
+      title: 'Validate Against Bug Dataset',
+      description: [
+        'Validates that the health score correlates with known bugs.',
+        'Three modes:',
+        '  1. useSyntheticBenchmark: true  — use the built-in TypeScript benchmark (5 buggy + 5 clean)',
+        '  2. datasetPath                  — load Defects4J-format JSON with buggy/clean code pairs',
+        '  3. directory                    — analyse a directory and heuristically label buggy files via git log',
+        'Returns AUROC, Pearson r, Spearman ρ, mean separation, and an interpretation.',
+      ].join('\n'),
+      inputSchema: {
+        datasetPath: z.string().optional().describe('Path to a Defects4J-format JSON file'),
+        useSyntheticBenchmark: z
+          .boolean()
+          .default(false)
+          .describe('Run the built-in benchmark (5 buggy + 5 clean TypeScript functions)'),
+        directory: z
+          .string()
+          .optional()
+          .describe(
+            'Analyse all source files in the directory; git log is used as a proxy: files in commits with "fix" or "bug" in the message are labelled buggy',
+          ),
+      },
+      annotations: {
+        title: 'Validate Against Bug Dataset',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
     },
-    async (args) => handleValidateDataset(args),
+    async (args: Record<string, unknown>) => handleValidateDataset(args),
   );
 }
 
@@ -72,7 +75,7 @@ function emptyRecordsError() {
       {
         type: 'text',
         text: JSON.stringify(
-          { error: 'Inga filer att validera. Ange datasetPath, useSyntheticBenchmark: true, eller directory.' },
+          { error: 'No files to validate. Provide datasetPath, useSyntheticBenchmark: true, or directory.' },
           null,
           2,
         ),
@@ -83,16 +86,16 @@ function emptyRecordsError() {
 }
 
 async function buildRecords(args: Record<string, unknown>): Promise<BugRecord[]> {
-  if (args.useSyntheticBenchmark === true) {
+  if (args['useSyntheticBenchmark'] === true) {
     return createSyntheticBenchmark();
   }
 
-  if (typeof args.datasetPath === 'string' && args.datasetPath.length > 0) {
-    return await loadDefects4JFromJson(args.datasetPath);
+  if (typeof args['datasetPath'] === 'string' && args['datasetPath'].length > 0) {
+    return await loadDefects4JFromJson(resolveSafePath(args['datasetPath']));
   }
 
-  if (typeof args.directory === 'string' && args.directory.length > 0) {
-    return await buildRecordsFromDirectory(args.directory);
+  if (typeof args['directory'] === 'string' && args['directory'].length > 0) {
+    return await buildRecordsFromDirectory(resolveSafePath(args['directory']));
   }
 
   return [];
@@ -273,22 +276,22 @@ function round(n: number): number {
 
 function buildRecommendation(report: ValidationReport): string {
   if (report.totalFiles === 0) {
-    return 'Inga filer analyserades.';
+    return 'No files were analysed.';
   }
   if (report.auroc >= 0.75) {
     return (
-      `Hälsopoängen fungerar väl som bugg-prediktor (AUROC ${round(report.auroc)}). ` +
-      'Fortsätt använda tröskelvärden från calibration-loader.'
+      `The health score works well as a bug predictor (AUROC ${round(report.auroc)}). ` +
+      'Continue using the thresholds from the calibration loader.'
     );
   }
   if (report.auroc >= 0.60) {
     return (
-      `Viss korrelation detekterad (AUROC ${round(report.auroc)}). ` +
-      'Överväg att köra code_health_calibration_status för att finjustera vikter.'
+      `Some correlation detected (AUROC ${round(report.auroc)}). ` +
+      'Consider running code_health_calibration_status to fine-tune the weights.'
     );
   }
   return (
-    `Låg AUROC (${round(report.auroc)}) — dataset kan vara för litet eller smells inte kalibrerade. ` +
-    'Lägg till fler datapunkter eller kör code_health_calibration_status.'
+    `Low AUROC (${round(report.auroc)}) — the dataset may be too small or the smells are not calibrated. ` +
+    'Add more data points or run code_health_calibration_status.'
   );
 }

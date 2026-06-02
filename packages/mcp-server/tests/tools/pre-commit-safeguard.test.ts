@@ -9,6 +9,9 @@ class MockMcpServer {
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
     this.tools.set(name, handler);
   }
+  registerTool(name: string, _config: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
   async callTool(name: string, args: any): Promise<any> {
     const handler = this.tools.get(name);
     if (!handler) throw new Error(`Tool ${name} not found`);
@@ -34,7 +37,7 @@ describe('pre_commit_code_health_safeguard tool', () => {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.overallSafe).toBe(true);
-    expect(parsed.message).toContain('säkra att committa');
+    expect(parsed.message).toContain('safe to commit');
     expect(parsed.results).toHaveLength(2);
     expect(parsed.results[0].safe).toBe(true);
     expect(parsed.results[1].safe).toBe(true);
@@ -107,7 +110,7 @@ describe('pre_commit_code_health_safeguard tool', () => {
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerPreCommitSafeguard(server);
     expect(registered).toContain('pre_commit_code_health_safeguard');

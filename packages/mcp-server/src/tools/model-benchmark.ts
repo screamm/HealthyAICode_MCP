@@ -11,13 +11,7 @@ import {
   DEFAULT_HISTORY_PATH,
 } from '@healthy-ai-code/core';
 import type { BenchmarkEntry } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 type BenchmarkLanguage = 'typescript' | 'javascript' | 'python' | 'java';
 
@@ -66,43 +60,57 @@ async function handleRunBenchmark(bArgs: BenchmarkArgs) {
 }
 
 export function registerModelBenchmark(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_model_benchmark',
-    'Compares AI-generated code against a human baseline. '
-    + 'Calculates delta in health metrics, tracks introduced smells and '
-    + 'stores results in benchmark history. Supports per-model statistics aggregation.',
     {
-      model_name: z.string().describe('AI model name, e.g. "claude-sonnet-4-6"'),
-      generated_code: z.string().describe('The AI-generated code to evaluate'),
-      reference_code: z.string().describe('Human-written reference code (baseline)'),
-      file_path: z.string().describe('Reference path for history file metadata'),
-      language: z.enum(['typescript', 'javascript', 'python', 'java']),
-      get_stats: z.boolean().default(false)
-        .describe('If true: return aggregated statistics for the model instead of a single benchmark'),
-      history_path: z.string().optional()
-        .describe('Custom path to history file (default: benchmarks/ai-model-quality-history.json)'),
+      title: 'AI Model Quality Benchmark',
+      description:
+        'Compares AI-generated code against a human baseline. Calculates the delta in health metrics, ' +
+        'tracks introduced smells, and stores results in a benchmark history file. ' +
+        'Supports per-model statistics aggregation.',
+      inputSchema: {
+        model_name: z.string().describe('AI model name, e.g. "claude-sonnet-4-6"'),
+        generated_code: z.string().describe('The AI-generated code to evaluate'),
+        reference_code: z.string().describe('Human-written reference code (baseline)'),
+        file_path: z.string().describe('Reference path for history file metadata'),
+        language: z.enum(['typescript', 'javascript', 'python', 'java']),
+        get_stats: z.boolean().default(false)
+          .describe('If true: return aggregated statistics for the model instead of a single benchmark'),
+        history_path: z.string().optional()
+          .describe('Custom path to history file (default: benchmarks/ai-model-quality-history.json)'),
+      },
+      annotations: {
+        title: 'AI Model Quality Benchmark',
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
     },
-    async (args) => handleModelBenchmark(args),
+    async (args: Record<string, unknown>) => handleModelBenchmark(args),
   );
 }
 
 async function handleModelBenchmark(
   args: Record<string, unknown>,
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean }> {
-  const modelName = args.model_name as string;
-  const historyPath = (args.history_path as string | undefined) ?? DEFAULT_HISTORY_PATH;
+  const modelName = args['model_name'] as string;
+  const customHistoryPath = args['history_path'] as string | undefined;
 
   try {
-    if ((args.get_stats as boolean | undefined) ?? false) {
+    // Validate a custom history path (it is read and written) before use.
+    const historyPath = customHistoryPath ? resolveSafePath(customHistoryPath) : DEFAULT_HISTORY_PATH;
+    if ((args['get_stats'] as boolean | undefined) ?? false) {
       return handleGetStats(modelName, historyPath);
     }
 
     return handleRunBenchmark({
       modelName,
-      generatedCode: args.generated_code as string,
-      referenceCode: args.reference_code as string,
-      filePath: args.file_path as string,
-      language: (args.language as string) ?? 'typescript',
+      generatedCode: args['generated_code'] as string,
+      referenceCode: args['reference_code'] as string,
+      filePath: args['file_path'] as string,
+      language: (args['language'] as string) ?? 'typescript',
       historyPath,
     });
   } catch (error: unknown) {

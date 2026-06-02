@@ -5,13 +5,7 @@ import fg from 'fast-glob';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeFile, analyzeAIReadiness, type AIReadinessFile } from '@healthy-ai-code/core';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 const LANGUAGE_EXTENSIONS: Record<string, string[]> = {
   typescript: ['ts', 'tsx'],
@@ -27,13 +21,13 @@ const LANGUAGE_EXTENSIONS: Record<string, string[]> = {
   swift: ['swift'],
 };
 
-const directorySchema = z.string().describe('Absolut sökväg till katalogen som ska analyseras');
+const directorySchema = z.string().describe('Absolute path to the directory to analyse');
 const languageEnum = z.enum(['typescript', 'javascript', 'python', 'java', 'kotlin', 'csharp', 'rust', 'go', 'php', 'ruby', 'swift']);
-const languageSchema = languageEnum.optional().describe('Primärt språk att filtrera filer på. Default: typescript.');
+const languageSchema = languageEnum.optional().describe('Primary language to filter files on. Default: typescript.');
 const maxFilesNum = z.number().int();
 const maxFilesBounded = maxFilesNum.min(1).max(500);
 const maxFilesWithDefault = maxFilesBounded.default(200);
-const maxFilesSchema = maxFilesWithDefault.describe('Maxantal filer att analysera (default 200)');
+const maxFilesSchema = maxFilesWithDefault.describe('Maximum number of files to analyse (default 200)');
 
 const AI_READINESS_SCHEMA = {
   directory: directorySchema,
@@ -48,14 +42,26 @@ interface AIReadinessOptions {
 }
 
 export function registerAIReadiness(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_ai_readiness',
-    'Beräknar AI-Readiness Score (0-10) för en katalog. Composite-metric som mäter hur väl en kodbas lämpar sig för AI-assisterad utveckling: naming clarity, type coverage, context window fit, doc signal och modularity. Returnerar score, per-dimensionsbreakdown, AI-blockers och en kort sammanfattning.',
-    AI_READINESS_SCHEMA,
-    async (args) => handleAIReadiness({
-      directory: args.directory as string,
-      language: (args.language as string | undefined) ?? 'typescript',
-      maxFiles: (args.maxFiles as number | undefined) ?? 200,
+    {
+      title: 'AI-Readiness Score',
+      description:
+        'Computes an AI-Readiness Score (0-10) for a directory. A composite metric of how well a ' +
+        'codebase suits AI-assisted development: naming clarity, type coverage, context-window fit, ' +
+        'doc signal, and modularity. Returns the score, a per-dimension breakdown, AI blockers, and a short summary.',
+      inputSchema: AI_READINESS_SCHEMA,
+      annotations: {
+        title: 'AI-Readiness Score',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (args: Record<string, unknown>) => handleAIReadiness({
+      directory: args['directory'] as string,
+      language: (args['language'] as string | undefined) ?? 'typescript',
+      maxFiles: (args['maxFiles'] as number | undefined) ?? 200,
     }),
   );
 }
@@ -144,13 +150,14 @@ function errorResponse(ctx: ErrorContext) {
 async function handleAIReadiness(
   opts: AIReadinessOptions,
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean }> {
-  const { directory, language, maxFiles } = opts;
+  const { language, maxFiles } = opts;
   try {
     const exts = LANGUAGE_EXTENSIONS[language];
     if (!exts) {
-      return errorResponse({ message: `Unsupported language: ${language}`, directory, language });
+      return errorResponse({ message: `Unsupported language: ${language}`, directory: opts.directory, language });
     }
 
+    const directory = resolveSafePath(opts.directory);
     const stat = await fs.stat(directory);
     if (!stat.isDirectory()) {
       return errorResponse({ message: `Not a directory: ${directory}`, directory, language });
@@ -176,6 +183,6 @@ async function handleAIReadiness(
     return { content: [{ type: 'text' as const, text: JSON.stringify(body, null, 2) }] };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return errorResponse({ message, directory, language });
+    return errorResponse({ message, directory: opts.directory, language });
   }
 }

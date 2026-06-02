@@ -7,6 +7,7 @@ import { buildNextAction, formatReviewSummary } from './shared';
 import { reviewOutputZodShape } from '../schemas/code-health-review-output.schema';
 import { structuralCache } from './structural-cache';
 import { encodeToon } from './toon-encoder';
+import { assertSafeReadableFile, resolveSafePath } from './path-safety';
 
 export function registerCodeHealthReview(server: McpServer): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +35,11 @@ export function registerCodeHealthReview(server: McpServer): void {
           ),
       },
       outputSchema: reviewOutputZodShape,
+      annotations: {
+        title: 'Code Health Review',
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
     },
     async (args: Record<string, unknown>) =>
       handleCodeHealthReview(
@@ -50,6 +56,10 @@ export async function handleCodeHealthReview(
   responseFormat: 'json' | 'toon' = 'json'
 ) {
   try {
+    // Path-traversal + single-file size guard before any disk access.
+    filePath = assertSafeReadableFile(filePath);
+    if (repoPath !== undefined) repoPath = resolveSafePath(repoPath);
+
     // Check structural cache for re-review optimisation
     let currentMtime: number | undefined;
     try {
@@ -88,7 +98,7 @@ export async function handleCodeHealthReview(
         // Extension fields for re-review
         cacheHit: true,
         smellIndex,
-        note: 'Re-review: returnerar byteRange-index, inte full text. Anropa med focusLines för specifikt utdrag.',
+        note: 'Re-review: returns a byteRange index, not the full text. Call with focusLines for a specific excerpt.',
       };
 
       return {

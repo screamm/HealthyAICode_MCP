@@ -9,6 +9,9 @@ class MockMcpServer {
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
     this.tools.set(name, handler);
   }
+  registerTool(name: string, _config: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
   async callTool(name: string, args: any): Promise<any> {
     const handler = this.tools.get(name);
     if (!handler) throw new Error(`Tool ${name} not found`);
@@ -68,7 +71,7 @@ export function analyzeData(data: any, config: any, opts: any, ctx: any, log: an
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.improvement).toBeLessThan(1.0);
-    expect(parsed.businessCase.recommendation).toContain('gott skick');
+    expect(parsed.businessCase.recommendation).toContain('good shape');
 
     await fs.unlink(tmpFile);
   });
@@ -122,7 +125,7 @@ export function big(a: any, b: any, c: any, d: any, e: any, f: any): void {
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerRefactoringBusinessCase(server);
     expect(registered).toContain('code_health_refactoring_business_case');

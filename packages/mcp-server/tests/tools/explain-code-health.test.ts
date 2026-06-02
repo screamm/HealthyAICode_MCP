@@ -6,6 +6,9 @@ class MockMcpServer {
   tool(name: string, _desc: string, _schema: any, handler: Function): void {
     this.tools.set(name, handler);
   }
+  registerTool(name: string, _config: any, handler: Function): void {
+    this.tools.set(name, handler);
+  }
   async callTool(name: string, args: any): Promise<any> {
     const handler = this.tools.get(name);
     if (!handler) throw new Error(`Tool ${name} not found`);
@@ -23,7 +26,7 @@ describe('explain_code_health tool', () => {
 
     expect(text).toContain('Code Health');
     expect(text).toContain('9.5');
-    expect(text).toContain('AI-redo');
+    expect(text).toContain('AI-ready');
     expect(text).toContain('1-10');
   });
 
@@ -34,16 +37,16 @@ describe('explain_code_health tool', () => {
     const result = await server.callTool('explain_code_health', {});
     const text = result.content[0].text;
 
-    expect(text).toContain('Röd');
-    expect(text).toContain('Gul');
-    expect(text).toContain('Grön');
-    expect(text.toLowerCase()).toMatch(/komplexitet|nästning|längd/);
+    expect(text).toContain('Red');
+    expect(text).toContain('Yellow');
+    expect(text).toContain('Green');
+    expect(text.toLowerCase()).toMatch(/complexity|nesting|length/);
   });
 
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerExplainCodeHealth(server);
     expect(registered).toContain('explain_code_health');
@@ -78,7 +81,7 @@ describe('explain_code_health_productivity tool', () => {
   it('verktyget registreras med rätt namn', () => {
     const registered: string[] = [];
     const server = {
-      tool: (name: string, _d: string, _s: any, _h: Function) => { registered.push(name); },
+      registerTool: (name: string, _config: any, _h: Function) => { registered.push(name); },
     } as any;
     registerExplainProductivity(server);
     expect(registered).toContain('explain_code_health_productivity');

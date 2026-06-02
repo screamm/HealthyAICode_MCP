@@ -7,33 +7,41 @@ import { analyzeArchitectureDebt, readProjectFiles } from '@healthy-ai-code/core
 import type { ModuleDebtProfile, DependencyCycle } from '@healthy-ai-code/core';
 import type { GraphNode, GraphLink, GraphData } from './architecture-report-template';
 import { generateHtml } from './architecture-report-template';
-
-type McpToolRegistrar = (
-  name: string,
-  desc: string,
-  schema: z.ZodRawShape,
-  handler: (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
-) => void;
+import { resolveSafePath } from './path-safety';
 
 const archMaxFilesInt = z.number().int();
 const archMaxFilesBase = archMaxFilesInt.min(1).max(10000);
-const archMaxFilesSchema = archMaxFilesBase.default(300).describe('Maxantal filer att analysera (default: 300)');
+const archMaxFilesSchema = archMaxFilesBase.default(300).describe('Maximum number of files to analyse (default: 300)');
 
 export function registerArchitectureReport(server: McpServer): void {
-  (server.tool as unknown as McpToolRegistrar)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.registerTool as any)(
     'code_health_architecture_report',
-    'Genererar en self-contained interaktiv HTML-fil med kraft-riktad beroendegraf (force-directed graph). Visualiserar arkitekturella skulder: FAN-IN/OUT, cykliska beroenden, Cost-of-Change severity per fil. Fungerar offline — ingen extern server behövs.',
     {
-      directory: z.string().describe('Absolut sökväg till projektets rotkatalog'),
-      output: z.string().optional().describe('Sökväg för HTML-filen (default: <directory>/architecture-report.html)'),
-      maxFiles: archMaxFilesSchema,
-      minCostOfChange: z.enum(['all', 'medium', 'high']).default('all').describe('Filtrera bort noder under angiven severity (default: all)'),
+      title: 'Architecture Report (HTML)',
+      description:
+        'Generates a self-contained interactive HTML file with a force-directed dependency graph. ' +
+        'Visualises architectural debt: FAN-IN/OUT, circular dependencies, and Cost-of-Change severity per file. ' +
+        'Works offline — no external server required. Writes the HTML report to disk.',
+      inputSchema: {
+        directory: z.string().describe('Absolute path to the project root directory'),
+        output: z.string().optional().describe('Path for the HTML file (default: <directory>/architecture-report.html)'),
+        maxFiles: archMaxFilesSchema,
+        minCostOfChange: z.enum(['all', 'medium', 'high']).default('all').describe('Filter out nodes below the given severity (default: all)'),
+      },
+      annotations: {
+        title: 'Architecture Report (HTML)',
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
-    async (args) => handleArchitectureReport(
-      args.directory as string,
-      args.output as string | undefined,
-      args.maxFiles as number,
-      args.minCostOfChange as 'all' | 'medium' | 'high',
+    async (args: Record<string, unknown>) => handleArchitectureReport(
+      args['directory'] as string,
+      args['output'] as string | undefined,
+      args['maxFiles'] as number,
+      args['minCostOfChange'] as 'all' | 'medium' | 'high',
     ),
   );
 }
@@ -80,7 +88,13 @@ async function handleArchitectureReport(
   minCostOfChange: 'all' | 'medium' | 'high',
 ) {
   try {
-    const resolvedOutput = outputPath ?? path.join(directory, 'architecture-report.html');
+    const safeDirectory = resolveSafePath(directory);
+    // Validate the output path too (it is written to disk). When omitted it
+    // defaults inside the analysed directory, which is already validated.
+    const resolvedOutput = outputPath
+      ? resolveSafePath(outputPath)
+      : path.join(safeDirectory, 'architecture-report.html');
+    directory = safeDirectory;
 
     const allFiles = await readProjectFiles(directory);
     const fileEntries = Object.entries(allFiles).slice(0, maxFiles);
