@@ -161,9 +161,9 @@ function mean(values: number[]): number {
 }
 
 function interpret(auroc: number): string {
-  if (auroc >= 0.75) return 'Stark validering — hälsopoängen separerar buggar väl';
-  if (auroc >= 0.60) return 'Måttlig validering — viss korrelation observerad';
-  return 'Svag korrelation — kräver fler datapunkter eller kalibrering';
+  if (auroc >= 0.75) return 'Strong validation — the health score separates bugs well';
+  if (auroc >= 0.60) return 'Moderate validation — some correlation observed';
+  return 'Weak correlation — requires more data points or calibration';
 }
 
 /** Empty report returned when no records are provided. */

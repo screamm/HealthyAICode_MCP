@@ -243,17 +243,17 @@ function cloneGroupsToSmells(groups: CloneGroup[]): Smell[] {
     const severity: Smell['severity'] = blockSize > 15 ? 'high' : 'medium';
     const typeLabel =
       group.cloneType === 1
-        ? 'exact klon (typ 1) — identisk kod'
-        : 'strukturell klon (typ 2) — identiska strukturer med oliknamnade identifierare';
+        ? 'exact clone (type 1) — identical code'
+        : 'structural clone (type 2) — identical structures with differently named identifiers';
     const dupRanges = rest
-      .map(o => `raderna ${o.startLine}–${o.endLine}`)
+      .map(o => `lines ${o.startLine}–${o.endLine}`)
       .join(', ');
     smells.push({
       type: 'DuplicateCode',
       severity,
       line: first.startLine,
-      description: `DuplicateCode — ${typeLabel} (block om ${blockSize} rader duplicerat ${rest.length + 1} gånger)`,
-      suggestion: `Extrahera det duplicerade blocket (rad ${first.startLine}–${first.endLine}) till en gemensam funktion. Duplikat finns på: ${dupRanges}.`,
+      description: `DuplicateCode — ${typeLabel} (block of ${blockSize} lines duplicated ${rest.length + 1} times)`,
+      suggestion: `Extract the duplicated block (lines ${first.startLine}–${first.endLine}) into a shared function. Duplicates are at: ${dupRanges}.`,
       metricValue: blockSize,
       chunkRanges: group.occurrences,
     });

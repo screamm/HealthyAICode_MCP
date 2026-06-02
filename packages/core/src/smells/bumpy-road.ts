@@ -103,8 +103,8 @@ export function detectBumpyRoadChunks(fnNode: Parser.SyntaxNode): Smell | null {
     severity,
     line: fnNode.startPosition.row + 1,
     functionName: name,
-    description: `'${name}' har ${chunkRanges.length} sekventiella kontrollflödes-chunks i samma funktion (gräns: ${BUMPY_ROAD_CHUNK_THRESHOLD}). Funktionen kapslar inte in sitt ansvar.`,
-    suggestion: `Extract each top-level chunk i '${name}' till en namngiven hjälpfunktion (t.ex. handle<Vad-block-gör>). Detta gör funktionens story tydlig och varje chunk testbart isolerat.`,
+    description: `'${name}' has ${chunkRanges.length} sequential control-flow chunks in the same function (limit: ${BUMPY_ROAD_CHUNK_THRESHOLD}). The function does not encapsulate its responsibilities.`,
+    suggestion: `Extract each top-level chunk in '${name}' into a named helper function (e.g. handle<WhatTheBlockDoes>). This makes the function's story clear and each chunk testable in isolation.`,
     chunkRanges,
   };
 }

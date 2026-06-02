@@ -49,8 +49,8 @@ function checkFunction(node: SyntaxNode, profile: LanguageProfile, acc: Smell[])
     severity: count >= 5 ? 'high' : 'medium',
     line: node.startPosition.row + 1,
     functionName: fnName,
-    description: `'${fnName}' tar ${count} primitiva parametrar (${names.join(', ')}) — saknar domänabstraktion.`,
-    suggestion: `Gruppera de primitiva parametrarna till ett välnamngivet domänobjekt (t.ex. interface ${capitalize(fnName)}Options) för att förbättra typsäkerheten och läsbarheten.`,
+    description: `'${fnName}' takes ${count} primitive parameters (${names.join(', ')}) — missing a domain abstraction.`,
+    suggestion: `Group the primitive parameters into a well-named domain object (e.g. interface ${capitalize(fnName)}Options) to improve type safety and readability.`,
   });
 }
 

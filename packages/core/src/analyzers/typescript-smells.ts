@@ -40,6 +40,6 @@ export function collectTypeScriptSmells(
     if (br) findings.push(br);
   }
 
-  if (mi.index < 30) findings.push({ type: 'LowMaintainability', severity: mi.index < 15 ? 'medium' : 'low', line: 1, description: `Maintainability Index är ${mi.index}/100 — filen är svår att underhålla (Halstead Volume=${Math.round(mi.halstead.volume)}, CC=${Math.round(avgCC)}).`, suggestion: 'Minska filens komplexitet: extrahera funktioner, förenkla logik, reducera cyklomatisk komplexitet.' } as Smell);
+  if (mi.index < 30) findings.push({ type: 'LowMaintainability', severity: mi.index < 15 ? 'medium' : 'low', line: 1, description: `Maintainability Index is ${mi.index}/100 — the file is hard to maintain (Halstead Volume=${Math.round(mi.halstead.volume)}, CC=${Math.round(avgCC)}).`, suggestion: 'Reduce the file complexity: extract functions, simplify logic, reduce cyclomatic complexity.' } as Smell);
   return findings;
 }

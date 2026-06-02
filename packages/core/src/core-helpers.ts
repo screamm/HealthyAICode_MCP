@@ -38,7 +38,7 @@ export function buildUnsupportedResult(code: string, filePath: string): HealthRe
 }
 
 function buildLargeFileSmell(totalLines: number): Smell {
-  return { type: 'LargeFile', severity: 'medium', line: 1, description: `Fil har ${totalLines} rader — analys kan vara långsam`, suggestion: 'Överväg att dela upp filen i mindre moduler.' };
+  return { type: 'LargeFile', severity: 'medium', line: 1, description: `File has ${totalLines} lines — analysis may be slow`, suggestion: 'Consider splitting the file into smaller modules.' };
 }
 
 /** Returns a zeroed-out MetricBreakdown for stubs, empty files, and unsupported languages. */

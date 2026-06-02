@@ -243,7 +243,7 @@ export function methodCouplingToSmells(result: MethodCouplingResult): Smell[] {
     type: 'MethodTemporalCoupling' as const,
     severity: p.severity === 'high' ? 'medium' : 'low' as Smell['severity'],
     line: 1,  // file-level finding; UI may resolve to the line of the highest-DOA method
-    description: `'${p.methodA}' och '${p.methodB}' samändras i ${(p.couplingStrength * 100).toFixed(0)}% av ändringarna (${p.coChangeCount} av ${p.combinedTouches} commits).`,
-    suggestion: `Dolt samband mellan metoderna. Överväg att (1) extrahera deras gemensamma logik till en hjälpfunktion, (2) flytta dem till samma klass/modul, eller (3) verifiera att de bör vara explicit beroende av varandra via en typ.`,
+    description: `'${p.methodA}' and '${p.methodB}' change together in ${(p.couplingStrength * 100).toFixed(0)}% of the changes (${p.coChangeCount} of ${p.combinedTouches} commits).`,
+    suggestion: `Hidden coupling between the methods. Consider (1) extracting their shared logic into a helper function, (2) moving them into the same class/module, or (3) verifying that they should be explicitly dependent on each other via a type.`,
   }));
 }

@@ -44,8 +44,8 @@ export function detectComplexityMassConcentration(functions: FunctionResult[]): 
     severity,
     line: 1,
     metricValue: erosion,
-    description: `Erosionsindex ${erosionPct} % — ${overThreshold} procentenheter över tröskeln (60 %). Agentkod uppvisar typiskt 0.68 kontra mänsklig kod 0.34.`,
+    description: `Erosion index ${erosionPct} % — ${overThreshold} percentage points over the threshold (60 %). Agent code typically shows 0.68 versus human code 0.34.`,
     suggestion:
-      'Extrahera komplexa funktioner (CC > 10) till separata moduler tills de inte längre dominerar komplexitetsmassan.',
+      'Extract complex functions (CC > 10) into separate modules until they no longer dominate the complexity mass.',
   };
 }

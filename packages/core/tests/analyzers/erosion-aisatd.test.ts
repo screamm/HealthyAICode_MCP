@@ -143,7 +143,7 @@ describe('detectComplexityMassConcentration', () => {
       fn('s1', 2, 10),
       fn('s2', 2, 10),
     ]);
-    expect(result!.description).toMatch(/Erosionsindex \d+\.\d+ %/);
+    expect(result!.description).toMatch(/Erosion index \d+\.\d+ %/);
   });
 
   it('works with the high-erosion.ts fixture file', () => {

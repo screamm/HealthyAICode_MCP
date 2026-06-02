@@ -2,9 +2,9 @@ import Parser from 'tree-sitter';
 import type { Smell } from '../types';
 
 const COMMENT_PATTERNS: Array<{ regex: RegExp; severity: Smell['severity']; suggestion: string }> = [
-  { regex: /@ts-nocheck/, severity: 'critical', suggestion: 'Ta bort @ts-nocheck och fixa typfelen' },
-  { regex: /@ts-ignore/, severity: 'high', suggestion: 'Ersätt @ts-ignore med korrekt typning eller @ts-expect-error' },
-  { regex: /@ts-expect-error/, severity: 'low', suggestion: 'OK när den parar med ett förväntat fel; överväg att lösa felet' },
+  { regex: /@ts-nocheck/, severity: 'critical', suggestion: 'Remove @ts-nocheck and fix the type errors' },
+  { regex: /@ts-ignore/, severity: 'high', suggestion: 'Replace @ts-ignore with correct typing or @ts-expect-error' },
+  { regex: /@ts-expect-error/, severity: 'low', suggestion: 'OK when it pairs with an expected error; consider resolving the error' },
 ];
 
 export function detectTypeSafetyEscapes(root: Parser.SyntaxNode, source: string): Smell[] {
@@ -40,8 +40,8 @@ function walkForAnyUsage(node: Parser.SyntaxNode, smells: Smell[]): void {
       type: 'TypeSafetyEscape',
       severity: 'medium',
       line: node.startPosition.row + 1,
-      description: `Användning av 'any' på rad ${node.startPosition.row + 1}`,
-      suggestion: "Ersätt 'any' med 'unknown' eller en specifik typ",
+      description: `Use of 'any' on line ${node.startPosition.row + 1}`,
+      suggestion: "Replace 'any' with 'unknown' or a specific type",
     });
   }
   for (const child of node.children) walkForAnyUsage(child, smells);

@@ -26,8 +26,8 @@ export function analyzeDockerfile(code: string, filePath = '<inline>') {
       type: 'ComplexMethod',
       severity: 'medium',
       line: 1,
-      description: `${complexRunCount} RUN-instruktioner med && (gräns: ${COMPLEX_DOCKER_LAYER_THRESHOLD}) — komplexa Docker-lager försvårar caching och felsökning`,
-      suggestion: 'Konsolidera relaterade RUN-instruktioner eller dela Dockerfile i multi-stage builds.',
+      description: `${complexRunCount} RUN instructions with && (limit: ${COMPLEX_DOCKER_LAYER_THRESHOLD}) — complex Docker layers make caching and debugging harder`,
+      suggestion: 'Consolidate related RUN instructions or split the Dockerfile into multi-stage builds.',
     };
     return { ...base, smells: [...base.smells, smell] };
   }

@@ -78,9 +78,9 @@ export function analyzeAIReadiness(files: AIReadinessFile[]): AIReadinessResult 
     if (naming.score < 5) {
       blockers.push({
         filePath: file.path,
-        issue: `Låg naming clarity (${naming.score}/10): ${naming.singleCharVars} enbokstavs-variabler, ${naming.crypticNames.length} kryptiska namn`,
+        issue: `Low naming clarity (${naming.score}/10): ${naming.singleCharVars} single-character variables, ${naming.crypticNames.length} cryptic names`,
         impact: naming.score < 3 ? 'high' : 'medium',
-        recommendation: 'Byt ut korta namn mot intention-avslöjande identifierare; håll en konsekvent casing-konvention per fil.',
+        recommendation: 'Replace short names with intention-revealing identifiers; keep a consistent casing convention per file.',
       });
     }
 
@@ -89,9 +89,9 @@ export function analyzeAIReadiness(files: AIReadinessFile[]): AIReadinessResult 
     if (tc.score < 5 && tc.totalFunctions > 0) {
       blockers.push({
         filePath: file.path,
-        issue: `Låg type coverage (${tc.score}/10): ${tc.annotatedParams}/${tc.totalParams} parametrar och ${tc.annotatedReturns}/${tc.totalFunctions} returvärden annoterade`,
+        issue: `Low type coverage (${tc.score}/10): ${tc.annotatedParams}/${tc.totalParams} parameters and ${tc.annotatedReturns}/${tc.totalFunctions} return values annotated`,
         impact: tc.score < 3 ? 'high' : 'medium',
-        recommendation: 'Lägg till explicita typannoteringar på publika funktioner — det halverar AI-hallucinationsrisk.',
+        recommendation: 'Add explicit type annotations to public functions — it halves the AI hallucination risk.',
       });
     }
 
@@ -101,9 +101,9 @@ export function analyzeAIReadiness(files: AIReadinessFile[]): AIReadinessResult 
     if (fit.functionsExceedingContext > 0) {
       blockers.push({
         filePath: file.path,
-        issue: `${fit.functionsExceedingContext} funktion(er) överstiger 2 000 tokens (max ${fit.maxFunctionTokens} tokens)`,
+        issue: `${fit.functionsExceedingContext} function(s) exceed 2,000 tokens (max ${fit.maxFunctionTokens} tokens)`,
         impact: fit.maxFunctionTokens > 4000 ? 'high' : 'medium',
-        recommendation: 'Bryt upp långa funktioner i mindre, fokuserade enheter så att AI-assistenter kan redigera dem atomärt.',
+        recommendation: 'Break up long functions into smaller, focused units so AI assistants can edit them atomically.',
       });
     }
 
@@ -112,9 +112,9 @@ export function analyzeAIReadiness(files: AIReadinessFile[]): AIReadinessResult 
     if (docSignal < 4 && functions.length > 0) {
       blockers.push({
         filePath: file.path,
-        issue: `Låg doc signal (${docSignal}/10): få exporterade symboler har docstring/JSDoc`,
+        issue: `Low doc signal (${docSignal}/10): few exported symbols have a docstring/JSDoc`,
         impact: 'low',
-        recommendation: 'Skriv en kort intent-beskrivning ovanför varje exporterad funktion — fokus på *varför*, inte *vad*.',
+        recommendation: 'Write a short intent description above each exported function — focus on *why*, not *what*.',
       });
     }
 
@@ -124,9 +124,9 @@ export function analyzeAIReadiness(files: AIReadinessFile[]): AIReadinessResult 
     if (modularity < 4) {
       blockers.push({
         filePath: file.path,
-        issue: `Hög kognitiv komplexitet (avg CC ≈ ${cc.toFixed(1)}): modularity-score ${modularity.toFixed(1)}/10`,
+        issue: `High cognitive complexity (avg CC ≈ ${cc.toFixed(1)}): modularity score ${modularity.toFixed(1)}/10`,
         impact: modularity < 2 ? 'high' : 'medium',
-        recommendation: 'Extrahera djupt nästlade block och tidiga returer; minska antal logiska operatorer per funktion.',
+        recommendation: 'Extract deeply nested blocks and early returns; reduce the number of logical operators per function.',
       });
     }
   }

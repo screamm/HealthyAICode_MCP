@@ -191,7 +191,7 @@ describe('detectDuplicateCode', () => {
 
     it('description mentions structural clone for type-2 finds', () => {
       const smells = detectDuplicateCode(STRUCTURAL_CLONE_CODE);
-      const type2 = smells.find(s => s.description.includes('typ 2'));
+      const type2 = smells.find(s => s.description.includes('type 2'));
       // Type 2 should be reported when exact-hash doesn't match
       expect(type2).toBeDefined();
     });

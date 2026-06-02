@@ -29,8 +29,8 @@ export function analyzeStructuralTierC(
       type: 'LargeFile',
       severity: 'medium',
       line: 1,
-      description: `Filen har ${totalLines} rader (gräns: ${LARGE_FILE_THRESHOLD})`,
-      suggestion: 'Dela upp filen i mindre, fokuserade konfigurationsfiler.',
+      description: `File has ${totalLines} lines (limit: ${LARGE_FILE_THRESHOLD})`,
+      suggestion: 'Split the file into smaller, focused configuration files.',
     });
   }
 

@@ -24,8 +24,8 @@ export function detectSATDFromText(code: string): Smell[] {
         type: 'SATD' as const,
         severity: 'low' as const,
         line: idx + 1,
-        description: `${keyword} kommentar: ${rest || '(ingen text)'}`,
-        suggestion: 'Lös den tekniska skulden eller skapa ett issue för att spåra den.',
+        description: `${keyword} comment: ${rest || '(no text)'}`,
+        suggestion: 'Resolve the technical debt or create an issue to track it.',
       },
     ];
   });
@@ -85,8 +85,8 @@ export function detectMagicNumbersFromText(code: string, filePath: string): Smel
       type: 'MagicNumber' as const,
       severity: 'low' as const,
       line: idx + 1,
-      description: `Magiskt tal ${match[0].trim()} — bör ersättas med namngiven konstant`,
-      suggestion: 'Extrahera till en namngiven konstant med beskrivande namn.',
+      description: `Magic number ${match[0].trim()} — should be replaced with a named constant`,
+      suggestion: 'Extract it into a named constant with a descriptive name.',
     }));
   });
 }

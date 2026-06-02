@@ -11,8 +11,8 @@ export function detectMagicNumbers(root: Parser.SyntaxNode, filePath: string): S
   visitNode(root, null, 0, perFn);
   return [...perFn.values()].filter(e => e.count >= MIN_MAGIC_PER_FUNCTION).map(e => ({
     type: 'MagicNumber' as const, severity: 'medium' as const, functionName: e.name, line: e.line,
-    description: `'${e.name}' innehåller ${e.count} magiska tal`,
-    suggestion: `Extrahera tal i '${e.name}' till namngivna konstanter`,
+    description: `'${e.name}' contains ${e.count} magic numbers`,
+    suggestion: `Extract the numbers in '${e.name}' into named constants`,
   }));
 }
 

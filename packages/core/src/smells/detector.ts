@@ -79,13 +79,13 @@ export function detectSmells(functions: FunctionResult[], metrics: MetricBreakdo
 
 function detectLargeFile(metrics: MetricBreakdown, limit: number): Smell | null {
   if (metrics.totalLines <= limit) return null;
-  return { type: 'LargeFile', severity: 'medium', line: 1, description: `Fil har ${metrics.totalLines} rader (gräns: ${limit})`, suggestion: 'Dela upp filen i mindre, fokuserade moduler' };
+  return { type: 'LargeFile', severity: 'medium', line: 1, description: `File has ${metrics.totalLines} lines (limit: ${limit})`, suggestion: 'Split the file into smaller, focused modules' };
 }
 
 function detectComplexMethod(fn: FunctionResult, thresholds: ResolvedThresholds): Smell | null {
   const { complexMethodThreshold: limit, criticalComplexityThreshold: criticalLimit } = thresholds;
   if (fn.cyclomaticComplexity <= limit) return null;
-  return { type: 'ComplexMethod', line: fn.line, functionName: fn.name, severity: fn.cyclomaticComplexity > criticalLimit ? 'critical' : 'high', description: `'${fn.name}' har cyklomatisk komplexitet ${fn.cyclomaticComplexity} (gräns: ${limit})`, suggestion: `Extrahera logik från '${fn.name}' till separata hjälpfunktioner` };
+  return { type: 'ComplexMethod', line: fn.line, functionName: fn.name, severity: fn.cyclomaticComplexity > criticalLimit ? 'critical' : 'high', description: `'${fn.name}' has cyclomatic complexity ${fn.cyclomaticComplexity} (limit: ${limit})`, suggestion: `Extract logic from '${fn.name}' into separate helper functions` };
 }
 
 function detectDeepNesting(fn: FunctionResult, thresholds: ResolvedThresholds): Smell | null {
@@ -99,17 +99,17 @@ function detectDeepNesting(fn: FunctionResult, thresholds: ResolvedThresholds): 
   } else {
     severity = 'medium';
   }
-  return { type: 'DeepNesting', line: fn.line, functionName: fn.name, severity, description: `'${fn.name}' har nestningsdjup ${fn.nestingDepth} (gräns: ${limit})`, suggestion: `Tillämpa early-return pattern i '${fn.name}'` };
+  return { type: 'DeepNesting', line: fn.line, functionName: fn.name, severity, description: `'${fn.name}' has nesting depth ${fn.nestingDepth} (limit: ${limit})`, suggestion: `Apply the early-return pattern in '${fn.name}'` };
 }
 
 function detectLargeMethod(fn: FunctionResult, limit: number): Smell | null {
   if (fn.length <= limit) return null;
-  return { type: 'LargeMethod', severity: 'medium', line: fn.line, functionName: fn.name, description: `'${fn.name}' är ${fn.length} rader (gräns: ${limit})`, suggestion: `Dela upp '${fn.name}' i mindre funktioner` };
+  return { type: 'LargeMethod', severity: 'medium', line: fn.line, functionName: fn.name, description: `'${fn.name}' is ${fn.length} lines (limit: ${limit})`, suggestion: `Split '${fn.name}' into smaller functions` };
 }
 
 function detectLongParameterList(fn: FunctionResult, limit: number): Smell | null {
   if (fn.parameterCount <= limit) return null;
-  return { type: 'LongParameterList', severity: 'medium', line: fn.line, functionName: fn.name, description: `'${fn.name}' har ${fn.parameterCount} parametrar (gräns: ${limit})`, suggestion: 'Gruppera parametrar i ett options-objekt' };
+  return { type: 'LongParameterList', severity: 'medium', line: fn.line, functionName: fn.name, description: `'${fn.name}' has ${fn.parameterCount} parameters (limit: ${limit})`, suggestion: 'Group the parameters into an options object' };
 }
 
 function detectHighCognitiveComplexity(fn: FunctionResult, thresholds: ResolvedThresholds): Smell | null {
@@ -120,7 +120,7 @@ function detectHighCognitiveComplexity(fn: FunctionResult, thresholds: ResolvedT
     line: fn.line,
     functionName: fn.name,
     severity: fn.cognitiveComplexity > criticalLimit ? 'critical' : 'high',
-    description: `'${fn.name}' har kognitiv komplexitet ${fn.cognitiveComplexity} (gräns: ${limit})`,
-    suggestion: `Förenkla '${fn.name}' — extrahera villkorliga grenar till namngivna hjälpfunktioner`,
+    description: `'${fn.name}' has cognitive complexity ${fn.cognitiveComplexity} (limit: ${limit})`,
+    suggestion: `Simplify '${fn.name}' — extract conditional branches into named helper functions`,
   };
 }

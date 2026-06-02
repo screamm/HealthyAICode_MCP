@@ -24,7 +24,7 @@ function checkFunction(fn: FunctionResult, cmap: Map<string, number>, maxC: numb
   if (score < SMELL_THRESHOLD || highCount < MIN_HIGH_FACTORS) return [];
   let sev: Smell['severity'] = 'medium';
   if (score >= 0.85) sev = 'critical'; else if (score >= 0.70) sev = 'high';
-  return [{ type: 'BrainMethod', severity: sev, functionName: fn.name, line: fn.line, description: `'${fn.name}' är en Brain Method (brain_score=${score.toFixed(2)}) — central, lång och komplex`, suggestion: `Bryt upp '${fn.name}'; varje av de ${highCount} höga faktorerna pekar mot en separat ansvarspunkt` } as Smell];
+  return [{ type: 'BrainMethod', severity: sev, functionName: fn.name, line: fn.line, description: `'${fn.name}' is a Brain Method (brain_score=${score.toFixed(2)}) — central, long, and complex`, suggestion: `Break up '${fn.name}'; each of the ${highCount} high factors points to a separate responsibility` } as Smell];
 }
 
 function clamp01(x: number): number { return Math.max(0, Math.min(1, x)); }

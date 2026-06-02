@@ -37,9 +37,9 @@ function buildSmell(text: string, line: number): Smell | null {
     type: 'AiAttributedSATD',
     severity,
     line,
-    description: `AI-attributerad SATD: "${aiTerm}" kombinerat med "${satdMarker}" — GenAI-inducerad teknisk skuld identifierad.`,
+    description: `AI-attributed SATD: "${aiTerm}" combined with "${satdMarker}" — GenAI-induced technical debt identified.`,
     suggestion:
-      'Lös den AI-inducerade skulden omedelbart eller addera ett spårat issue — kräver score ≥ 9.7 för loopComplete.',
+      'Resolve the AI-induced debt immediately or add a tracked issue — requires score ≥ 9.7 for loopComplete.',
   };
 }
 
