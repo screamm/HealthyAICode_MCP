@@ -229,3 +229,46 @@ Vi körde äntligen den studie hela planen vilar på — inte den skriptade simu
 **Det SINGEL viktigaste återstående steget — oförändrat och nu skärpt av piloten:** den **fullskaliga, förregistrerade Spel 3-RCT:n med en levande agent som redigerar källfiler i en faktisk loop mot riktiga issues, med ett uppgiftsurval som framkallar riskfyllda refaktoreringar** (inte additiva hjälpare som råkar vara rena). Piloten bevisade att instrumentet mäter rätt; den bevisade också att det lätta scenariot ger en liten effekt. Den fullskaliga studien är det enda som avgör om det finns en *publicerbar* kausal siffra konkurrenterna inte kan kontra — eller om vi måste pivotera ärligt till "prevention av komplexitetserosion" som det realistiska claimet. OCHS-extern-adopter och riktiga användare är nästa-efter-det, men de följer av RCT-siffran, inte tvärtom.
 
 **Sammanfattat:** detta increment gör oss inte världsbäst och löser inte marginalfrågan — det levererar tre verifierade artefakter, kör pilotstudien ärligt, och tvingar fram en nedjustering av huvudtesens styrka. Vägen är intakt; beviset som avgör den är fortfarande okört i full skala.
+
+
+---
+
+## Increment 2026-06-02 — Spel 1: behavior-equivalence-grinden
+
+**Status:** verifierad första-version, file-disjoint, allt grönt. **Detta increment gör oss INTE världsbäst** och löser inte marginalfrågan. Det levererar en riktig, körbar artefakt i den proven-empty kategorin — och tvingar samtidigt fram en ärlig avgränsning av hur mycket den faktiskt täcker.
+
+### 1. Den verifierade siffran först — fångar grinden tysta beteendebrott som testerna missar?
+
+**Detektionsgrad 90,0 % (18/20) på divergenta par. Falsk-positiv-grad 13,3 % (2/15) på ekvivalenta par.** Reproducerat av en oberoende adversariell verifierare i två separata körningar (projektets egen `scripts/behavior-equiv-bench.mjs` + verifierarens egen drivare som anropar den publika `verifyRefactor`-dispatchen, dvs exakt MCP-tool-vägen); Python-resultaten byte-identiska över båda. Full per-par-tabell i `docs/benchmarks/behavior-equivalence-results.md` (real motorkörning, 2000 inputs/par, varaktighet 93 972 ms, inga fabricerade tal).
+
+Detta är **äkta differentiell exekvering, inte heuristik**: TS/JS-motorn transpilerar båda versionerna och kör dem i en sandboxad `node:vm` med frusen `Date`/`Math.random`/`performance`, syntetiserar ~2000 gränsbiaserade typade inputs från en seedad PRNG, och jämför djupklonade returvärden + kastade felnamn + post-call argument-mutation. Python-motorn skriver båda modulerna + en autogenererad harness till en temp-dir och kör dem i en riktig Python-subprocess (hypothesis 6.155.1 bekräftat aktiv + edge-biaserad PRNG). Verifieraren bevittnade konkreta divergerande inputs (t.ex. `ts-09` fångar att en immutabel operation blev in-place via post-args-jämförelse; `py-eq-03` args=[null,0] → before kastar TypeError, after returnerar null) och såg detektioner falla vid n=1–5 inputs — äkta semantiska fångster, inte budget-utmattning. **Svaret är ja: grinden fångar genuina beteendebrott på en korpus där tester inte hade synat dem.**
+
+Lika ärligt — de 2 missarna och 2 falsk-positiverna är verkliga, inte bortförklarade:
+- **FN `py-06-slice-offbyone`:** index-parametern `k` typas heuristiskt som "str" (namn-baserad inferens), så `a[:k]` kastar TypeError på BÅDA sidor och off-by-one:en exekveras aldrig. Genuin svaghet i input-syntesen.
+- **FN `ts-08-async-await-drop`:** async-semantik-droppen syns inte i de 2000 syntetiserade inputs.
+- **FP `py-eq-03` / `py-eq-05`:** namn-baserad `_infer_kind` returnerar "any"/"optional" för parametrar som `a`, så motorn matar in `None` i funktioner fixturen avser för numerik/listor. `len(None)` → TypeError på originalet medan refaktoreringens guard returnerar None — grinden flaggar en inom-kontrakt-ekvivalent refaktorering som divergent. **Rotorsaken är otypad input-syntes på produktionsvägen** (spiken nådde 0 % FP enbart för att den bar explicita per-arg-typdomäner som denna korpusväg saknar).
+
+### 2. Är den proven-empty kategorin nu VÅR, med en okopierbar artefakt — eller är den ärliga domen "static-only advisory + mer arbete krävs"?
+
+**Båda delvis, och det måste sägas rakt.** Vi har nu en riktig artefakt ingen kommersiell produkt har: karakteriserings-test-syntes + differentiell fuzzing + en *blockerande* grind för otestad multi-språk-kod. Diffblue är Java-only och gör inget ekvivalens-claim; LLM-baserad verifiering är bevisat opålitlig (arXiv 2502.18454). Vår motor kör genuin differentiell exekvering på **endast Python och TS/JS** — för de övriga ~44 språken returnerar dispatchen ett ärligt `unverified` / `static-only-advisory`. Detta är konsekvent och korrekt formulerat i `index.ts`, gate-signalen, designnoten och results.md. **Ingen "alla 46 språk bevisat säkra"-överclaim förekommer någonstans** — verifieraren bekräftade detta som arbetets starkaste del.
+
+Den ärliga domen är därför: **kategorin är VÅR för Python/TS/JS som blockerande dynamisk grind; för resten är det static-only advisory som behöver mer arbete.** "Okopierbar" är för starkt på 90 %/13,3 %: korpusen är 35 par (10+10 divergenta, 7+8 ekvivalenta), hand-konstruerad mot en bug-taxonomi från arXiv:2602.15761 — en stark prototyp-validering, inte en fält-validerad bredd-siffra. 13,3 % FP är för högt för en grind som ska *blockera* utan att irritera; otypad input-syntes måste härdas innan vi kan kalla det produktionsfärdigt.
+
+### 3. Vad är byggt + verifierat, och det enda viktigaste återstående steget
+
+**Byggt & verifierat (file-disjoint, typecheck + tester gröna):**
+- `packages/core/src/refactor/behavior-equiv/python-equiv.ts` — Python differentiell motor (subprocess + hypothesis, jämför värde/exception-typ/argsAfter).
+- `packages/core/src/refactor/behavior-equiv/js-equiv.ts` — TS/JS-motor (`node:vm`, frusen nondeterminism, post-call-mutation-jämförelse).
+- `packages/core/src/refactor/behavior-equiv/index.ts` — dispatch `verifyRefactor(before, after, language, target)`; dynamisk verdict för py/js, ärligt `unverified` advisory för övriga.
+- Re-export av `verifyRefactor` + `VerifyResult`/`Verdict`/`VerifyMode` från `packages/core/src/index.ts`.
+- MCP-tool `packages/mcp-server/src/tools/verify-refactor.ts` (`code_health_verify_refactor`), wired i `server.ts`, registrerad i `tool-registry.ts` (29→30). **`blocking:true` endast på äkta `divergence`** — aldrig på `unverified`/`equivalent`, så en genuint ekvivalent refaktorering i ett ostött språk nekas aldrig felaktigt.
+- Gate-signal `packages/gate/src/behavior-equiv-signal.ts` — blockerar enbart på real `divergence`.
+- Korpus `packages/core/tests/fixtures/behavior-equiv/` (35 par, `manifest.json` med proveniens) + bench `scripts/behavior-equiv-bench.mjs` + publicerad `docs/benchmarks/behavior-equivalence-results.md`.
+
+**Det SINGEL viktigaste återstående steget:** implementera den **purity-/self-containment-grind** som designnoten §3/§5 redan lovar men som INTE är byggd. Verifieraren bekräftade (grep på båda motorerna): ingen AST-kontroll för `open`/`socket`/`urllib`/`subprocess`/`globals()`/modul-global-läsning. Båda motorerna fryser `time`/`random` och kör sedan funktionen rakt av. En oren enhet som råkar bete sig identiskt över de syntetiserade inputs får då ett `PASS` — vilket bryter designnotens centrala hederslöfte att IO-/global-rörande funktioner ska returnera `UNVERIFIED`, inte gissad `PASS`. **Detta är gapet mellan vad vi lovar och vad vi kör, och det måste täppas före varje produktionsclaim.** (Tätt följt av att härda den otypade input-syntesen som orsakar både FP-paren och `py-06`-missen.)
+
+### 4. Stärker detta marginal-caset mer än den (nedjusterade) gate-säkerhetstesen gjorde?
+
+**Ja — men måttligt, och av en annan anledning.** Gate-säkerhetstesen nedjusterades hårt av den riktiga-agent-piloten (+0,296 svagt, 0 vs 0 säkerhet — säkerhets-dramatiken tillhörde simuleringen). Behavior-equivalence-grinden stärker caset mer eftersom den för första gången levererar en **kategori-unik, körbar, blockerande artefakt** med en oberoende reproducerad siffra (90 %/13,3 %) i ett rum där ingen konkurrent ens gör ekvivalens-claimet — medan gate-tesen försökte försvara en *advisory-vs-enforced*-nyans som visade sig liten mot naturliga edits. Skillnaden i kvalitet: gate-tesen vilade på ett scenario; denna vilar på differentiell exekvering med bevittnade divergerande inputs.
+
+**Men ingen hype.** 90 % på 35 hand-konstruerade par är inte 90 % i fält. 13,3 % FP är för högt för hård blockering. Den lovade purity-grinden saknas. Dynamisk täckning är 2 av 46 språk. Detta är **ett äkta steg in i den proven-empty kategorin med en honest static-only-advisory-default för resten** — inte ett världsbäst-bevis. Den fullskaliga, förregistrerade Spel 3-RCT:n förblir det som avgör marginalfrågan; denna grind är ett av de differentierande vapen den RCT:n nu kan mäta, inte en ersättning för den.
