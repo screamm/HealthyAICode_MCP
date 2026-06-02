@@ -10,7 +10,14 @@
 const CHARS_PER_TOKEN = 4;
 const EXCEED_TOKENS = 2_000;
 const CONTEXT_TIERS = [4_000, 16_000, 32_000, 128_000, 200_000];
+/** Fraction of functions a recommended window must cover (90th percentile). */
+const COVERAGE_PERCENTILE = 0.9;
+/** Best possible composite score (also the perfect-fit ceiling). */
+const MAX_SCORE = 10;
+/** Multiplier used to round the score to one decimal place. */
+const ONE_DECIMAL = 10;
 
+/** A single function to be evaluated for context-window fit. */
 export interface ContextWindowFitInput {
   name: string;
   startLine: number;
@@ -18,6 +25,7 @@ export interface ContextWindowFitInput {
   content: string;
 }
 
+/** Aggregate context-window-fit metrics for a set of functions. */
 export interface ContextWindowFitResult {
   /** Composite 0..10 score. Higher is better. */
   score: number;
@@ -44,7 +52,7 @@ function approxTokens(text: string): number {
 export function analyzeContextWindowFit(functions: ContextWindowFitInput[]): ContextWindowFitResult {
   if (functions.length === 0) {
     return {
-      score: 10,
+      score: MAX_SCORE,
       avgFunctionTokens: 0,
       maxFunctionTokens: 0,
       functionsExceedingContext: 0,
@@ -59,10 +67,10 @@ export function analyzeContextWindowFit(functions: ContextWindowFitInput[]): Con
   const functionsExceedingContext = tokenCounts.filter(t => t > EXCEED_TOKENS).length;
 
   const exceedRatio = functionsExceedingContext / functions.length;
-  let score = 10 - exceedRatio * 10;
+  let score = MAX_SCORE - exceedRatio * MAX_SCORE;
   if (score < 0) score = 0;
-  if (score > 10) score = 10;
-  score = Math.round(score * 10) / 10;
+  if (score > MAX_SCORE) score = MAX_SCORE;
+  score = Math.round(score * ONE_DECIMAL) / ONE_DECIMAL;
 
   const recommendedContextSize = pickRecommendedWindow(tokenCounts);
 
@@ -81,7 +89,7 @@ export function analyzeContextWindowFit(functions: ContextWindowFitInput[]): Con
  */
 function pickRecommendedWindow(tokens: number[]): number {
   const sorted = [...tokens].sort((a, b) => a - b);
-  const idx90 = Math.max(0, Math.floor(sorted.length * 0.9) - 1);
+  const idx90 = Math.max(0, Math.floor(sorted.length * COVERAGE_PERCENTILE) - 1);
   const p90 = sorted[idx90];
   for (const tier of CONTEXT_TIERS) {
     if (tier >= p90) return tier;

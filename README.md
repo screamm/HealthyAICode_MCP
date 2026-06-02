@@ -71,6 +71,23 @@ Key smells eliminated per file: DeepNesting, ComplexMethod, MagicNumber, BumpyRo
 
 Run: `pnpm test`
 
+### Self-audit — we score our own code
+
+We hold this codebase to the same bar we apply to everyone else's. Running our own engine over our own source (`node scripts/health-audit.mjs`, which calls `analyzeFile()` on every non-generated `.ts` file in `packages/core/src` and `packages/mcp-server/src`) gives the honest picture below.
+
+| Metric | Value |
+|--------|-------|
+| Files analysed | 237 |
+| Mean score | **8.45 / 10** |
+| Files scoring a perfect 10.0 | 105 (44%) |
+| Files below 9.0 | 79 |
+| Files below 9.5 | 106 |
+| Files below 9.6 (our internal target) | 113 |
+
+No spin: our mean is **8.45**, not 9-something. The score distribution is bimodal — 105 files are already at 10.0, while the bulk of the deficit sits in a smaller set of intentionally dense files. The lowest-scoring files are our own smell detectors and behaviour-equivalence engines (e.g. `slopsquatting.ts`, `async-antipatterns.ts`, `behavior-equiv/js-equiv.ts`), which trade internal complexity for detection accuracy. We deliberately do **not** auto-refactor those: their exact output is asserted on by the test suite, and accuracy of the verification layer outweighs its own internal beauty score. We treat raising this mean as ongoing technical-debt work, tracked honestly rather than hidden.
+
+Reproduce: `node scripts/health-audit.mjs`
+
 ---
 
 ## Self-Correcting Loop

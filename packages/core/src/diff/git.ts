@@ -29,14 +29,22 @@ async function processChangedFile(git: SimpleGit, ctx: ChangeContext, acc: Chang
   if (language === 'unsupported') return;
   const currentCode = await readFileSafe(absPath);
   if (currentCode === null) return;
-  let baseCode: string | null = null;
-  try { baseCode = await git.show([`${ctx.baseBranch}:${ctx.relPath}`]); } catch { /* new file */ }
+  const baseCode = await readBaseVersion(git, ctx.baseBranch, ctx.relPath);
   if (baseCode === null) {
-    const r = analyzeCode(currentCode, language, absPath);
-    if (r.score < NEW_FILE_UNHEALTHY_THRESHOLD) acc.newUnhealthyFiles.push(r);
+    recordIfNewUnhealthy(analyzeCode(currentCode, language, absPath), acc);
     return;
   }
   applyComparison({ baseResult: analyzeCode(baseCode, language, absPath), currentResult: analyzeCode(currentCode, language, absPath) }, ctx.relPath, acc);
+}
+
+/** Reads a file's content at the base branch, returning null when the file is new (no base version). */
+async function readBaseVersion(git: SimpleGit, baseBranch: string, relPath: string): Promise<string | null> {
+  try { return await git.show([`${baseBranch}:${relPath}`]); } catch { return null; /* new file */ }
+}
+
+/** Records a brand-new file as unhealthy when its score falls below the new-file threshold. */
+function recordIfNewUnhealthy(result: HealthResult, acc: ChangesetAccumulator): void {
+  if (result.score < NEW_FILE_UNHEALTHY_THRESHOLD) acc.newUnhealthyFiles.push(result);
 }
 
 async function readFileSafe(absPath: string): Promise<string | null> {

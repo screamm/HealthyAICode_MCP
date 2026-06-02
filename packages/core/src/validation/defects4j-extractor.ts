@@ -7,6 +7,7 @@
  * Both run on Linux/macOS only (Windows is not supported by the tooling).
  */
 
+/** Static metadata describing the Defects4J dataset (version, size, projects, citation). */
 export interface Defects4JInfo {
   version: string;
   totalBugs: number;
@@ -17,6 +18,7 @@ export interface Defects4JInfo {
   citation: string;
 }
 
+/** Canonical Defects4J 2.0.0 metadata: 835 bugs across 17 Apache/Google projects. */
 export const DEFECTS4J_INFO: Defects4JInfo = {
   version: '2.0.0',
   totalBugs: 835,
