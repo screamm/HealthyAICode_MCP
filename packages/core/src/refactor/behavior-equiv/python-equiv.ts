@@ -90,6 +90,13 @@ export interface PythonEquivOptions {
   readonly python?: string;
   /** Deterministic seed for input synthesis (default 1337). */
   readonly seed?: number;
+  /**
+   * When true (default) the engine statically refuses to differentially execute a target
+   * that is impure / not self-contained (file/IO, network, subprocess, global mutation,
+   * unfrozen nondeterminism) and returns `verdict:'unverified'` with reason `impure: <cause>`.
+   * Set false only to bypass the gate in controlled tests.
+   */
+  readonly checkPurity?: boolean;
 }
 
 interface ExecResult {
@@ -194,6 +201,212 @@ def _load_func(file_path, mod_name, func_name):
     return fn
 
 
+# --- Purity / self-containment gate ------------------------------------------------------
+# BEFORE running differential execution we statically check whether the TARGET function is
+# pure enough to be deterministically comparable. Executing an impure / non-self-contained
+# function yields a FALSE pass-or-divergence: the result would depend on the filesystem, the
+# network, the wall clock, an unseeded RNG, or module-level state mutated across the input
+# loop — none of which the harness controls. When any such cause is found we decline with
+# verdict 'unverified' and a SPECIFIC reason rather than fabricating a verdict.
+#
+# Scope: the analysis is FUNCTION-SCOPED (the target's own body + any nested functions it
+# defines). It deliberately does NOT flag:
+#   * mutation of the function's OWN parameters (e.g. acc.append(x), d[k]=v) -- that
+#     is observable behaviour the engine already compares via post-call argument state, and
+#     is the very thing the mutable-default / reordered-side-effect corpus pairs test.
+#   * pure reads of module-level CONSTANTS used as default argument values.
+# It DOES flag: file/IO, network, subprocess/os process control, global/nonlocal
+# writes, writes to module-level names, and nondeterministic sources that are not already
+# frozen by _freeze_nondeterminism (datetime.now/today, random used WITHOUT a
+# local seeded RNG, uuid, os.environ/os.getenv, secrets).
+
+# Module names whose mere import-and-use signals an un-sandboxable effect.
+_IMPURE_MODULES = {
+    "io": "file/IO (io)",
+    "pathlib": "file/IO (pathlib)",
+    "socket": "network (socket)",
+    "urllib": "network (urllib)",
+    "requests": "network (requests)",
+    "http": "network (http)",
+    "httpx": "network (httpx)",
+    "ftplib": "network (ftplib)",
+    "smtplib": "network (smtplib)",
+    "subprocess": "subprocess",
+    "shutil": "filesystem mutation (shutil)",
+    "tempfile": "filesystem (tempfile)",
+    "sqlite3": "database (sqlite3)",
+    "uuid": "nondeterministic id source (uuid) not frozen",
+    "secrets": "nondeterministic source (secrets) not frozen",
+    "datetime": "wall-clock source (datetime) not frozen",
+}
+
+# Bare builtins / dotted calls that signal an un-sandboxable effect when CALLED in the body.
+# random.* is intentionally NOT a hard block here: it is frozen by _freeze_nondeterminism
+# (random.seed(0)) so a divergence from random would be identical on both sides. We only
+# flag random when the code constructs an UNSEEDED random.Random() instance (its own
+# RNG that the global seed does not cover).
+
+
+def _attr_chain(node):
+    """Return the dotted attribute/name chain of a call target, e.g. 'os.path.join' or 'open'."""
+    parts = []
+    cur = node
+    while isinstance(cur, ast.Attribute):
+        parts.append(cur.attr)
+        cur = cur.value
+    if isinstance(cur, ast.Name):
+        parts.append(cur.id)
+    parts.reverse()
+    return ".".join(parts)
+
+
+def _impurity_reason(func_node, module_tree, target_name):
+    """Return a specific impurity reason string, or None if the target is pure enough.
+
+    func_node     : the ast.FunctionDef/AsyncFunctionDef of the target.
+    module_tree   : the parsed module (for resolving module-level names / imports).
+    """
+    # Names bound at module level (so we can detect WRITES to module state from the body).
+    module_level_names = set()
+    for n in module_tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            module_level_names.add(n.name)
+        elif isinstance(n, ast.Assign):
+            for t in n.targets:
+                for nm in ast.walk(t):
+                    if isinstance(nm, ast.Name):
+                        module_level_names.add(nm.id)
+        elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
+            module_level_names.add(n.target.id)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            for a in n.names:
+                module_level_names.add((a.asname or a.name).split(".")[0])
+
+    # Parameters of the target (and of nested functions) are "local" — mutating them is fine.
+    param_names = set()
+    for a in func_node.args.posonlyargs + func_node.args.args + func_node.args.kwonlyargs:
+        param_names.add(a.arg)
+    if func_node.args.vararg:
+        param_names.add(func_node.args.vararg.arg)
+    if func_node.args.kwarg:
+        param_names.add(func_node.args.kwarg.arg)
+
+    # Walk ONLY the body (not the signature defaults — module constants used as defaults are ok).
+    body_nodes = []
+    for stmt in func_node.body:
+        body_nodes.extend(ast.walk(stmt))
+
+    # Locals assigned inside the body (so a later use of a module name is distinguishable).
+    local_assigned = set(param_names)
+    for node in body_nodes:
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name):
+                    local_assigned.add(t.id)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            local_assigned.add(node.target.id)
+        elif isinstance(node, (ast.For, ast.comprehension)):
+            tgt = getattr(node, "target", None)
+            if isinstance(tgt, ast.Name):
+                local_assigned.add(tgt.id)
+        elif isinstance(node, ast.withitem) and isinstance(node.optional_vars, ast.Name):
+            local_assigned.add(node.optional_vars.id)
+
+    for node in body_nodes:
+        # global / nonlocal — explicit escape from the function's own scope.
+        if isinstance(node, ast.Global):
+            return "global mutation (global %s)" % ", ".join(node.names)
+        if isinstance(node, ast.Nonlocal):
+            return "global mutation (nonlocal %s)" % ", ".join(node.names)
+
+        # Calls: file/network/subprocess/nondeterministic.
+        if isinstance(node, ast.Call):
+            chain = _attr_chain(node.func)
+            head = chain.split(".")[0] if chain else ""
+            # bare builtins
+            if chain in ("open", "input", "print"):
+                if chain == "open":
+                    return "file/IO (open)"
+                if chain == "input":
+                    return "stdin/IO (input)"
+                # print to stdout would corrupt our JSON protocol AND is an observable effect
+                return "stdout/IO (print)"
+            if chain in ("eval", "exec", "compile", "__import__"):
+                return "dynamic code execution (%s)" % chain
+            # dotted module calls
+            if head in _IMPURE_MODULES and head not in local_assigned:
+                # datetime.now / datetime.today specifically; bare datetime construction is ok-ish
+                if head == "datetime" and not chain.endswith((".now", ".today", ".utcnow")):
+                    pass
+                else:
+                    return _IMPURE_MODULES[head]
+            if head == "os" and head not in local_assigned:
+                if chain in ("os.system", "os.popen", "os.remove", "os.unlink", "os.rename",
+                             "os.mkdir", "os.makedirs", "os.rmdir", "os.getenv") \
+                        or chain.startswith(("os.path.exists", "os.path.isfile", "os.path.isdir")) \
+                        or chain.startswith("os.environ"):
+                    return "os process/filesystem/env access (%s)" % chain
+            if head == "time" and chain in ("time.sleep",) and head not in local_assigned:
+                return "blocking IO (time.sleep)"
+            # unseeded RNG instance — global random.seed(0) does NOT cover its own Random()
+            if chain in ("random.Random", "random.SystemRandom") and "random" not in local_assigned:
+                return "unseeded RNG (%s) not frozen" % chain
+
+        # Attribute reads of nondeterministic sources, even without a call:
+        if isinstance(node, ast.Attribute):
+            chain = _attr_chain(node)
+            head = chain.split(".")[0] if chain else ""
+            if head == "os" and chain.startswith("os.environ") and head not in local_assigned:
+                return "os environment access (os.environ)"
+
+        # Writes to MODULE-LEVEL names (not params, not body locals) — module state mutation.
+        if isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for t in targets:
+                base = t
+                # x.attr = ... or x[i] = ... mutates the object bound to the base name.
+                while isinstance(base, (ast.Attribute, ast.Subscript)):
+                    base = base.value
+                if isinstance(base, ast.Name):
+                    nm = base.id
+                    if nm in param_names or nm in local_assigned:
+                        continue
+                    if nm in module_level_names:
+                        return "global mutation (writes module-level '%s')" % nm
+
+    return None
+
+
+def _check_purity(file_path, target_name):
+    """Parse the module, locate the target, and return an impurity reason or None.
+
+    Returns None when the file cannot be parsed / target cannot be found in the AST — in that
+    case the downstream loader will surface a precise error, so we don't double-report here.
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+    except Exception:  # noqa: BLE001
+        return None
+
+    # Resolve the target: it may be defined directly, or be an ALIAS of another top-level
+    # function (the corpus uses f = before). Follow one level of aliasing.
+    func_defs = {n.name: n for n in tree.body
+                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    resolved = target_name
+    if resolved not in func_defs:
+        for n in tree.body:
+            if isinstance(n, ast.Assign) and len(n.targets) == 1 \
+                    and isinstance(n.targets[0], ast.Name) and n.targets[0].id == target_name \
+                    and isinstance(n.value, ast.Name) and n.value.id in func_defs:
+                resolved = n.value.id
+                break
+    func_node = func_defs.get(resolved)
+    if func_node is None:
+        return None
+    return _impurity_reason(func_node, tree, resolved)
+
+
 def _params(fn):
     """Return [(name, annotation_str_or_None, has_default)] for positional/keyword params."""
     sig = inspect.signature(fn)
@@ -218,38 +431,218 @@ _EDGE_INTS = [0, 1, -1, 2, -2, 10, -10, 50, -50, 100]
 _EDGE_STRS = ["", "x", "Hello World", "  pad  ", "a b c", "0"]
 
 
-def _infer_kind(name, ann):
-    n = (name or "").lower()
+def _kind_from_annotation(ann):
+    """Map a type-hint string to a synthesis kind, or None when the hint is unhelpful."""
     a = (ann or "").lower()
-    if a:
-        if a in ("int",):
-            return "int"
-        if a in ("float",):
-            return "float"
-        if a in ("str", "string"):
-            return "str"
-        if a in ("bool",):
-            return "bool"
-        if a.startswith("list") or a.endswith("[]") or a in ("list", "sequence", "iterable"):
-            return "list"
-        if a.startswith("dict") or a in ("dict", "mapping"):
-            return "dict"
-        if "optional" in a or "none" in a:
-            return "optional"
-    # Heuristics from common parameter names.
+    if not a:
+        return None
+    if a in ("int",):
+        return "int"
+    if a in ("float", "complex", "number"):
+        return "float"
+    if a in ("str", "string"):
+        return "str"
+    if a in ("bool",):
+        return "bool"
+    if a.startswith("list") or a.startswith("sequence") or a.startswith("tuple") \
+            or a.endswith("[]") or a in ("list", "sequence", "iterable", "tuple"):
+        return "list"
+    if a.startswith("dict") or a.startswith("mapping") or a in ("dict", "mapping"):
+        return "dict"
+    if "optional" in a or "none" in a:
+        return "optional"
+    return None
+
+
+def _kind_from_name(name):
+    """Best-effort kind from a conventional parameter name."""
+    n = (name or "").lower()
     if n in ("log", "logs", "history", "trace", "acc", "accumulator", "out", "sink"):
         return "list"  # often a mutated side-effect collection
-    if n in ("items", "values", "arr", "array", "nums", "numbers", "xs", "data", "elements", "seq"):
+    if n in ("items", "values", "arr", "array", "nums", "numbers", "xs", "data", "elements",
+             "seq", "weights", "lst", "list"):
         return "list"
     if n in ("d", "dict", "mapping", "table", "counts", "m"):
         return "dict"
     if n in ("key", "k", "name", "label", "s", "text", "word"):
         return "str"
-    if n in ("n", "i", "j", "x", "y", "count", "limit", "lo", "hi", "low", "high", "idx", "index", "size", "len"):
+    if n in ("n", "i", "j", "x", "y", "count", "limit", "lo", "hi", "low", "high", "idx",
+             "index", "size", "len"):
         return "int"
     if n in ("val", "value", "v", "fallback", "default", "opt", "maybe"):
         return "optional"
+    return None
+
+
+def _infer_kind(name, ann, usage=None):
+    """Infer a synthesis kind for a parameter.
+
+    Priority (most authoritative first):
+      1. an explicit type annotation,
+      2. USAGE inferred from how the BEFORE body uses the parameter (subscript/iterate/len
+         -> list/dict; arithmetic -> numeric; string methods -> str). Usage is the key lever
+         that stops untyped genuinely-equivalent pairs being fed nonsensical inputs (None,
+         garbage) they would never receive in real callers — the documented FP cause.
+      3. a conventional-name heuristic,
+      4. a permissive 'any' mixture.
+    Annotation and usage are reconciled: when both are present the annotation wins, except
+    that a list/dict usage is honoured over a bare 'optional' hint (a common x=None list).
+    """
+    k_ann = _kind_from_annotation(ann)
+    k_use = usage
+    if k_ann is not None:
+        if k_ann == "optional" and k_use in ("list", "dict", "int", "float", "str"):
+            return k_use
+        return k_ann
+    if k_use is not None:
+        return k_use
+    k_name = _kind_from_name(name)
+    if k_name is not None:
+        return k_name
     return "any"
+
+
+def _infer_usage_kinds(file_path, target_name, params):
+    """Infer a kind per parameter from how the TARGET body uses each parameter.
+
+    Reads the BEFORE module AST only (never the after / never expected outputs), follows the
+    f = before aliasing the corpus uses, and classifies each parameter by the operations
+    applied to it. Returns a dict {param_name: kind}; absent params get no usage signal.
+
+    Signals:
+      * len(p), for x in p, p[i], slicing p[:k], p + [..]            -> list
+      * p[key] with a string key, p.get(...), p.keys/items/values    -> dict
+      * p / q, p * q, p // q, p % q, p - q, range(p), p < lo         -> int/float
+      * p.strip()/lower()/upper()/split()/replace()...               -> str
+    Ambiguous evidence falls through to caller's name/annotation heuristics.
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+    except Exception:  # noqa: BLE001
+        return {}
+
+    func_defs = {n.name: n for n in tree.body
+                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    resolved = target_name
+    if resolved not in func_defs:
+        for n in tree.body:
+            if isinstance(n, ast.Assign) and len(n.targets) == 1 \
+                    and isinstance(n.targets[0], ast.Name) and n.targets[0].id == target_name \
+                    and isinstance(n.value, ast.Name) and n.value.id in func_defs:
+                resolved = n.value.id
+                break
+    func_node = func_defs.get(resolved)
+    if func_node is None:
+        return {}
+
+    pset = {name for (name, _ann, _d) in params}
+    # Per-param vote tallies.
+    votes = {p: {"list": 0, "dict": 0, "num": 0, "str": 0} for p in pset}
+
+    _STR_METHODS = {"strip", "lstrip", "rstrip", "lower", "upper", "title", "split",
+                    "rsplit", "replace", "join", "startswith", "endswith", "format",
+                    "encode", "capitalize", "casefold", "splitlines", "zfill"}
+    _DICT_METHODS = {"get", "keys", "values", "items", "setdefault", "update", "pop"}
+    _LIST_METHODS = {"append", "extend", "insert", "sort", "reverse"}
+
+    def base_name(node):
+        cur = node
+        while isinstance(cur, (ast.Attribute, ast.Subscript)):
+            cur = cur.value
+        return cur.id if isinstance(cur, ast.Name) else None
+
+    body_nodes = []
+    for stmt in func_node.body:
+        body_nodes.extend(ast.walk(stmt))
+
+    for node in body_nodes:
+        # for x in p:
+        if isinstance(node, ast.For) and isinstance(node.iter, ast.Name) and node.iter.id in votes:
+            votes[node.iter.id]["list"] += 1
+        if isinstance(node, ast.comprehension) and isinstance(node.iter, ast.Name) \
+                and node.iter.id in votes:
+            votes[node.iter.id]["list"] += 1
+        # subscript p[...] — list vs dict by index expression
+        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) \
+                and node.value.id in votes:
+            p = node.value.id
+            sl = node.slice
+            if isinstance(sl, ast.Slice):
+                votes[p]["list"] += 1
+            elif isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                votes[p]["dict"] += 1
+            elif isinstance(sl, ast.Constant) and isinstance(sl.value, int):
+                votes[p]["list"] += 1
+            elif isinstance(sl, ast.Name):
+                # p[i] where i is itself a param/loop var → indexing → list (default lean)
+                votes[p]["list"] += 1
+            else:
+                votes[p]["list"] += 1
+        # method call p.<method>()
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+                and isinstance(node.func.value, ast.Name) and node.func.value.id in votes:
+            p = node.func.value.id
+            m = node.func.attr
+            if m in _STR_METHODS:
+                votes[p]["str"] += 1
+            elif m in _DICT_METHODS:
+                votes[p]["dict"] += 1
+            elif m in _LIST_METHODS:
+                votes[p]["list"] += 1
+        # len(p) / range(p) / sum(p) / sorted(p) / max(p) / min(p)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            fn = node.func.id
+            for arg in node.args:
+                if isinstance(arg, ast.Name) and arg.id in votes:
+                    if fn in ("len", "sorted", "sum", "max", "min", "list", "set",
+                              "enumerate", "reversed", "any", "all"):
+                        votes[arg.id]["list"] += 1
+                    elif fn in ("range",):
+                        votes[arg.id]["num"] += 1
+                    elif fn in ("int", "abs", "float", "round"):
+                        votes[arg.id]["num"] += 1
+                    elif fn in ("str",):
+                        votes[arg.id]["str"] += 1
+        # arithmetic / numeric binops. Div/FloorDiv/Mod/Mult/Sub/Pow are unambiguously numeric
+        # for their operands. Add is overloaded (list/str concatenation) so it only votes
+        # numeric when the OTHER operand is a numeric literal (e.g. a + 1).
+        if isinstance(node, ast.BinOp):
+            if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.Mod, ast.Mult, ast.Sub, ast.Pow)):
+                for side in (node.left, node.right):
+                    if isinstance(side, ast.Name) and side.id in votes:
+                        votes[side.id]["num"] += 1
+            elif isinstance(node.op, ast.Add):
+                pairs_lr = ((node.left, node.right), (node.right, node.left))
+                for nm_node, other in pairs_lr:
+                    if isinstance(nm_node, ast.Name) and nm_node.id in votes \
+                            and isinstance(other, ast.Constant) \
+                            and isinstance(other.value, (int, float)) \
+                            and not isinstance(other.value, bool):
+                        votes[nm_node.id]["num"] += 1
+        # numeric comparison (p < lo etc.) — only < <= > >= signal ordering on numbers
+        if isinstance(node, ast.Compare):
+            ops = node.ops
+            if any(isinstance(o, (ast.Lt, ast.LtE, ast.Gt, ast.GtE)) for o in ops):
+                operands = [node.left] + list(node.comparators)
+                for operand in operands:
+                    if isinstance(operand, ast.Name) and operand.id in votes:
+                        votes[operand.id]["num"] += 1
+
+    result = {}
+    for p, tally in votes.items():
+        # list / dict usage is strong structural evidence; pick the dominant structural vote.
+        if tally["dict"] > 0 and tally["dict"] >= tally["list"]:
+            result[p] = "dict"
+        elif tally["list"] > 0:
+            result[p] = "list"
+        elif tally["str"] > 0 and tally["str"] >= tally["num"]:
+            result[p] = "str"
+        elif tally["num"] > 0:
+            # numeric: default to int (edge-biased ints dominate refactor bug classes); the
+            # generator still mixes in float-friendly values via the 'int' edge set.
+            result[p] = "int"
+    return result
 
 
 def _gen_value(kind, rng):
@@ -373,6 +766,16 @@ def main():
                               "detail": "no target function supplied and none could be auto-detected",
                               "usedHypothesis": False}))
             return
+    # PURITY GATE: refuse to differentially execute an impure / non-self-contained target.
+    # Executing such a function yields a FALSE pass/divergence, so we decline honestly. The
+    # gate is scoped to the BEFORE target body (the specification side).
+    if job.get("checkPurity", True):
+        reason = _check_purity(job["beforeFile"], target)
+        if reason is not None:
+            print(json.dumps({"verdict": "unverified", "checked": 0,
+                              "detail": "impure: %s" % reason, "usedHypothesis": False}))
+            return
+
     try:
         before = _load_func(job["beforeFile"], "before_mod", target)
         after = _load_func(job["afterFile"], "after_mod", target)
@@ -389,7 +792,10 @@ def main():
                           "detail": "signature inspect error: %s" % e, "usedHypothesis": False}))
         return
 
-    kinds = [_infer_kind(name, ann) for (name, ann, _default) in params]
+    # Usage-guided inference from the BEFORE body refines untyped params so equivalent pairs
+    # are not fed nonsensical inputs (None/garbage) they could never receive.
+    usage = _infer_usage_kinds(job["beforeFile"], target, params)
+    kinds = [_infer_kind(name, ann, usage.get(name)) for (name, ann, _default) in params]
     n = int(job.get("inputs", 2000))
     seed = int(job.get("seed", 1337))
 
@@ -494,6 +900,7 @@ export async function verifyPythonEquivalence(
       inputs: options.inputs ?? 2000,
       seed: options.seed ?? 1337,
       useHypothesis: true,
+      checkPurity: options.checkPurity ?? true,
     };
 
     await Promise.all([

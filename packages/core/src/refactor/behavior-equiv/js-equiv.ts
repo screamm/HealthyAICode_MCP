@@ -212,9 +212,12 @@ function synthByKind(kind: ParamKind, rng: () => number): unknown {
       // mixed with real numbers/strings so the non-null path is exercised too.
       return pick(rng, [null, undefined, 0, '', false, NaN, synthNumber(rng), synthString(rng)]);
     default:
-      // 'any' — unknown slot: mixed but type-stable across THIS draw only. Used when no
-      // usage signal exists; numbers dominate because they are the commonest scalar.
-      return randInt(rng, 0, 3) === 0 ? synthString(rng) : synthNumber(rng);
+      // 'any' — should not reach here at synthesis time: `inferParamSpecs` resolves every
+      // 'any' slot to a CONCRETE, run-stable kind (see resolveAnyKind) precisely so a slot
+      // never flips type between draws. Type-flipping is the dominant FALSE-POSITIVE cause:
+      // it makes a genuinely-equivalent numeric reformulation (`x*3` vs `x+x+x`) diverge
+      // (3 vs 'xxx') on an input it would never receive. Fall back to number defensively.
+      return synthNumber(rng);
   }
 }
 
@@ -236,8 +239,17 @@ function synthArgs(specs: readonly ParamSpec[], rng: () => number): unknown[] {
 }
 
 /**
- * Infer a stable {@link ParamSpec} per parameter from the source. Annotation-driven when
- * a TS type is present; otherwise usage-driven from the function body.
+ * Infer a stable {@link ParamSpec} per parameter from the source (FIX 2: type-guided
+ * synthesis). Strongest-signal-first:
+ *   1. TS type annotation (when present) — the strongest, most honest signal.
+ *   2. Structural usage inference from the function body (numeric ops → number,
+ *      `.length`/indexing/array methods → array, string methods → string, `??`/`||` →
+ *      nullable, property access → object).
+ *   3. A run-STABLE concrete default for slots with no signal at all — NEVER the type-
+ *      flipping 'any' grab-bag, because flipping a slot's type between draws is the dominant
+ *      false-positive cause (it feeds a number-formula function a string on an input it would
+ *      never legitimately receive, making two equivalent formulations diverge).
+ * The inferred kind is FIXED per slot for the entire run, matching the spike's argSpec.
  */
 function inferParamSpecs(source: string, fnName: string, arity: number): ParamSpec[] {
   const sig = extractParamList(source, fnName);
@@ -245,13 +257,36 @@ function inferParamSpecs(source: string, fnName: string, arity: number): ParamSp
   for (let i = 0; i < arity; i++) {
     const p = sig[i];
     if (!p) {
-      specs.push({ kind: 'any', defaulted: false });
+      // A slot beyond the declared signature (rest/over-arity): default to a stable scalar.
+      specs.push({ kind: resolveAnyKind(source, undefined), defaulted: false });
       continue;
     }
-    const kind = kindFromAnnotation(p.annotation) ?? kindFromUsage(source, p.name) ?? 'any';
+    const inferred = kindFromAnnotation(p.annotation) ?? kindFromUsage(source, p.name);
+    const kind = inferred ?? resolveAnyKind(source, p.name);
     specs.push({ kind, defaulted: p.defaulted });
   }
   return specs;
+}
+
+/**
+ * Resolve a no-signal ('any') slot to a CONCRETE, run-stable kind so it never flips type
+ * across draws. Heuristic, honest, and deterministic from the source:
+ *   - if the parameter (or the body) clearly leans on string methods anywhere → 'string';
+ *   - otherwise → 'number' (the commonest scalar, and the type on which the dominant LLM
+ *     bug classes — off-by-one, boundary, truncation, comparator-swap — manifest).
+ * Choosing a single stable scalar (vs a string/number coin-flip per draw) trades a little
+ * coverage for a large reduction in false positives, which is the explicit FIX-2 goal:
+ * equivalent pairs must not be flagged divergent on inputs they would never receive.
+ */
+function resolveAnyKind(source: string, name: string | undefined): ParamKind {
+  if (name) {
+    const id = escapeRe(name);
+    const stringLean = new RegExp(
+      `\\b${id}\\s*\\.\\s*(?:trim|toLowerCase|toUpperCase|charAt|charCodeAt|split|replace|padStart|padEnd|startsWith|endsWith|substring|substr|concat|repeat|includes)\\b`,
+    ).test(source) || new RegExp(`\`[^\`]*\\$\\{[^}]*\\b${id}\\b`).test(source);
+    if (stringLean) return 'string';
+  }
+  return 'number';
 }
 
 interface ParamInfo {
@@ -299,11 +334,17 @@ function parseParams(raw: string): ParamInfo[] {
 function kindFromAnnotation(annotation: string | null): ParamKind | null {
   if (!annotation) return null;
   const a = annotation.toLowerCase();
-  const nullable = /null|undefined/.test(a) && /\|/.test(a);
-  if (/number\s*\[\s*\]|array<\s*number\s*>/.test(a)) return 'numberArray';
-  if (/string\s*\[\s*\]|array<\s*string\s*>/.test(a)) return 'stringArray';
-  if (/\[\s*\]|array</.test(a)) return 'numberArray';
-  if (nullable && /number/.test(a)) return 'nullable';
+  const nullable = /\b(?:null|undefined)\b/.test(a) && /\|/.test(a);
+  // Arrays first (most specific). A nullable array (`number[] | null`) is still synthesised
+  // as an array — array params are rarely the locus of ?? vs || nullish bugs, and feeding a
+  // bare null/undefined to a function that immediately does `.length` would be a type-
+  // confusion artifact (false positive), not a refactoring bug.
+  if (/number\s*\[\s*\]|array<\s*number\s*>|readonlyarray<\s*number\s*>/.test(a)) return 'numberArray';
+  if (/string\s*\[\s*\]|array<\s*string\s*>|readonlyarray<\s*string\s*>/.test(a)) return 'stringArray';
+  if (/\[\s*\]|\barray<|readonlyarray</.test(a)) return 'numberArray';
+  // Scalar | null/undefined → nullable so the ?? vs || / falsy-coercion bug class is exercised
+  // on the exact nullish edges, regardless of the underlying scalar type.
+  if (nullable && /\b(?:number|string)\b/.test(a)) return 'nullable';
   if (/\bnumber\b/.test(a)) return 'number';
   if (/\bstring\b/.test(a)) return 'string';
   if (/\bboolean\b/.test(a)) return 'boolean';
@@ -339,6 +380,254 @@ function kindFromUsage(source: string, name: string): ParamKind | null {
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ---------------------------------------------------------------------------
+// PURITY / SELF-CONTAINMENT GATE (FIX 1).
+//
+// Differential execution is only sound for functions that are PURE enough to be
+// deterministically comparable. Running an impure / non-self-contained function under the
+// frozen sandbox does NOT yield a trustworthy verdict:
+//   - an `fs`/network/process/DOM call either throws inside the sandbox (the builtin is
+//     absent) or — worse — succeeds nondeterministically, so a `divergent` or `equivalent`
+//     verdict reflects sandbox artefacts, not the refactoring. That is a FALSE result.
+//   - module-scope mutable state accumulates across `before` vs `after` calls and fabricates
+//     divergence (or hides it).
+//   - a nondeterministic source we do NOT freeze (e.g. `crypto.randomUUID`, `process.hrtime`)
+//     makes the two sides differ for reasons unrelated to the refactor.
+//
+// So BEFORE executing, we statically scan the source and, if any impurity is found, return
+// `unverified` with a specific named cause. Date/Math.random/performance.now/Date.now and
+// timers are NOT flagged — the sandbox already freezes those deterministically (see
+// makeFrozenGlobals), so they remain safely comparable.
+//
+// The scan is intentionally regex/lexical (no full AST) to match the rest of this module and
+// stay dependency-free. It first strips comments and string/template literals so that the
+// word "fetch" in a comment or a string never trips the gate (avoids false `unverified`).
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove line/block comments and the CONTENTS of string / template literals, leaving
+ * structural delimiters intact. Used so impurity tokens are only matched in real code.
+ */
+function stripCommentsAndStrings(source: string): string {
+  let out = '';
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const c = source[i];
+    const c2 = source[i + 1];
+    // line comment
+    if (c === '/' && c2 === '/') {
+      i += 2;
+      while (i < n && source[i] !== '\n') i++;
+      continue;
+    }
+    // block comment
+    if (c === '/' && c2 === '*') {
+      i += 2;
+      while (i < n && !(source[i] === '*' && source[i + 1] === '/')) i++;
+      i += 2;
+      continue;
+    }
+    // string / template literal: keep the quotes, blank the body
+    if (c === '"' || c === "'" || c === '`') {
+      const quote = c;
+      out += ' ';
+      i++;
+      while (i < n) {
+        if (source[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (source[i] === quote) break;
+        // for templates, do not try to parse ${...}; blanking is enough for token matching
+        i++;
+      }
+      out += ' ';
+      i++;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+/**
+ * Patterns that make a function impure / not self-contained / nondeterministic-in-a-way-the-
+ * sandbox-does-not-freeze. Each entry pairs a matcher with the human cause reported in the
+ * `unverified` reason. Order matters only for which cause is reported first.
+ *
+ * NOTE: `Date`, `Date.now`, `Math.random`, `performance.now`, `setTimeout`/`setInterval`
+ * are deliberately ABSENT — the sandbox freezes time/RNG and never schedules real timers, so
+ * those sources are deterministically comparable and must NOT trigger `unverified`.
+ */
+interface ImpurityRule {
+  readonly re: RegExp;
+  readonly cause: string;
+  /** When true, match against RAW source (module specifiers survive string-blanking). */
+  readonly onRaw?: boolean;
+}
+
+const IMPURITY_RULES: readonly ImpurityRule[] = [
+  // ── Module imports (matched on RAW source: the specifier lives inside a string literal,
+  //    which the comment/string stripper blanks — so these MUST see the raw text) ─────────
+  { re: /\b(?:require\s*\(\s*|import\b[^;]*?\bfrom\s*)['"](?:node:)?fs(?:\/promises)?['"]/, cause: 'filesystem IO (fs module)', onRaw: true },
+  { re: /\b(?:require\s*\(\s*|import\b[^;]*?\bfrom\s*)['"](?:node:)?(?:http|https|net|dgram|tls)['"]/, cause: 'network IO (http/net module)', onRaw: true },
+  { re: /\b(?:require\s*\(\s*|import\b[^;]*?\bfrom\s*)['"](?:node:)?(?:child_process|os|cluster|worker_threads|v8|vm)['"]/, cause: 'process/OS module (child_process/os/…)', onRaw: true },
+  { re: /\b(?:require\s*\(\s*|import\b[^;]*?\bfrom\s*)['"](?:axios|node-fetch|got|undici|superagent)['"]/, cause: 'network IO (http client module)', onRaw: true },
+  // ── Filesystem / disk IO calls ─────────────────────────────────────────────
+  { re: /\bfs\s*\.\s*(?:readFile|readFileSync|writeFile|writeFileSync|appendFile|appendFileSync|existsSync|mkdir|mkdirSync|unlink|unlinkSync|stat|statSync|createReadStream|createWriteStream|readdir|readdirSync)\b/, cause: 'filesystem IO (fs call)' },
+  { re: /\b(?:readFileSync|writeFileSync|appendFileSync|existsSync|mkdirSync|readdirSync|statSync|unlinkSync)\s*\(/, cause: 'filesystem IO (fs call)' },
+  // ── Network ───────────────────────────────────────────────────────────────
+  { re: /\bfetch\s*\(/, cause: 'network IO (fetch)' },
+  { re: /\bnew\s+XMLHttpRequest\b/, cause: 'network IO (XMLHttpRequest)' },
+  { re: /\b(?:axios|got|superagent)\s*\.\s*(?:get|post|put|patch|delete|request)\b/, cause: 'network IO (http client)' },
+  { re: /\baxios\s*\(/, cause: 'network IO (axios)' },
+  { re: /\bnew\s+WebSocket\b|\bWebSocket\s*\(/, cause: 'network IO (WebSocket)' },
+  // ── Process / OS / environment / subprocess ────────────────────────────────
+  { re: /\bprocess\s*\.\s*(?:env|argv|exit|cwd|hrtime|pid|stdout|stderr|stdin|kill|nextTick)\b/, cause: 'process/environment access' },
+  { re: /\b(?:execSync|spawnSync|execFileSync)\s*\(/, cause: 'subprocess execution (child_process)' },
+  { re: /\bchild_process\s*\.\s*(?:exec|spawn|fork|execFile)\b/, cause: 'subprocess execution (child_process)' },
+  // ── DOM / browser globals ──────────────────────────────────────────────────
+  { re: /\b(?:window|document|localStorage|sessionStorage|navigator|location|history)\s*\.\s*[A-Za-z_$]/, cause: 'DOM/browser global access' },
+  { re: /\b(?:alert|confirm|prompt)\s*\(/, cause: 'DOM/browser global access' },
+  // ── Nondeterministic sources the sandbox does NOT freeze ───────────────────
+  { re: /\bcrypto\s*\.\s*(?:randomUUID|randomBytes|randomInt|getRandomValues)\b/, cause: 'nondeterministic crypto randomness (crypto.random*)' },
+  { re: /\bprocess\s*\.\s*hrtime\b/, cause: 'nondeterministic high-resolution time (process.hrtime)' },
+];
+
+/** Walk a function's `( … )` parameter list / body braces to extract its source span. */
+function extractFunctionBodies(source: string, fnName: string): string[] {
+  const bodies: string[] = [];
+  // Anchors for `function NAME`, `NAME = (…) =>`/`function`, default-export function.
+  const anchors: RegExp[] = [
+    new RegExp(`function\\s+${escapeRe(fnName)}\\b`, 'g'),
+    new RegExp(`\\b${escapeRe(fnName)}\\s*=\\s*(?:async\\s*)?(?:function\\b|\\([^)]*\\)\\s*(?::[^={]+)?=>|[A-Za-z_$][\\w$]*\\s*=>)`, 'g'),
+  ];
+  if (fnName === 'default') {
+    anchors.push(/export\s+default\s+(?:async\s+)?function\b/g);
+  }
+  for (const re of anchors) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(source)) !== null) {
+      const body = sliceBalancedBody(source, m.index);
+      if (body) bodies.push(body);
+    }
+  }
+  // If nothing matched (unusual shape), fall back to the whole module so the gate still runs.
+  return bodies.length > 0 ? bodies : [source];
+}
+
+/** From a declaration start, return the `{ … }` body (or arrow concise body up to `;`). */
+function sliceBalancedBody(source: string, from: number): string | null {
+  // Find the first `{` (block body) or `=>` concise body after the declaration head.
+  let i = from;
+  const n = source.length;
+  // Skip to the end of the parameter list: find matching ')' for the first '('.
+  let firstParen = source.indexOf('(', from);
+  // Arrow with single unparenthesised param has no '(' before '=>'
+  const arrow = source.indexOf('=>', from);
+  if (firstParen >= 0 && (arrow < 0 || firstParen < arrow)) {
+    let depth = 0;
+    for (i = firstParen; i < n; i++) {
+      if (source[i] === '(') depth++;
+      else if (source[i] === ')') {
+        depth--;
+        if (depth === 0) {
+          i++;
+          break;
+        }
+      }
+    }
+  } else {
+    i = from;
+  }
+  // From here, find the function body: either `{ … }` or an arrow concise body.
+  while (i < n && source[i] !== '{' && !(source[i] === '=' && source[i + 1] === '>')) i++;
+  if (i >= n) return null;
+  if (source[i] === '{') {
+    let depth = 0;
+    const start = i;
+    for (; i < n; i++) {
+      if (source[i] === '{') depth++;
+      else if (source[i] === '}') {
+        depth--;
+        if (depth === 0) return source.slice(start, i + 1);
+      }
+    }
+    return source.slice(start);
+  }
+  // arrow concise body: take to end of statement (`;` or newline at depth 0) — coarse but
+  // sufficient for impurity-token scanning.
+  i += 2;
+  const start = i;
+  let depth = 0;
+  for (; i < n; i++) {
+    const ch = source[i];
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') {
+      if (depth === 0) break;
+      depth--;
+    } else if (depth === 0 && (ch === ';' || ch === '\n')) break;
+  }
+  return source.slice(start, i);
+}
+
+/** Detect module-scope mutable state mutated inside the target function. */
+function detectModuleScopeMutation(cleanSource: string, fnName: string): string | null {
+  // Collect module-level mutable bindings declared with `let`/`var` (NOT `const`, NOT params).
+  // We scan only top-level-ish declarations (line-anchored, optionally exported).
+  const mutableNames = new Set<string>();
+  const declRe = /^\s*(?:export\s+)?(?:let|var)\s+([A-Za-z_$][\w$]*)/gm;
+  let m: RegExpExecArray | null;
+  while ((m = declRe.exec(cleanSource)) !== null) mutableNames.add(m[1]);
+  if (mutableNames.size === 0) return null;
+
+  const bodies = extractFunctionBodies(cleanSource, fnName);
+  for (const body of bodies) {
+    for (const name of mutableNames) {
+      // skip if the name is re-declared (shadowed) as a local inside the body
+      const shadowed = new RegExp(`\\b(?:const|let|var)\\s+${escapeRe(name)}\\b`).test(body);
+      if (shadowed) continue;
+      const id = escapeRe(name);
+      // assignment / compound-assignment / inc-dec to the module binding inside the body
+      const mutated =
+        new RegExp(`\\b${id}\\s*(?:=(?!=)|\\+=|-=|\\*=|/=|%=|\\*\\*=|\\|\\|=|&&=|\\?\\?=|<<=|>>=|&=|\\|=|\\^=)`).test(body) ||
+        new RegExp(`\\b${id}\\s*(?:\\+\\+|--)`).test(body) ||
+        new RegExp(`(?:\\+\\+|--)\\s*${id}\\b`).test(body) ||
+        // in-place collection mutation on the module binding (push/pop/splice/sort/set/…)
+        new RegExp(`\\b${id}\\s*\\.\\s*(?:push|pop|shift|unshift|splice|sort|reverse|fill|set|delete|add|clear)\\s*\\(`).test(body) ||
+        // indexed/property assignment to the module binding
+        new RegExp(`\\b${id}\\s*(?:\\[[^\\]]*\\]|\\.[A-Za-z_$][\\w$]*)\\s*(?:=(?!=)|\\+\\+|--|\\+=|-=)`).test(body);
+      if (mutated) return `module-scope mutation of '${name}'`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Statically decide whether a function in `source` is pure / self-contained enough for sound
+ * differential execution. Returns a specific cause string when impure, or `null` when the
+ * function is safe to execute. Operates on comment/string-stripped source so tokens inside
+ * comments or string literals never trigger a (false) impurity verdict.
+ */
+function detectImpurity(source: string, fnName: string): string | null {
+  const clean = stripCommentsAndStrings(source);
+  // For comment/string-token suppression we scan the stripped source, EXCEPT module-import
+  // rules (onRaw) whose specifier lives inside a string literal the stripper blanks — those
+  // scan the raw source. Token-based impurity is matched module-wide: a helper the target
+  // function calls is part of its observable behaviour, so an `fs` call in a same-module
+  // helper still makes the unit non-self-contained.
+  for (const rule of IMPURITY_RULES) {
+    if (rule.re.test(rule.onRaw ? source : clean)) return rule.cause;
+  }
+  // Module-scope mutation is checked specifically against the target function's body so that
+  // a benign module-level `const` table (read-only) does not get flagged.
+  const mut = detectModuleScopeMutation(clean, fnName);
+  if (mut) return mut;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -661,6 +950,28 @@ export function checkJsEquivalence(
   const runs = options.runs ?? DEFAULT_RUNS;
   const seed = options.seed ?? DEFAULT_SEED;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  // ── FIX 1: purity / self-containment gate ──────────────────────────────────
+  // Run BEFORE any differential execution. An impure / non-self-contained function cannot be
+  // deterministically compared in the frozen sandbox; executing it would yield a FALSE
+  // pass/divergence. We decline honestly with a named cause instead. Either side being impure
+  // disqualifies the pair (a refactor that ADDS impurity is itself unverifiable here).
+  const beforeImpurity = detectImpurity(beforeSource, beforeFnName);
+  const afterImpurity = detectImpurity(afterSource, afterFnName);
+  if (beforeImpurity || afterImpurity) {
+    const cause =
+      beforeImpurity && afterImpurity && beforeImpurity !== afterImpurity
+        ? `${beforeImpurity} (before), ${afterImpurity} (after)`
+        : (beforeImpurity ?? afterImpurity);
+    return {
+      verdict: 'unverified',
+      checked: 0,
+      detail:
+        `impure: ${cause}. Differential execution is only sound for pure, self-contained ` +
+        `functions; this function is not deterministically comparable in the sandbox, so a ` +
+        `pass/divergence verdict would be unreliable. Treated as advisory only.`,
+    };
+  }
 
   let beforeMod: LoadedModule;
   let afterMod: LoadedModule;

@@ -174,6 +174,130 @@ describe('checkJsEquivalence — default 2000-input budget', () => {
   });
 });
 
+// ── FIX 1: purity / self-containment gate ──────────────────────────────────────
+
+describe('checkJsEquivalence — purity / self-containment gate', () => {
+  it('returns unverified (not pass/divergence) for a filesystem-IO function', () => {
+    const src = readFixture('impure/ts-impure-fs.ts');
+    const res = checkJsEquivalence(src, src, { beforeFnName: 'before', afterFnName: 'after' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure/i);
+    expect(res.detail).toMatch(/filesystem|fs/i);
+    expect(res.checked).toBe(0);
+  });
+
+  it('flags network IO (fetch) as impure → unverified', () => {
+    const before = `export async function load(id) { const r = await fetch('/u/' + id); return r.status; }`;
+    const after = `export async function load(id) { const r = await fetch('/user/' + id); return r.status; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'load', afterFnName: 'load' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure: network/i);
+  });
+
+  it('flags process/environment access as impure → unverified', () => {
+    const before = `export function mode() { return process.env.NODE_ENV; }`;
+    const after = `export function mode() { return process.env.NODE_ENV || 'dev'; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'mode', afterFnName: 'mode' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure: process/i);
+  });
+
+  it('flags module-scope mutation as impure → unverified', () => {
+    const before = `let calls = 0;\nexport function tick() { calls += 1; return calls; }`;
+    const after = `let calls = 0;\nexport function tick() { calls = calls + 1; return calls; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'tick', afterFnName: 'tick' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure: module-scope mutation/i);
+  });
+
+  it('flags crypto.randomUUID (unfrozen nondeterminism) as impure → unverified', () => {
+    const before = `export function id() { return crypto.randomUUID(); }`;
+    const after = `export function id() { return crypto.randomUUID().toString(); }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'id', afterFnName: 'id' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure: nondeterministic crypto/i);
+  });
+
+  it('flags DOM/window access as impure → unverified', () => {
+    const before = `export function w() { return window.innerWidth; }`;
+    const after = `export function w() { return window.innerWidth * 1; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'w', afterFnName: 'w' });
+    expect(res.verdict).toBe('unverified');
+    expect(res.detail).toMatch(/impure: dom/i);
+  });
+
+  it('does NOT flag Date.now / Math.random — the sandbox freezes them (still verifiable)', () => {
+    // Both use frozen sources; the refactor genuinely changes behaviour (off-by-one on the
+    // frozen clock). Must run dynamically and detect divergence, NOT bail out as impure.
+    const before = `export function f(x) { return x + Date.now() % 7; }`;
+    const after = `export function f(x) { return x + Date.now() % 5; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'f', afterFnName: 'f' });
+    expect(res.verdict).toBe('divergent');
+  });
+
+  it('does NOT flag a read-only module-scope const table as impure (no mutation)', () => {
+    // LABELS is read-only (const, never mutated) → the function is still pure & verifiable.
+    // Both formulations read the same table identically, so the pair is genuinely equivalent.
+    const before = `const LABELS = ['a','b','c'];\nexport function label(i) { return LABELS[i] === undefined ? 'x' : LABELS[i]; }`;
+    const after = `const LABELS = ['a','b','c'];\nexport function label(i) { return LABELS[i] ?? 'x'; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'label', afterFnName: 'label' });
+    expect(res.verdict).toBe('equivalent');
+  });
+
+  it('does NOT flag the word "fetch" appearing only in a comment or string', () => {
+    const before = `export function tag(n) { /* fetch the label */ return 'fetch-' + n; }`;
+    const after = `export function tag(n) { return 'fetch-' + n; /* fetch */ }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'tag', afterFnName: 'tag' });
+    expect(res.verdict).toBe('equivalent');
+  });
+});
+
+// ── FIX 2: type-guided synthesis lowers false positives ─────────────────────────
+
+describe('checkJsEquivalence — type-guided synthesis avoids garbage-input false positives', () => {
+  // Equivalent numeric reformulation. Untyped, type-FLIPPING fuzzing would feed a string and
+  // make `n*3` (NaN) differ from `n+n+n` ('xxx'), a dishonest FP. Type-stable synthesis keeps
+  // the slot numeric, so the pair correctly passes.
+  it('does not false-flag x*3 vs x+x+x on an untyped numeric param', () => {
+    const before = `export function scale(n) { return n * 3; }`;
+    const after = `export function scale(n) { return n + n + n; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'scale', afterFnName: 'scale' });
+    expect(res.verdict).toBe('equivalent');
+  });
+
+  // TS-typed equivalent reformulation across two params; types resolve both to number.
+  it('does not false-flag a TS-typed equivalent average reformulation', () => {
+    const before = `export function avg(a: number, b: number): number { return (a + b) / 2; }`;
+    const after = `export function avg(a: number, b: number): number { return a / 2 + b / 2; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'avg', afterFnName: 'avg' });
+    expect(res.verdict).toBe('equivalent');
+  });
+
+  // String param inferred from usage; equivalent uppercase reformulations must not be flagged
+  // by being fed a number (n.toUpperCase() would throw on a number → spurious divergence).
+  it('does not false-flag equivalent string transforms on a usage-inferred string param', () => {
+    const before = `export function shout(s) { return s.trim().toUpperCase(); }`;
+    const after = `export function shout(s) { return s.toUpperCase().trim(); }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'shout', afterFnName: 'shout' });
+    expect(res.verdict).toBe('equivalent');
+  });
+
+  // Genuinely-divergent pairs must STILL be detected after the synthesis hardening.
+  it('still detects a genuine numeric divergence (off-by-one)', () => {
+    const before = `export function f(n) { return n + 1; }`;
+    const after = `export function f(n) { return n + 2; }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'f', afterFnName: 'f' });
+    expect(res.verdict).toBe('divergent');
+  });
+
+  it('still detects a genuine string divergence', () => {
+    const before = `export function g(s) { return s.trim(); }`;
+    const after = `export function g(s) { return s.trimStart(); }`;
+    const res = checkJsEquivalence(before, after, { beforeFnName: 'g', afterFnName: 'g' });
+    expect(res.verdict).toBe('divergent');
+  });
+});
+
 // ── Determinism ────────────────────────────────────────────────────────────────
 
 describe('checkJsEquivalence — determinism', () => {

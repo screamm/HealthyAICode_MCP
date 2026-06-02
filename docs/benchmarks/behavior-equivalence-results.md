@@ -1,7 +1,7 @@
 # Behavior-Equivalence Gate — Corpus Measurement
 
-Generated: 2026-06-02T08:39:26.508Z (real engine run, no fabricated numbers)
-Duration: 93972 ms
+Generated: 2026-06-02T09:08:39.326Z (real engine run, no fabricated numbers)
+Duration: 59365 ms
 Corpus: `packages/core/tests/fixtures/behavior-equiv/` (35 pairs)
 Engines: Python (`verifyPythonEquivalence`, 2000 inputs/pair) + TS/JS (`checkJsEquivalence`, 2000 inputs/pair)
 
@@ -10,8 +10,8 @@ Engines: Python (`verifyPythonEquivalence`, 2000 inputs/pair) + TS/JS (`checkJsE
 | Metric | Value | Numerator / Denominator |
 |---|---|---|
 | **Detection rate** (recall on divergent) | **90.0%** | 18 / 20 |
-| **False-positive rate** (over verified equivalents) | **13.3%** | 2 / 15 |
-| False-positive rate (over all equivalents) | 13.3% | 2 / 15 |
+| **False-positive rate** (over verified equivalents) | **0.0%** | 0 / 15 |
+| False-positive rate (over all equivalents) | 0.0% | 0 / 15 |
 | Unverified equivalents (advisory, not FP) | 0 | of 15 |
 
 Confusion matrix (divergent = positive class):
@@ -19,13 +19,13 @@ Confusion matrix (divergent = positive class):
 | | observed divergent | observed equivalent | observed unverified |
 |---|---|---|---|
 | **expected divergent** | 18 (TP) | 2 (FN) | 0 (FN/unv) |
-| **expected equivalent** | 2 (FP) | 13 (TN) | 0 (advisory) |
+| **expected equivalent** | 0 (FP) | 15 (TN) | 0 (advisory) |
 
 ## Per-language breakdown
 
 | Language | TP | FN | TN | FP | Unverified |
 |---|---|---|---|---|---|
-| python | 9 | 1 | 5 | 2 | 0 |
+| python | 9 | 1 | 7 | 0 | 0 |
 | typescript | 9 | 1 | 8 | 0 | 0 |
 
 ## Per-pair results
@@ -39,7 +39,7 @@ Confusion matrix (divergent = positive class):
 | TP | py-05-truthy-coercion | python | falsy-coercion | divergent | divergent | 2 | behaviour differs on synthesised input #2 |
 | FN | py-06-slice-offbyone | python | off-by-one | divergent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TP | py-07-dict-default | python | dropped-edge-case | divergent | divergent | 1 | behaviour differs on synthesised input #1 |
-| TP | py-08-comparator-sign | python | comparator-sign-swap | divergent | divergent | 5 | behaviour differs on synthesised input #5 |
+| TP | py-08-comparator-sign | python | comparator-sign-swap | divergent | divergent | 6 | behaviour differs on synthesised input #6 |
 | TP | py-09-dropped-return | python | dropped-return-value | divergent | divergent | 3 | behaviour differs on synthesised input #3 |
 | TP | py-10-reordered-sideeffect | python | reordered-side-effects | divergent | divergent | 2 | behaviour differs on synthesised input #2 |
 | TP | ts-01-boundary-condition | typescript | boundary-condition | divergent | divergent | 38 | Observable behaviour diverged on input #38: before=true after=false. The refactoring is NOT behaviour-preserving for this input. |
@@ -54,9 +54,9 @@ Confusion matrix (divergent = positive class):
 | TP | ts-10-exception-swallow | typescript | exception-handling | divergent | divergent | 1 | Observable behaviour diverged on input #1: before=throw Error after=0. The refactoring is NOT behaviour-preserving for this input. |
 | TN | py-eq-01-recursive-to-iterative | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TN | py-eq-02-comprehension | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
-| FP | py-eq-03-guard-clause | python | none | equivalent | divergent | 18 | behaviour differs on synthesised input #18 |
+| TN | py-eq-03-guard-clause | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TN | py-eq-04-extract-method | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
-| FP | py-eq-05-early-return | python | none | equivalent | divergent | 1 | behaviour differs on synthesised input #1 |
+| TN | py-eq-05-early-return | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TN | py-eq-06-rename-variable | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TN | py-eq-07-use-builtin | python | none | equivalent | equivalent | 2000 | no divergence found across 2000 synthesised inputs |
 | TN | ts-eq-01-recursive-to-iterative | typescript | none | equivalent | equivalent | 2000 | No divergence found across 2000 synthesized inputs (seed=1337). This is differential evidence of equivalence, not a proof. |
