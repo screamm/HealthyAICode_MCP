@@ -9,9 +9,21 @@
  * coaching fallback when a block cannot be enforced.
  */
 
-/** Core evaluation. */
+/** Core evaluation (synchronous). */
 export { evaluateGate, newlyIntroducedSmells } from './evaluate-gate';
 export type { ProposedEdit } from './evaluate-gate';
+
+/**
+ * Extended async gate evaluation: runs the deterministic {@link evaluateGate}
+ * AND the optional behaviour-equivalence signal, combining them into a single
+ * {@link GateDecision}.
+ *
+ * - DENY `behaviour_divergence` — dynamic engine confirmed observable-behaviour
+ *   change (Python / TS / JS only, base gate otherwise allows).
+ * - Advisory warning appended to reason on `unverified` — does NOT block.
+ * - `equivalent` or unsupported language — synchronous decision stands.
+ */
+export { evaluateGateWithBehaviorEquiv } from './evaluate-gate';
 
 /**
  * Optional behaviour-equivalence signal (async, Python/TS/JS only). An ADDITIONAL

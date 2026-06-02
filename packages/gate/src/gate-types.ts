@@ -27,6 +27,13 @@ export type GateReasonCode =
   | 'new_security_smell'
   /** Edit introduces a new LLM-integration or supply-chain smell (incl. SlopsquattingRisk). */
   | 'new_ai_native_smell'
+  /**
+   * Dynamic behavior-equivalence check found that the edit changed observable
+   * behaviour for a synthesized input (Python / TS/JS only). This is the ONLY
+   * reason code emitted by `evaluateGateWithBehaviorEquiv` and not by the
+   * synchronous `evaluateGate`.
+   */
+  | 'behaviour_divergence'
   /** Edit is allowed; no blocking reason. */
   | 'none';
 

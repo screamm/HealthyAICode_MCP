@@ -29,6 +29,7 @@ import {
 } from './gate-types';
 import { isAdvisorySmell, isAiNativeSmell, isSecuritySmell } from './smell-classification';
 import { collectSecuritySmells } from './security-smells';
+import { evaluateBehaviorEquivalence } from './behavior-equiv-signal';
 // Deep import: core's index does not re-export the scorer. The gate recomputes a
 // file's score from the merged smell set (see below) so the reported score and
 // the `below_floor` check account for the security smells `analyzeCode` omits.
@@ -249,8 +250,78 @@ function buildReason(code: GateReasonCode, ctx: ReasonContext): string {
       );
     case 'none':
       return `Edit to ${ctx.filePath} is allowed (health ${before} → ${after}).`;
+    case 'behaviour_divergence':
+      // This case is handled by evaluateGateWithBehaviorEquiv, not buildReason,
+      // but the exhaustiveness guard requires it here.
+      return `Edit to ${ctx.filePath} changed observable behaviour and was blocked.`;
     default:
       // Exhaustiveness guard.
       return `Edit to ${ctx.filePath} evaluated.`;
   }
+}
+
+/**
+ * Extended gate evaluation that adds an **async** behaviour-equivalence signal
+ * on top of the synchronous {@link evaluateGate} decision.
+ *
+ * Contract (honest by construction):
+ * - DENY `behaviour_divergence` — the dynamic engine confirmed the edit changed
+ *   observable behaviour for a synthesized input (Python / TS / JS only).
+ * - WARN (advisory) on `unverified` — the engine could not verify (unsupported
+ *   language, file with imports, new file). The gate does NOT block; the
+ *   advisory message is appended to the allow/deny reason from the base gate.
+ * - `equivalent` — no additional effect; the deterministic decision stands.
+ *
+ * The synchronous {@link evaluateGate} result is ALWAYS evaluated first. If it
+ * already denies (security, floor, regression), the behaviour-equiv check runs
+ * in parallel and the deny verdict is not upgraded — the first denial stands.
+ * If the base gate allows AND the behaviour-equiv check returns `divergence`,
+ * the combined result is `deny / behaviour_divergence`.
+ *
+ * @param edit            The proposed whole-file edit (before → after).
+ * @param config          Optional gate thresholds (same as {@link evaluateGate}).
+ * @param targetFunction  Optional function name hint for the Python/TS engine.
+ */
+export async function evaluateGateWithBehaviorEquiv(
+  edit: ProposedEdit,
+  config?: GateConfig,
+  targetFunction?: string,
+): Promise<GateDecision> {
+  // Run the synchronous gate and the async behaviour-equiv signal in parallel.
+  const [baseDecision, behaviorSignal] = await Promise.all([
+    Promise.resolve(evaluateGate(edit, config)),
+    evaluateBehaviorEquivalence(edit, targetFunction),
+  ]);
+
+  // If the behaviour-equiv engine detected a divergence AND the base gate
+  // allowed the edit, upgrade to deny.
+  if (behaviorSignal.block && baseDecision.verdict === 'allow') {
+    const divergingInputClause = behaviorSignal.divergingInput
+      ? ` Diverging input: ${behaviorSignal.divergingInput}.`
+      : '';
+    return {
+      ...baseDecision,
+      verdict: 'deny',
+      reasonCode: 'behaviour_divergence',
+      reason:
+        `Edit to ${edit.filePath} changed observable behaviour and was blocked. ` +
+        behaviorSignal.reason +
+        divergingInputClause,
+    };
+  }
+
+  // If unverified (advisory), append a warning to the reason but do NOT change
+  // the verdict. This is the honest contract: "we couldn't verify, so we don't
+  // claim safety nor falsely block."
+  if (behaviorSignal.verdict === 'unverified' && behaviorSignal.attempted) {
+    return {
+      ...baseDecision,
+      reason:
+        baseDecision.reason +
+        ` [behaviour-equiv advisory: ${behaviorSignal.reason}]`,
+    };
+  }
+
+  // equivalent or language not attempted — deterministic decision stands unchanged.
+  return baseDecision;
 }
