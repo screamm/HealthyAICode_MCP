@@ -280,3 +280,54 @@ Två av §1–§3:s förbehåll är nu **åtgärdade och oberoende re-verifierad
 - **FP sänkt 13,3 % → 0,0 % (0/15)** via typ-/användningsstyrd input-syntes (rotorsaken i §1: otypad syntes som matade `None`/skräp till typade parametrar). Detektion **90,0 % (18/20) behållen**.
 
 Med 0 % FP är grinden nu **hård-blockerings-trovärdig på korpusen** — den avvisar inga legitima refaktoreringar. Oförändrat ärligt: 35 hand-konstruerade par ≠ fält; 2 av 46 språk dynamiska; 2 FN (`py-06` slice-off-by-one, `ts-08` async-await-drop) kvarstår som dokumenterade gränser. **Lärdom inbyggd:** bench:en importerar från `dist/`, så `dist` måste byggas om efter motoredits — en stale dist gav en felaktig "FP kvar 13,3 %"-läsning denna körning som först såg ut som en regression men var en mätartefakt. Detta gör grinden produktionsfärdig på de två språken; det gör oss fortfarande **inte** världsbäst — den fält-validerade bredden, den fullskaliga RCT:n, peer-review och riktiga användare återstår.
+
+
+---
+
+## Increment 2026-06-02 — Spel 3: den avgörande forced-risky-refactoring-RCT:n
+
+**Ton:** Senior, brutalt ärlig, noll hype. Detta increment kör den studie som hela planen utpekat som *avgörande* (§ 5, § 6): den naturliga-edit-piloten (+0,296, 0-vs-0 säkerhet) visade att grinden mestadels no-op:ar på rena agent-edits, så pre-registreringen krävde ett **uppgiftsurval som tvingar fram riskfyllda refaktoreringar** — strukturella omskrivningar där regressioner är lätta att introducera, med en riktig agent. Detta är den körningen. **Slutsatsen är negativ för marginal-tesen, och den publiceras oavsett** — det var hederslöftet.
+
+### 0. De tre förregistrerade måtten — oberoende omräknade ur rådata, inget fabricerat
+
+Setup: 40 forced-risky-tasks (`benchmark-data/spel3-rct/batch-{0,10,20,30}.json`, idx 0–39), ~12 språk, baslinje-score 1,0–6,7. Varje uppgift är en genuin strukturell omskrivning (extract-class, decompose-conditional, extract-method-shared-state) — *inte* additiva hjälpare. Båda armarna (gate-off / gate-on) kördes på in-memory-buffertar; field-repos och motorkällan muterades aldrig. En oberoende verifierare byggde om `core`/`gate` från grunden, re-scorade varje slutbuffert med `analyzeCode`, körde `evaluateGate` + `verifyRefactor` på nytt, och **hand-exekverade de påstått buggiga off-buffertarna i Python** för att mäta faktisk beteendedivergens.
+
+| # | Förregistrerat mått | Verifierat utfall (n=40) | Domen |
+|---|---|---|---|
+| **1** | Genuint dåliga edits blockerade | **7/40 — men ALLA 7 är `below_floor` (score < 6,0), NOLL är beteendebugg-block** | Grindens beteendeekvivalens-arm blockerade **ingenting**. Denierade idx: 0, 1, 6, 14, 20, 27, 34. |
+| **2** | Beteendedivergenser som landade (off / on) | **0 / 0 enligt motorn — men det är ett TÄCKNINGS-artefakt, inte säkerhet** | Dynamisk verifiering körde på **2/40** tasks (båda Python). 38/40 = `unverified`/`static-only-advisory`. "0 landade" = "0 *upptäckta*", inte "0 *närvarande*". |
+| **3** | Medel-score-delta (ON − OFF) | **+0,167** (off=7,365, on=7,532; 7 positiva, 31 exakta nollor, 2 negativa) | **Svagare än naturliga-edit-piloten (+0,296)** och långt under simuleringens +1,45. Gate-on skilde sig från gate-off på **10/40**; av dem var **3 fulla task-abandonment-reverts** (idx 20, 27, 36). |
+
+### 1. Det avgörande fyndet: grinden släppte igenom RIKTIGA regressioner — på ett stött språk
+
+Verifieraren differential-exekverade de misstänkta off-buffertarna. Tre konkreta beteendebrott landade som grinden **ALLOW:ade**:
+
+- **idx 32 (`Complex.cs`, C#):** off-bufferten hissar en `% 2 == 0`-check ut ur sin `while`-loop. Differentiell exekvering: **off divergerar på 24/78 inputs** (t.ex. `[3],"fast"` → orig `"fast"`, off `"default"`). Bufferten innehåller bokstavligen kommentaren `// BUG: checks even once outside loop instead of per-iteration`. Grinden **tillät** den (5,8→6,1, över floor; C# är advisory ⇒ `verifyRefactor`=unverified). Gate-on landade den korrekta 6,7-bufferten *enbart* för att harnessen hand-matade en förskriven `task32_on.cs` — **inte för att grinden fångade buggen**. I en riktig loop hade grinden skeppat regressionen.
+- **idx 35 (`fixImportNonExportedMember.ts`, TypeScript — ett STÖTT språk):** off returnerar `moduleSpecifier: token.text` ("Foo") i stället för modulsträngen ("./bar"). Den dynamiska motorn returnerade `unverified` eftersom field-repo-filens imports inte kan laddas i VM:en (`require is not defined`). Grinden tillät (6,1→6,4). **Även på ett stött språk degraderade den dynamiska checken tyst till advisory på en realistisk fil.**
+- **idx 36 (`atomic_waker.rs`, Rust):** genuin panik-propagerings-ordnings-bugg i off; advisory-only ⇒ grinden tillät (6,4→8,3).
+
+### 2. Pre-registreringen var skriven före körning — men körningen implementerade inte protokollet
+
+- **Timing OK:** `docs/benchmarks/rct-preregistration.md` committades 2026-06-02 01:57:39 (+0200, commit `acd4ebe`); batch-JSON:erna är tidsstämplade ~16:5x UTC samma dag, dvs **efter** prereg. Temporalt föregår prereg körningarna.
+- **Protokoll-avvikelse (avgörande):** prereg (§5/§6) låser "Model: Claude … runnern anropar Anthropic-API:t direkt … agenten genererar en föreslagen edit (full-file replacement)". Den committade runnern `scripts/rct/run-real-agent-rct.mjs` har den riktiga `runArmWithLlm()`-API-vägen — **men spel3-batcharna anropar den aldrig.** De använder bespoke-harnesser (`batch0/rct-harness-v2.mjs`, `batch20/evaluate.mjs`, `batch30/runner.mjs`) som scorar **hand-författade buffertfiler**. Runner-kommentarerna är explicita: `task<N>_off.<ext> — the refactoring as first written (may have bugs)`, flera taggade "has bug"/"deliberate risky change". **Det är exakt den deliberately-injected-garbage-approach orchestratorns hederskontrakt förbjuder** — inte genuina agent-edits i en loop. En prereg man sedan avviker från är ingen uppfylld prereg.
+- **Uppgiftsdesignen är dock korrekt riskfylld** (det är inte problemet): idx 0 extract-class, idx 4 6-nivå-nesting, idx 23 try_join poll-logik, idx 36 CAS-loop atomic ordering, idx 38 BrainMethod-decompose — alla strukturella omskrivningar, inte additiva hjälpare. Felet är i *exekveringen* (hand-buffertar + injicerade buggar), inte i task-poolen.
+
+### 3. Svarar detta den avgörande frågan? Ärligt: NEJ — och det är själva fyndet
+
+**Frågan var:** reducerar enforced gating + beteendeekvivalens-verifiering *kausalt* beteendebrytande/osunda edits på forced-risky-refaktoreringar, och med hur mycket? **Det verifierade svaret: denna körning kan inte besvara det**, av tre skäl som måste resa med varje citering:
+
+1. **Grindens enda mätbara verkan var score-floor-blockering (7/40), inte beteendefångst (0/40).** Beteendeekvivalens-armen — den kategori-unika delen — fångade noll regressioner. De regressioner som *fanns* (idx 32, 35, 36) släpptes igenom.
+2. **"0 divergenser landade" är en icke-täcknings-artefakt.** 38/40 tasks var advisory-only. Påståendet "grinden förhindrade divergens" är ostött; minst en bevisad divergens (idx 32, 24/78 inputs) landade i båda armarna och registrerades som `behaviourDivergentOn: false`.
+3. **+0,167 är svagare än till och med den nedjusterade naturliga-edit-piloten.** Grinden no-op:ade på 30/40; 3 av de 10 verkande fallen var task-abandonment-reverts. Det finns ingen marginal-definierande kausal siffra här.
+
+**Är detta nu det kausala resultat advisory-kategorin strukturellt inte kan producera, eller no-op:ar grinden fortfarande? Ärlig pivot: grinden no-op:ar fortfarande på det som spelar roll.** Den fångar tråkig score-erosion (floor-block) men **inte** de tysta beteendebrotten — och beteendebrotten är hela poängen med Spel 1-armen. Värre: på de två stödda språken (TS) degraderade den dynamiska checken tyst till advisory på en realistisk field-repo-fil. Den asymmetri planen vilar på (§ 1, § 6) är **inte demonstrerad** av denna körning.
+
+### 4. Det SINGEL viktigaste återstående steget
+
+Oförändrat från § 6, men nu skärpt av exakt *vad* som gick fel: **kör den förregistrerade RCT:n via den committade `runArmWithLlm()`-vägen — en riktig agent som genererar edits autonomt mot riktiga issues — INTE hand-författade buffertar med injicerade buggar.** Och tätt knutet: **stäng två täcknings-/täcknings-hål som denna körning blottade**, eftersom utan dem är RCT-siffran oavläsbar oavsett protokoll:
+1. Den dynamiska motorns tysta degradering till `unverified` på field-repo-filer med oladdbara imports (idx 35) — en supported-language-fil som faller till advisory är en falsk trygghet. Loader-vägen (`require is not defined`) måste härdas så att stödda språk faktiskt verifieras dynamiskt i fält, annars är "2/46 språk dynamiska" i praktiken "0/46 på realistiska filer".
+2. Score-floor-blockering kan inte vara grindens *enda* verkningsmekanism på risky edits; beteendeekvivalens-armen måste faktiskt kopplas in i gate-beslutet för stödda språk (idx 32-klassens bugg ska deny:as på beteende, inte tillåtas på score).
+
+### 5. Gör detta oss världsbäst? Nej — och nu med starkare skäl än tidigare increment
+
+**Nej.** Och denna körning *försvagar* caset i stället för att stärka det: (a) den avgörande kausala siffran är fortfarande okörd via det förregistrerade protokollet; (b) den körning vi gjorde visade att beteendeekvivalens-grinden fångade 0/3 verkliga regressioner och tyst degraderade på en stödd-språk-fil; (c) effektstorleken (+0,167) är den svagaste hittills uppmätta. Vi har bevisade artefakter (OCHS-CLI, slopsquatting, behavior-equiv-bench på 90 %/0 % FP på 35 hand-par, gate-FP 0 %), men **det avgörande beviset existerar inte**, och denna körning visade dessutom att två instrumentbrister kan göra det avgörande beviset oavläsbart även när vi väl kör det rätt. Världsbäst kräver: den korrekt körda förregistrerade RCT:n med en levande agent, en fält-validerad beteendeekvivalens-grind som inte tyst degraderar, OCHS-extern-adopter, peer-review och riktiga användare. Inget av detta är levererat. **Vägen är intakt; detta increment var ett ärligt negativt resultat som identifierade exakt vad som måste fixas innan den avgörande studien kan köras meningsfullt.**

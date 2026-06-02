@@ -1,7 +1,7 @@
 # Behavior-Equivalence Gate — Corpus Measurement
 
-Generated: 2026-06-02T09:08:39.326Z (real engine run, no fabricated numbers)
-Duration: 59365 ms
+Generated: 2026-06-02T17:05:22.685Z (real engine run, no fabricated numbers)
+Duration: 60314 ms
 Corpus: `packages/core/tests/fixtures/behavior-equiv/` (35 pairs)
 Engines: Python (`verifyPythonEquivalence`, 2000 inputs/pair) + TS/JS (`checkJsEquivalence`, 2000 inputs/pair)
 
