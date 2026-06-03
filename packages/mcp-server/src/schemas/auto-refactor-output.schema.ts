@@ -22,7 +22,7 @@ import { z } from 'zod';
 /** Zod shape for the embedded Smell in AutoRefactorResult. */
 const smellZod = z.object({
   type: z.string(),
-  severity: z.enum(['critical', 'high', 'medium']),
+  severity: z.enum(['critical', 'high', 'medium', 'low']),
   description: z.string(),
   suggestion: z.string(),
   line: z.number().optional(),

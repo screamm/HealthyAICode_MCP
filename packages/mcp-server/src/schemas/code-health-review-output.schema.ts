@@ -18,7 +18,7 @@ import { z } from 'zod';
 export const smellZodSchema = z.object({
   type: z.string().describe('SmellType identifier, e.g. ComplexMethod, DeepNesting'),
   severity: z
-    .enum(['critical', 'high', 'medium'])
+    .enum(['critical', 'high', 'medium', 'low'])
     .describe('Severity level of the smell'),
   description: z.string().describe('Human-readable explanation of the smell'),
   suggestion: z.string().describe('Actionable refactoring suggestion'),
@@ -68,7 +68,7 @@ const smellJsonSchema = {
     type: { type: 'string', description: 'SmellType identifier' },
     severity: {
       type: 'string',
-      enum: ['critical', 'high', 'medium'],
+      enum: ['critical', 'high', 'medium', 'low'],
       description: 'Severity level',
     },
     description: { type: 'string', description: 'Explanation of the smell' },
