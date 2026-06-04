@@ -6,7 +6,7 @@ import { calculateScore, categorize } from './scoring/scorer';
 import { detectBrainMethods } from './temporal/brain-method';
 import { detectSlopsquattingOffline } from './analyzers/slopsquatting';
 import { analyzeMethodCoupling, methodCouplingToSmells } from './temporal/method-coupling';
-import type { HealthResult, Language } from './types';
+import type { HealthResult, Language, Smell, SmellType } from './types';
 import { buildEmptyResult, buildUnparseableResult, buildUnsupportedResult, appendLargeFileSmellIfNeeded, type FileContext } from './core-helpers';
 
 /** Re-exports all public types for use by consumers of this package. */
@@ -57,6 +57,9 @@ export { getChangeFrequency } from './analyzers/change-frequency';
 export { setConfig, getConfig } from './config';
 /** Calibration infrastructure: load Defects4J-calibrated thresholds from calibration/*.json. */
 export { loadCalibration, getThresholds, getWeights, DEFAULT_THRESHOLDS } from './scoring/calibration-loader';
+/** Base per-occurrence smell weights (documented scoring table). Exposed so other packages can
+ *  identify non-scored advisory smells (weight 0) without re-deriving the table. */
+export { SMELL_WEIGHTS } from './scoring/weights';
 /** Debt goals tracking system for technical debt supervision (Sprint 34). */
 export {
   loadGoals,
@@ -325,8 +328,44 @@ export function analyzeCode(code: string, language: Language, filePath = '<inlin
   // corpus detection. Self-guards to TS/JS/Python; returns [] for all other languages.
   smells.push(...detectSlopsquattingOffline(code, language, filePath));
   appendLargeFileSmellIfNeeded(smells, totalLines);
-  const score = calculateScore(smells, language);
-  return { filePath, language, score, category: categorize(score), smells, metrics: parsed.metrics, functions: parsed.functions };
+  const finalSmells = suppressRedundantAdvisories(smells);
+  const score = calculateScore(finalSmells, language);
+  return { filePath, language, score, category: categorize(score), smells: finalSmells, metrics: parsed.metrics, functions: parsed.functions };
+}
+
+/**
+ * Complexity / structure smells whose remediation IS "extract or restructure". When a function
+ * already has one of these, the TidyOpportunity "extract each chunk into a named function" advisory
+ * is redundant noise, so it is dropped for that function. Non-structural findings (MagicNumber,
+ * LongParameterList, …) are orthogonal and do NOT suppress it — e.g. a low-complexity 2-chunk
+ * function with a magic number still gets the tidy nudge (the bilden checkoutOrder case).
+ */
+const STRUCTURAL_SMELL_TYPES = new Set<SmellType>([
+  'ComplexMethod',
+  'BrainMethod',
+  'CognitiveComplexity',
+  'LargeMethod',
+  'DeepNesting',
+  'BumpyRoad',
+]);
+
+/**
+ * Drops the (non-scored) TidyOpportunity advisory from any function that already has a scored
+ * structural smell — that function will be restructured for the real issue anyway. Advisories on
+ * otherwise-healthy functions are kept. Score is unaffected (TidyOpportunity weight is 0).
+ */
+function suppressRedundantAdvisories(smells: Smell[]): Smell[] {
+  const restructuredFunctions = new Set<string>();
+  for (const s of smells) {
+    if (s.functionName && STRUCTURAL_SMELL_TYPES.has(s.type)) restructuredFunctions.add(s.functionName);
+  }
+  if (restructuredFunctions.size === 0) return smells;
+  return smells.filter(
+    (s) =>
+      s.type !== 'TidyOpportunity' ||
+      s.functionName === undefined ||
+      !restructuredFunctions.has(s.functionName),
+  );
 }
 
 /** Attempts to parse and analyze the code, returning null if the analyzer throws. */

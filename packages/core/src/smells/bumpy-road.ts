@@ -66,6 +66,19 @@ function collectChunkRanges(body: Parser.SyntaxNode): Array<{ startLine: number;
 }
 
 /**
+ * Returns 1-indexed inclusive line ranges for every top-level sibling control-flow chunk inside a
+ * function body, or an empty array when the function has no brace-delimited body. Shared by the
+ * BumpyRoad detector (≥ BUMPY_ROAD_CHUNK_THRESHOLD chunks) and the TidyOpportunity advisory (2–3).
+ */
+export function getTopLevelChunkRanges(
+  fnNode: Parser.SyntaxNode,
+): Array<{ startLine: number; endLine: number }> {
+  const body = findFunctionBody(fnNode);
+  if (!body) return [];
+  return collectChunkRanges(body);
+}
+
+/**
  * Detects Bumpy Road: a single function whose body contains too many sequential top-level
  * control-flow chunks. Operates on ONE function node; returns a single Smell or null.
  *
@@ -84,10 +97,7 @@ function collectChunkRanges(body: Parser.SyntaxNode): Array<{ startLine: number;
  * Kotlin support is deferred to a future sprint.
  */
 export function detectBumpyRoadChunks(fnNode: Parser.SyntaxNode): Smell | null {
-  const body = findFunctionBody(fnNode);
-  if (!body) return null;
-
-  const chunkRanges = collectChunkRanges(body);
+  const chunkRanges = getTopLevelChunkRanges(fnNode);
   if (chunkRanges.length < BUMPY_ROAD_CHUNK_THRESHOLD) return null;
 
   // getFunctionName handles TypeScript-specific patterns; for other languages fall back to the

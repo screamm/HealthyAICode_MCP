@@ -127,3 +127,51 @@ describe('formatReviewSummary', () => {
     expect(summary).toContain('DeepNesting');
   });
 });
+
+describe('non-scored advisory smells (TidyOpportunity, weight 0)', () => {
+  const tidy = {
+    type: 'TidyOpportunity' as const,
+    severity: 'low' as const,
+    description: "'checkout' has 2 sequential control-flow chunks",
+    suggestion: 'Optional clean-code improvement: extract each top-level chunk into a named helper.',
+    functionName: 'checkout',
+    line: 2,
+  };
+
+  const advisoryOnly: HealthResult = {
+    ...greenResult,
+    filePath: 'src/checkout.ts',
+    score: 10,
+    category: 'green',
+    smells: [tidy],
+  };
+
+  it('formatReviewSummary does not list an advisory under "Issues found"', () => {
+    const summary = formatReviewSummary('src/checkout.ts', advisoryOnly);
+    expect(summary).toContain('No issues found');
+    expect(summary).not.toContain('Issues found:');
+  });
+
+  it('formatReviewSummary still surfaces the advisory under its own heading', () => {
+    const summary = formatReviewSummary('src/checkout.ts', advisoryOnly);
+    expect(summary).toContain('TidyOpportunity');
+    expect(summary.toLowerCase()).toContain('advisory');
+  });
+
+  it('buildNextAction never picks a weight-0 advisory as the priority smell', () => {
+    const mixed: HealthResult = {
+      ...greenResult,
+      filePath: 'src/mix.ts',
+      score: 9.0,
+      category: 'green',
+      // TidyOpportunity listed FIRST and same 'low' severity as SATD — without a weight
+      // filter the array-order tiebreak would wrongly pick the advisory.
+      smells: [
+        tidy,
+        { type: 'SATD', severity: 'low', description: 'TODO left in code', suggestion: 'Resolve the TODO.', functionName: 'f', line: 3 },
+      ],
+    };
+    const action = buildNextAction(mixed, false);
+    expect(action.priority?.type).toBe('SATD');
+  });
+});

@@ -75,6 +75,11 @@ export const SMELL_WEIGHTS: Record<SmellType, number> = {
   // Sprint 56: anti-gaming structural smells (penalise mechanical code-splitting).
   SplitResidue: 0.5,
   FragmentedCode: 0.3,
+  // Non-scored clean-code advisory. Weight 0 by design — TidyOpportunity (a function with 2–3
+  // sequential control-flow chunks) is informational only and must never affect the score or
+  // loopComplete. It is the only weight-0 smell; see ADVISORY_SMELL_TYPES (gate) and
+  // DERIVED_SMELL_TYPES (smell-picker) for the matching refactor-loop / regression guards.
+  TidyOpportunity: 0,
 };
 
 /** Minimum score at which a file is considered safe for AI-assisted modification. */

@@ -25,6 +25,10 @@ export const DERIVED_SMELL_TYPES = new Set<SmellType>([
   'DeveloperCongestion',
   'KnowledgeLoss',
   'MethodTemporalCoupling',
+  // Non-scored clean-code advisory (weight 0). Never a refactor-loop target: there is no
+  // score to recover, so targeting it would waste an iteration (rejected by the convergence
+  // noise floor anyway). The advisory is surfaced for the human/AI to act on optionally.
+  'TidyOpportunity',
 ]);
 
 /**

@@ -1,5 +1,15 @@
 import type { HealthResult, Smell } from '@healthy-ai-code/core';
+import { SMELL_WEIGHTS } from '@healthy-ai-code/core';
 import type { NextAction } from '../types';
+
+/**
+ * A smell is "scored" when it has a non-zero weight in the health formula. Weight-0 smells
+ * (TidyOpportunity) are informational advisories: they never lower the score, are never the
+ * refactor-loop target, and are listed separately from real issues in the review summary.
+ */
+function isScored(smell: Smell): boolean {
+  return (SMELL_WEIGHTS[smell.type] ?? 0) > 0;
+}
 
 /** Builds the next recommended action for the AI based on the current health result. */
 export function buildNextAction(result: HealthResult, loopComplete: boolean): NextAction {
@@ -24,9 +34,11 @@ export function buildNextAction(result: HealthResult, loopComplete: boolean): Ne
 }
 
 function getPrioritySmell(smells: Smell[]): Smell | null {
-  if (smells.length === 0) return null;
+  // Only scored smells are refactor targets; a weight-0 advisory is never the next action.
+  const scored = smells.filter(isScored);
+  if (scored.length === 0) return null;
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2 };
-  return [...smells].sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))[0];
+  return [...scored].sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))[0];
 }
 
 /** Formats a human-readable review summary for the given file and health result. */
@@ -37,15 +49,26 @@ export function formatReviewSummary(filePath: string, result: HealthResult): str
     '',
   ];
 
-  if (result.smells.length === 0) {
+  const scored = result.smells.filter(isScored);
+  const advisories = result.smells.filter((s) => !isScored(s));
+
+  if (scored.length === 0) {
     lines.push('No issues found. Code is AI-ready.');
-    return lines.join('\n');
+  } else {
+    lines.push('Issues found:');
+    for (const smell of scored) {
+      lines.push(`  ${severityLabel(smell.severity)} ${smell.type}: ${smell.description}`);
+      lines.push(`             → ${smell.suggestion}`);
+    }
   }
 
-  lines.push('Issues found:');
-  for (const smell of result.smells) {
-    lines.push(`  ${severityLabel(smell.severity)} ${smell.type}: ${smell.description}`);
-    lines.push(`             → ${smell.suggestion}`);
+  if (advisories.length > 0) {
+    lines.push('');
+    lines.push('Advisory (informational — does not affect the score or AI-readiness):');
+    for (const smell of advisories) {
+      lines.push(`  [ADVISORY] ${smell.type}: ${smell.description}`);
+      lines.push(`             → ${smell.suggestion}`);
+    }
   }
   return lines.join('\n');
 }

@@ -95,6 +95,10 @@ export const ADVISORY_SMELL_TYPES: ReadonlySet<string> = new Set<string>([
   'MagicNumber',
   'StyleInconsistency',
   'LowMaintainability',
+  // Non-scored clean-code advisory (weight 0): a function with 2–3 sequential control-flow
+  // chunks. Excluded from the regression judgement so that extracting a helper — which can
+  // reveal a fresh 2-chunk function — is never denied as a regression.
+  'TidyOpportunity',
 ]);
 
 /** True when the smell type is in the hard-deny security set. */

@@ -119,7 +119,12 @@ export type SmellType =
   | 'DuplicateCode'
   // Anti-gaming structural smells (Sprint 56):
   | 'SplitResidue'
-  | 'FragmentedCode';
+  | 'FragmentedCode'
+  // Non-scored clean-code advisory (Design A): a function with 2–3 sequential control-flow
+  // chunks (below the BumpyRoad threshold of 4). Weight 0 — informational only, never lowers
+  // the score, never a refactoring-loop target. Surfaces the "extract each chunk into a named
+  // function" nudge without the false-positive cost of lowering the BumpyRoad threshold.
+  | 'TidyOpportunity';
 
 /**
  * Per-dimension health subscores (Sprint 56). Each value is in [1.0, 10.0] and is computed by

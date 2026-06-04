@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { analyzeCode, analyzeForAutoRefactor } from '../../src/index.js';
 import type { Language } from '../../src/types.js';
+import { SMELL_WEIGHTS } from '../../src/scoring/weights.js';
 
 const BENCH_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -42,22 +43,31 @@ function printBreakdown(file: string, language: Language) {
 }
 
 describe('Sprint 50 benchmark — AFTER scores (refactored)', () => {
-  it('TypeScript good-code: score ≥ 9.5, smells ≤ 2', () => {
+  it('TypeScript good-code: score ≥ 9.5, scored smells ≤ 2', () => {
     const { result } = printBreakdown('good-typescript.ts', 'typescript');
     expect(result.score).toBeGreaterThanOrEqual(9.5);
-    expect(result.smells.length).toBeLessThanOrEqual(2);
+    // Count only SCORED problems — non-scored advisories (TidyOpportunity, weight 0) are
+    // surfaced on clean code by design and must not count against "good code has few issues".
+    const scoredSmells = result.smells.filter((s) => (SMELL_WEIGHTS[s.type] ?? 0) > 0);
+    expect(scoredSmells.length).toBeLessThanOrEqual(2);
   });
 
-  it('Python good-code: score ≥ 9.5, smells ≤ 2', () => {
+  it('Python good-code: score ≥ 9.5, scored smells ≤ 2', () => {
     const { result } = printBreakdown('good-python.py', 'python');
     expect(result.score).toBeGreaterThanOrEqual(9.5);
-    expect(result.smells.length).toBeLessThanOrEqual(2);
+    // Count only SCORED problems — non-scored advisories (TidyOpportunity, weight 0) are
+    // surfaced on clean code by design and must not count against "good code has few issues".
+    const scoredSmells = result.smells.filter((s) => (SMELL_WEIGHTS[s.type] ?? 0) > 0);
+    expect(scoredSmells.length).toBeLessThanOrEqual(2);
   });
 
-  it('Go good-code: score ≥ 9.5, smells ≤ 2', () => {
+  it('Go good-code: score ≥ 9.5, scored smells ≤ 2', () => {
     const { result } = printBreakdown('good-go.go', 'go');
     expect(result.score).toBeGreaterThanOrEqual(9.5);
-    expect(result.smells.length).toBeLessThanOrEqual(2);
+    // Count only SCORED problems — non-scored advisories (TidyOpportunity, weight 0) are
+    // surfaced on clean code by design and must not count against "good code has few issues".
+    const scoredSmells = result.smells.filter((s) => (SMELL_WEIGHTS[s.type] ?? 0) > 0);
+    expect(scoredSmells.length).toBeLessThanOrEqual(2);
   });
 
   it('prints full BEFORE → AFTER comparison table', () => {
