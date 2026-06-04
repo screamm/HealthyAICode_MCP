@@ -1,148 +1,90 @@
+<div align="center">
+
 # Healthy AI Code MCP
 
-> **27 tools · 28 biomarkers · 46 languages · fully local, no account required**
+<p align="center">
+  <img src="assets/code-health-banner.svg" alt="messy code turns into healthy code — a red 4.2 health gauge becomes a green 9.7 while smells disappear" width="100%">
+</p>
 
-A local MCP server that gives AI assistants objective, score-based code health feedback — enabling a self-correcting refactoring loop where the AI keeps iterating until the health score reaches the target.
+**The independent, local verification layer for AI-generated code.**
 
----
+An MCP server that gives AI assistants an objective, score-based health signal — and the tooling to act on it — so generated code is refactored until it is genuinely safe to keep.
 
-## Verified Benchmarks
+<p align="center">
+  <a href="https://www.buymeacoffee.com/YOUR_USERNAME"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
+  &nbsp;
+  <a href="https://www.paypal.com/donate/?hosted_button_id=YOUR_ID"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
+</p>
 
-All numbers come from reproducible runs on purpose-built fixtures. Raw data: [`docs/benchmarks/`](docs/benchmarks/).
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License MIT">
+  <img src="https://img.shields.io/badge/tools-29-3fb950" alt="29 tools">
+  <img src="https://img.shields.io/badge/biomarkers-55-3fb950" alt="55 biomarkers">
+  <img src="https://img.shields.io/badge/languages-46-3fb950" alt="46 languages">
+  <img src="https://img.shields.io/badge/node-%E2%89%A518-026e00" alt="Node >= 18">
+  <img src="https://img.shields.io/badge/runs-100%25%20local-026e00" alt="100% local">
+</p>
 
-### Mechanical loop — no LLM required
-
-`runRefactoringLoop()` applies AST-guided rewrites (extract method, early return, parameter object) with zero Claude calls.
-
-| Metric | Result |
-|--------|--------|
-| Corpus | 17 unhealthy fixture files, 12 languages |
-| Fix rate (score < 9.0 → ≥ 9.5) | **11.8%** (2 / 17) |
-| Average score improvement | **+0.27 pts** |
-| Median iterations to fix | 3 |
-| Cost | **$0** |
-
-Language coverage is the constraint: TypeScript, JavaScript, and PHP have working transformers; Go, Python, Ruby, Rust, Elixir, and Swift receive smell detection but no automated rewrites yet.
-
-### Claude Opus — single pass
-
-`code_health_auto_refactor` returns structured instructions (function name, numbered steps, example skeleton). Claude Opus applies them in one pass, using your existing Pro/Max session — no separate billing.
-
-| Metric | Result |
-|--------|--------|
-| Corpus | 5 files with actionable smells |
-| Fix rate (→ ≥ 9.5, single pass) | **20%** (1 / 5) |
-| Average score improvement | **+2.04 pts** |
-| Best single-pass result | `complex.ex` (Elixir) 5.1 → **9.6** (+4.5 pts) |
-| Cost | **Included in Claude Pro/Max** |
-
-Near-misses in a single pass: `Complex.cs` (C#) 5.5 → 8.7 (+3.2 pts). These cross the threshold on the second iteration.
-
-### Claude Opus — multi-iteration loop
-
-Running `code_health_auto_refactor → apply → code_health_review` until `loopComplete: true`:
-
-| File | Language | Start | End | Iterations |
-|------|----------|-------|-----|------------|
-| `bumpy-road-fixture.ts` | TypeScript | 8.9 | **10.0** | 2 |
-| `Complex.java` | Java | 5.5 | **10.0** | 6 |
-
-Files near the scoring floor (< 5.0) need more passes and benefit from targeting the highest-weight smell first (enforced since Sprint 34).
-
-### Sprint 50 BEFORE → AFTER benchmark
-
-Purpose-built bad-code fixtures (≈1.0–1.2 score, 32–34 smells) refactored to ≥ 9.5 in one session. Fixtures live in [`before-after/benchmark-sprint50/`](before-after/benchmark-sprint50/).
-
-| File | BEFORE | AFTER | Δ Score | Smells↓ |
-|------|--------|-------|---------|---------|
-| `typescript.ts` | 1.00 | **9.60** | +8.60 | 32 → 1 |
-| `python.py` | 1.00 | **9.70** | +8.70 | 33 → 1 |
-| `go.go` | 1.20 | **10.00** | +8.80 | 34 → 0 |
-
-Key smells eliminated per file: DeepNesting, ComplexMethod, MagicNumber, BumpyRoad, LargeMethod, DataClumps, LowDocCoverage, CognitiveComplexity, PrimitiveObsession. Run: `pnpm --filter @healthy-ai-code/core test tests/benchmark/sprint50-after.test.ts`
-
-### Test suite
-
-| Package | Test files | Tests | Status |
-|---------|-----------|-------|--------|
-| `@healthy-ai-code/core` | 82 | 905 | ✅ all passing |
-| `@healthy-ai-code/mcp-server` | 20 | 118 | ✅ all passing |
-| **Total** | **102** | **1 023** | ✅ |
-
-Run: `pnpm test`
-
-### Self-audit — we score our own code
-
-We hold this codebase to the same bar we apply to everyone else's. Running our own engine over our own source (`node scripts/health-audit.mjs`, which calls `analyzeFile()` on every non-generated `.ts` file in `packages/core/src` and `packages/mcp-server/src`) gives the honest picture below.
-
-| Metric | Value |
-|--------|-------|
-| Files analysed | 237 |
-| Mean score | **8.45 / 10** |
-| Files scoring a perfect 10.0 | 105 (44%) |
-| Files below 9.0 | 79 |
-| Files below 9.5 | 106 |
-| Files below 9.6 (our internal target) | 113 |
-
-No spin: our mean is **8.45**, not 9-something. The score distribution is bimodal — 105 files are already at 10.0, while the bulk of the deficit sits in a smaller set of intentionally dense files. The lowest-scoring files are our own smell detectors and behaviour-equivalence engines (e.g. `slopsquatting.ts`, `async-antipatterns.ts`, `behavior-equiv/js-equiv.ts`), which trade internal complexity for detection accuracy. We deliberately do **not** auto-refactor those: their exact output is asserted on by the test suite, and accuracy of the verification layer outweighs its own internal beauty score. We treat raising this mean as ongoing technical-debt work, tracked honestly rather than hidden.
-
-Reproduce: `node scripts/health-audit.mjs`
+</div>
 
 ---
 
-## Self-Correcting Loop
+## Why this exists
 
-```
-code_health_review (or code_health_score for quick screen)
-        │
-        ▼
-score ≥ 9.5? ──Yes──→ loopComplete: true — stop
-        │
-        No
-        ▼
-code_health_auto_refactor
-  returns: smell type, target function, numbered steps, example skeleton,
-           predicted score delta, remaining smell queue
-        │
-        ▼
-Claude Opus 4.7 subagent applies the targeted refactoring
-  (model: claude-opus-4-7 — highest fix rate on structured instructions)
-        │
-        ▼
-code_health_review (verify improvement)
-        │
-        ▼
-loopComplete: true? ──Yes──→ done
-        │
-        No  (loop stops only when score ≥ 9.5 — no minimum; typical: 2–4 iterations)
-        └──────────────────→ code_health_auto_refactor (next smell)
+AI assistants write a lot of code, fast. What they lack is an **objective, second opinion** on whether that code is healthy — one that the model cannot talk its way around. Asking the same model "is this good?" just produces more of the same model.
+
+Healthy AI Code MCP is that second opinion. It is:
+
+- **Local** — runs entirely on your machine over stdio. No account, no upload, no telemetry-by-default. Your code never leaves the box.
+- **Objective** — a deterministic score derived from 55 biomarkers via a published formula. Same code in, same score out, every time.
+- **Open** — the scoring spec (formula, every weight, every detection threshold) is published as the **OCHS** standard under MIT + CC BY 4.0, so any tool can reproduce the number.
+- **Actionable** — it doesn't just grade; it returns the next refactoring step and verifies that the refactoring preserved behavior, driving a self-correcting loop until the score hits the target.
+
+> **Honest status (2026-06):** This project's *goal* is to become the best-in-class verification layer for AI-generated code. That is a stated direction, **not** a current claim. Where it stands today, measured independently: **measurably competitive, honestly validated, and proven robust — and statistically better than PMD at predicting human-labelled code smells on Java.** It is *not* world-best yet, and this README never pretends otherwise. See [Benchmarks](#verified-benchmarks-honest) for the exact numbers and their scope.
+
+---
+
+## See it work: messy → healthy
+
+The banner above is the real workflow. Here is the concrete example behind it — a behavior-preserving refactor of an order-pricing function ([`before-after/refactor-demo/`](before-after/refactor-demo/)):
+
+| | **Before** (`processOrder`) | **After** (`priceOrder`) |
+|---|---|---|
+| Signature | 8 positional params, all `any` | one typed `OrderPricing` object |
+| Nesting | up to 5 levels deep | flat, single-purpose helpers |
+| Magic numbers | 14 inline literals | named constants + rate tables |
+| Structure | one function does everything | 6 small, documented functions |
+| Docs | none | JSDoc on every function |
+
+Across a larger fixture set ([`before-after/benchmark-sprint50/`](before-after/)), an LLM driving the loop took files from red to AI-ready while **preserving behavior**:
+
+| File | Score | Smells |
+|---|---|---|
+| `typescript.ts` | `1.00 → 9.60` | 32 → 1 |
+| `python.py` | `1.00 → 9.70` | 33 → 1 |
+| `go.go` | `1.20 → 10.00` | 34 → 0 |
+
+These are reproducible runs on purpose-built fixtures, not headline marketing numbers — re-run them yourself with `pnpm test` and the scripts under [`before-after/`](before-after/).
+
+---
+
+## Quick start
+
+One command sets everything up — detects your MCP client, registers the server, installs the pre-edit gate hook, and runs a first score:
+
+```bash
+npx @healthy-ai-code/init
 ```
 
-The tool response is structured for reasoning-first consumption: `followUpInstruction` and `refactoringInstructions` appear before the code block so the agent reads context before applying changes.
+Flags: `--dry-run` (preview, no writes), `--no-telemetry`, `--help`.
 
----
-
-## Installation
-
-### Claude Code (recommended)
+### Manual setup (Claude Code)
 
 ```bash
 claude mcp add healthy-ai-code -s user -- npx @healthy-ai-code/mcp-server
 ```
 
-Verify: `claude mcp get healthy-ai-code`
-
-For local development:
-
-```bash
-claude mcp add healthy-ai-code -s user -- node /absolute/path/to/packages/mcp-server/dist/index.js
-```
-
-### VS Code
-
-The repository ships `.vscode/mcp.json` — opening the folder with the Claude extension installed is sufficient.
-
-### Cursor, Claude Desktop, and other MCP clients
+### Manual setup (Cursor, Claude Desktop, other MCP clients)
 
 ```json
 {
@@ -156,300 +98,255 @@ The repository ships `.vscode/mcp.json` — opening the folder with the Claude e
 }
 ```
 
-### Docker
-
-```bash
-docker build -t healthy-ai-code-mcp .
-docker run --rm -i healthy-ai-code-mcp
-```
-
-```json
-{ "command": "docker", "args": ["run", "--rm", "-i", "healthy-ai-code-mcp"] }
-```
+**Requirements:** Node.js ≥ 18, an MCP-compatible client. tree-sitter grammars build natively on install; Swift is lazy-loaded and degrades gracefully if its grammar is absent.
 
 ---
 
-## Agent Setup
+## The self-correcting loop
 
-Copy `AGENTS.md` to the root of any repository where you want health enforcement. It instructs agents to run health checks before and after every change and blocks commits on files scoring below 7.0.
+The intended production flow: the AI assistant drives the loop using the MCP tools, guided by the `followUpInstruction` each tool returns.
+
+```
+code_health_review  (or code_health_score for a quick screen)
+        │
+        ▼
+   score ≥ 9.5? ──── yes ───►  loopComplete: true — stop
+        │
+        no
+        ▼
+code_health_auto_refactor
+   returns: worst smell, target function, numbered steps, example
+            skeleton, predicted score delta, and a followUpInstruction
+            that sets model effort + every stop condition
+        │
+        ▼
+apply the change  (AI-written, or mechanical via auto_refactor_apply)
+        │
+        ▼
+code_health_verify_refactor   ── divergence? ──►  BLOCK, revert
+        │ equivalent / unverified
+        ▼
+code_health_review  (re-score)  ──► loop until loopComplete (typ. 2–4 passes)
+```
+
+**Built-in stop conditions** keep the loop honest and prevent gaming the metric: `loopComplete` at 9.5 · score delta < 0.1 between passes · `stagnating` flag · per-smell iteration budget (3/4/5) · new security smell · a behavior `divergence` from `verify_refactor` · comment-stripping and rename-only edits are rejected.
+
+Adaptive effort (Opus 4.x): `nearTarget` → `low`; hard smell → `xhigh`; hard smell with score < 5 → `max`. When score is between 9.0 and 9.5 the loop switches to **minimal-diff mode** to avoid over-refactoring.
 
 ---
 
-## Tools (27)
+## The gate — enforcement, not advice
 
-### Review loop
+Most quality tools are advisory: they report after the fact and rely on someone reading the report. `@healthy-ai-code/gate` is different — it's a **deterministic `PreToolUse` hook** that evaluates an edit *before it lands* and can hard-deny it.
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_score` | `filePath` | Quick score for screening |
-| `code_health_review` | `filePath`, `repoPath?` | Detailed review with smell breakdown and next-action |
-| `pre_commit_code_health_safeguard` | `repoPath`, `files[]` | Gate files before commit |
-| `analyze_change_set` | `repoPath`, `baseBranch` | Check full branch diff before PR merge |
+It uses **delta-gating**: the decision is based on the *change* between the file before and after the proposed edit, not the absolute score. It denies an edit only when:
 
-### Refactoring
+1. it introduces a **new security smell** (injection, crypto misuse, SSRF, unsafe deserialization…),
+2. it introduces a **new AI-native smell** (hallucinated import, slopsquatting, LLM anti-pattern),
+3. it leaves the file **below the floor** (default 6.0), or
+4. it **regresses the score** beyond tolerance (default −0.05), measured on non-advisory smells only (doc/style changes never trigger a false block).
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_auto_refactor` | `filePath`, `targetSmell?` | Returns structured refactoring instructions for worst smell |
-| `code_health_auto_refactor_apply` | `filePath` | Applies mechanical rewrite and writes file back — returns before/after score |
-| `code_health_refactoring_business_case` | `filePath` | ROI estimate for refactoring investment |
+The gate is **fail-open** — a transient analysis error always allows the edit, so it never blocks a developer by accident — and ships with an install-time self-test that verifies the deny payload still encodes a block across every supported harness schema (guarding against silent breakage when a client changes its hook format). Works with Claude Code (enforced), VS Code Copilot (enforced), and Cursor (advisory, since Cursor has no pre-edit veto).
 
-### Temporal and organisational
+---
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_hotspots` | `repoPath` | Top-N files by complexity × churn |
-| `code_health_trend_analysis` | `repoPath`, `filePaths[]` | Complexity slope per file over time |
-| `code_health_knowledge_map` | `projectPath` | Knowledge distribution, bus factor, temporal coupling |
-| `code_health_bus_factor` | `projectPath` | Bus factor (Shannon entropy), sprint congestion, knowledge-loss index |
-| `code_health_method_coupling` | `filePath` | Method pairs that co-change in git history |
+## Tools (29)
+
+Verified against the `registerTool(...)` calls in [`packages/mcp-server/src/server.ts`](packages/mcp-server/src/).
+
+### Core review loop
+
+| Tool | What it does |
+|---|---|
+| `code_health_score` | Quick 1–10 score for screening |
+| `code_health_review` | Score + smell breakdown + `loopComplete` + next action (run after every refactor) |
+| `code_health_auto_refactor` | Refactoring plan for the worst smell; sets effort and stop conditions |
+| `code_health_auto_refactor_apply` | Applies a mechanical rewrite and writes it back to disk (keeps a `.bak`) |
+| `code_health_verify_refactor` | Differential-execution check that a refactor preserved behavior |
+
+### Gating & commit safety
+
+| Tool | What it does |
+|---|---|
+| `pre_commit_code_health_safeguard` | Flags red files before commit |
+| `analyze_change_set` | Analyzes a full branch diff vs base; reports regressions and improvements |
+
+### Security
+
+| Tool | What it does |
+|---|---|
+| `code_health_security_audit` | SQLi / XSS / command injection / path traversal / secrets — summary or SARIF 2.1.0 |
+
+### AI quality
+
+| Tool | What it does |
+|---|---|
+| `code_health_ai_readiness` | Composite AI-Readiness score: naming, types, context fit, docs, modularity |
+| `code_health_ai_audit` | AI-specific biomarkers on suspected AI-generated code |
+| `code_health_model_benchmark` | Tracks per-model quality vs a human baseline over time |
+
+### Behavioral / temporal (git history)
+
+| Tool | What it does |
+|---|---|
+| `code_health_hotspots` | Top-N files by complexity × churn |
+| `code_health_trend_analysis` | Complexity trajectory per file over time |
+| `code_health_bus_factor` | Bus factor (Shannon entropy), sprint congestion, knowledge-loss index |
+| `code_health_method_coupling` | Method pairs inside a file that co-change in history ("X-Ray-light") |
+| `code_health_knowledge_map` | Project-wide knowledge distribution, coupling, doc-debt, intent clarity |
 
 ### Architecture
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_architecture_debt` | `directory` | FAN-IN/OUT, instability, propagation cost, dependency cycles |
-| `code_health_architecture_report` | `directory` | Self-contained interactive HTML dependency graph (offline) |
+| Tool | What it does |
+|---|---|
+| `code_health_architecture_debt` | Fan-in/out, instability, propagation cost, dependency cycles (Tarjan SCC) |
+| `code_health_architecture_report` | Self-contained interactive HTML dependency graph (offline) |
 
-### AI-specific
+### Debt goals
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_ai_readiness` | `directory` | Composite AI-Readiness Score — naming, types, context fit, docs, modularity |
-| `code_health_ai_audit` | `filePath` | AbstractionLeakage, HardcodedAssumption, MissingEdgeCase, StyleInconsistency |
-| `code_health_model_benchmark` | `model_name`, `generated_code`, `reference_code` | Tracks per-model quality history |
+| Tool | What it does |
+|---|---|
+| `code_health_debt_goal_set` | Create/update a debt goal for a file |
+| `code_health_debt_goal_remove` | Remove a goal |
+| `code_health_debt_goals_list` | List tracked goals |
+| `code_health_debt_goals_report` | Report all goals with current scores |
 
-### Security
+### Validation, config & education
 
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_security_audit` | `directory` | SQL injection, XSS, command injection, path traversal, hardcoded secrets — SARIF or summary |
+| Tool | What it does |
+|---|---|
+| `code_health_validate_against_dataset` | Correlate scores with known bugs (AUROC, Pearson, Spearman) |
+| `code_health_calibration_status` | Per-language calibration status (empirical vs placeholder) |
+| `code_health_refactoring_business_case` | Heuristic ROI estimate for a refactor (see caveat below) |
+| `get_config` / `set_config` | Read / persist configuration |
+| `explain_code_health` / `explain_code_health_productivity` | Plain-text explanations of the score and its productivity link |
 
-### Debt management
-
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_debt_goal_set` | `filePath`, `goalType` | Create or update a debt goal (`planned_refactoring` / `supervise` / `accepted` / `no_problem`) |
-| `code_health_debt_goals_list` | `filePath?` | List tracked goals, optionally filtered by file |
-| `code_health_debt_goal_remove` | `filePath` | Remove a goal |
-| `code_health_debt_goals_report` | `projectDir?` | Report all goals with current health scores |
-
-### Calibration and validation
-
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `code_health_calibration_status` | — | Show active empirical calibration overlays |
-| `validate_dataset` | `datasetPath` | Validate a benchmark dataset against health scores |
-
-### Configuration and education
-
-| Tool | Input | What it does |
-|------|-------|-------------|
-| `get_config` | — | Read current server configuration |
-| `set_config` | `key`, `value` | Persist a configuration value |
-| `explain_code_health` | — | What is code health? |
-| `explain_code_health_productivity` | — | Health → productivity link |
+> **Caveat on `refactoring_business_case` / productivity text:** the ROI figures are a **heuristic** (≈4% per point), and the productivity numbers (36% faster, ~50% fewer tokens, 90–100% fix-rate) come from **CodeScene's published research on their own product** ([arXiv 2203.04374]), not from measurements on your codebase. Treat them as industry context, not proven ROI for your code.
 
 ---
 
-## Biomarkers (28)
+## Health score & formula
 
-### Method-level
+```
+score = max(1.0, round1( 10 − Σ  weight × √count ))   per smell type
+```
 
-| Biomarker | Weight | Description |
-|-----------|--------|-------------|
-| `ComplexMethod` | 1.5 | Cyclomatic complexity above threshold |
-| `BrainMethod` | 1.2 | Compound smell — multiple severe method-level issues |
-| `DeepNesting` | 1.2 | Nesting depth > 3 |
-| `BumpyRoad` | 0.8 | Sequential sibling control-flow chunks — extract-chunk candidate |
-| `CognitiveComplexity` | 0.8 | SonarSource S3776 cognitive complexity |
-| `LargeMethod` | 0.6 | Function exceeds line-length limit |
-| `ComplexConditional` | 0.5 | Nested ternaries and long boolean chains |
-| `LongParameterList` | 0.4 | Excessive parameter count |
-| `MagicNumber` | 0.4 | Unexplained numeric or string literals |
-| `LowDocCoverage` | 0.3 | Insufficient documentation on public APIs |
+Verified in [`packages/core/src/scoring/scorer.ts`](packages/core/src/scoring/). Key properties:
 
-### Class / module level
-
-| Biomarker | Weight | Description |
-|-----------|--------|-------------|
-| `GodClass` | 1.5 | ATFD + WMC + LCOM4 composite detector |
-| `KnowledgeLoss` | 1.0 | Bus factor / DOA — code known only by departed contributors |
-| `FeatureEnvy` | 0.7 | Method more interested in other classes' data |
-| `TypeSafetyEscape` | 0.7 | `any`, `@ts-ignore`, unsafe casts |
-| `SATD` | 0.6 | Self-Admitted Technical Debt (`TODO` / `FIXME` / `HACK`) |
-| `LargeFile` | 0.3 | File exceeds size limit |
-| `MethodTemporalCoupling` | 0.3 | Method pairs that co-change in git history |
-
-### Organisational / temporal
-
-| Biomarker | Weight | Description |
-|-----------|--------|-------------|
-| `DeveloperCongestion` | 0.7 | Too many developers touching the same module |
-| `CodeChurn` | 0.6 | Nagappan & Ball churn — frequently rewritten code |
-| `DataClumps` | 0.5 | Recurring groups of parameters / fields |
-| `MessageChain` | 0.5 | Law of Demeter violations (train-wreck calls) |
-| `TestProximity` | 0.5 | Insufficient test coverage near changed code |
-| `PrimitiveObsession` | 0.5 | Overuse of primitives as parameters |
-| `LowMaintainability` | 0.4 | Halstead volume + CC + LOC composite index |
-
-### Security
-
-| Biomarker | Weight | Description |
-|-----------|--------|-------------|
-| `HardcodedCredential` | 2.0 | Plaintext passwords, tokens, connection strings |
-| `HardcodedApiKey` | 2.0 | API keys and secrets in source |
-| `SqlInjectionRisk` | 1.5 | Unsanitised SQL string interpolation |
-| `XssRisk` | 1.5 | Unsanitised HTML rendering |
-| `CommandInjectionRisk` | 1.5 | Shell command with user-controlled input |
-
----
-
-## Supported Languages (46)
-
-### Tier A — Full AST (tree-sitter) · 17 languages
-
-TypeScript, JavaScript, Python, Java, C#, Kotlin, Scala, Swift, Ruby, Rust, Go, PHP, Vue.js, Elixir, Haskell, Julia, OCaml
-
-All 28 biomarkers available. Language-profile biomarkers (GodClass, FeatureEnvy, DataClumps) vary by language. Elixir is function-oriented (def/defp, no class analog). Swift is lazy-loaded and falls back to empty metrics if `tree-sitter-swift` is absent.
-
-### Tier B — Regex · 19 languages
-
-Bash, Lua, R, Clojure, Dart, C, C++, COBOL, Apex, F#, VB.NET, Perl, Groovy, Objective-C, PowerShell, Erlang, Zig, Nim, Crystal
-
-Function extraction, cyclomatic complexity, SATD, MagicNumber. Method temporal coupling is also available for Tier B via regex-extracted function ranges.
-
-### Tier C — Structural · 10 formats
-
-YAML, JSON, Dockerfile, HCL/Terraform, Makefile, SQL, HTML, CSS, Markdown, TOML
-
-LOC, LargeFile, SATD only.
-
----
-
-## Health Score
-
-### Scale
+- **Per smell type, not per occurrence.** The square-root damping gives diminishing returns — 10 magic numbers cost √10 ≈ 3.16×, not 10×, so a single noisy detector can't dominate.
+- **Floor 1.0, ceiling 10.0.** Always a meaningful, comparable value.
+- **Deterministic & file-local.** Same source + same OCHS version → identical score.
 
 | Score | Category | Meaning |
-|-------|----------|---------|
-| 9.5–10.0 | Green | AI-ready (`loopComplete: true`) |
-| 9.0–9.4 | Green | Healthy |
-| 6.0–8.9 | Yellow | Technical debt present |
-| 1.0–5.9 | Red | Severe technical debt |
+|---|---|---|
+| 9.5 – 10.0 | 🟢 Green | AI-ready (`loopComplete: true`) |
+| 9.0 – 9.4 | 🟢 Green | Healthy |
+| 6.0 – 8.9 | 🟡 Yellow | Technical debt present |
+| 1.0 – 5.9 | 🔴 Red | Severe technical debt |
 
-### Formula
-
-```
-score = 10 − Σ (weight × √count)   per smell type
-floor = 1.0
-```
-
-The square-root term makes penalties sub-linear: three `ComplexMethod` smells deduct `1.5 × √3 ≈ 2.6` points, not `1.5 × 3 = 4.5`. Smells are prioritised by weight when choosing the next refactoring target, so each iteration maximises score gain.
+When a file contains AI-attributed self-admitted debt, the `loopComplete` threshold rises from 9.5 to **9.7** — the one content-dependent threshold.
 
 ---
 
-## Example Tool Response
+## Biomarkers (55)
 
-```json
-{
-  "followUpInstruction": "Apply the refactoringInstructions using model claude-opus-4-7. Then run code_health_review to verify. Loop until loopComplete: true (score ≥ 9.5) — stops immediately when threshold is reached, no minimum. Hard stop after 3–5 iterations depending on difficulty.",
-  "smell": { "type": "ComplexMethod", "severity": "high", "functionName": "validateUser", "line": 42 },
-  "refactoringStrategy": "extract_method",
-  "refactoringInstructions": [
-    "1. Identify logically cohesive sections within 'validateUser'.",
-    "2. Extract lines 42–55 into 'validateUserInput'.",
-    "3. Extract lines 56–70 into 'checkUserPermissions'.",
-    "4. Replace each block with a call to the new helper.",
-    "5. Ensure 'validateUser' now reads as a sequence of named calls."
-  ],
-  "predictedScoreDelta": "+2.5",
-  "remainingSmellTypes": ["DeepNesting", "LowDocCoverage"],
-  "currentHealthScore": 5.2,
-  "targetFunction": "validateUser",
-  "currentCode": "function validateUser(...) { ... }"
-}
+55 scored biomarkers (plus one non-scored advisory, `TidyOpportunity`). Full rules and weights are in [`packages/core/src/scoring/weights.ts`](packages/core/src/scoring/) and the [OCHS spec](docs/ochs/). Highest weights shown per category.
+
+- **Complexity** — `ComplexMethod` (1.5), `DeepNesting` (1.2), `BrainMethod` (1.2), `BumpyRoad`, `CognitiveComplexity`, `LargeMethod`
+- **Design** — `GodClass` (1.5), `TypeSafetyEscape`, `FeatureEnvy`, `DataClumps`, `MessageChain`, `PrimitiveObsession`, `LongParameterList`, `ComplexConditional`, anti-gaming guards (`SplitResidue`, `FragmentedCode`)
+- **Maintainability & docs** — `DocumentationDebt`, `IntentClarity`, `MagicNumber`, `LargeFile`, `LowDocCoverage`, `LowMaintainability`, `TestProximity`
+- **Organizational / temporal (git)** — `KnowledgeLoss` (1.0), `DeveloperCongestion`, `CodeChurn`, `SATD`, `ArchitectureDebt`, `StyleInconsistency`, `MethodTemporalCoupling`
+- **Security** — `HardcodedCredential` / `HardcodedApiKey` (2.0, the heaviest weights), `SqlInjectionRisk` / `XssRisk` / `CommandInjectionRisk` (1.5), `SsrfRisk`, `UnsafeDeserialization`, `PathTraversalRisk`, `CryptographicMisuseRisk`, `DependencyVulnerability`, `SlopsquattingRisk`
+- **AI-native** — `HallucinatedPackageImport` (1.5), `ComplexityMassConcentration`, `AiAttributedSATD`, the LLM-integration family (`LlmUnboundedCall`, `LlmUnpinnedModel`, `LlmNoSystemMessage`, …), `AbstractionLeakage`, `HardcodedAssumption`, `MissingEdgeCase`
+- **Reliability / duplication** — `DuplicateCode`, `ExceptionHandlingAntiPattern`, `AsyncAntiPattern`
+
+---
+
+## Supported languages (46)
+
+**Tier A — Full AST (tree-sitter) · 16 languages**
+TypeScript, JavaScript, Python, Java, C#, Kotlin, Scala, Go, Ruby, Rust, PHP, Swift, Elixir, Haskell, Julia, OCaml.
+Full class-level analysis (God Class, Feature Envy, Data Clumps…) for 10 of these; the functional/AST-only languages get complexity, nesting, SATD and magic-number detection.
+
+**Tier B — Regex · 19 languages** (plus a Vue `<script>` bridge that routes to TS/JS)
+Bash, Lua, R, Clojure, Dart, C, C++, COBOL, Apex, F#, VB.NET, Perl, Groovy, Objective-C, PowerShell, Erlang, Zig, Nim, Crystal.
+Function extraction, cyclomatic complexity, SATD, magic numbers.
+
+**Tier C — Structural · 10 formats**
+YAML, JSON, Dockerfile, HCL/Terraform, Makefile, SQL, HTML, CSS, Markdown, TOML.
+LOC, large-file, SATD.
+
+---
+
+## Verified benchmarks (honest)
+
+Every number below is reproducible and scoped. Raw data: [`docs/benchmarks/`](docs/benchmarks/) and [`docs/calibration/`](docs/calibration/).
+
+**Predictive power — MLCQ (human-labelled smells, Java only):** AUROC **0.688** [0.632–0.741]. Statistically **tied with `lizard`** (DeLong p = 0.85) and statistically **better than PMD** (Δ +0.066, p = 0.0021, survives Bonferroni). It does **not** have the highest AUROC — that race against `lizard` is a draw, and we say so.
+
+**Logical bugs — Defects4J (Java):** AUROC **0.495** — random. Structural health does **not** predict logical bugs, and this project does not claim it does. The honesty is the point.
+
+**Robustness / scale:** **0 crashes, 0 parse errors** across **12,583 files, 13 OSS repos, 10 languages**. p50/p95 latency 72 ms / 808 ms.
+
+**Behavior-equivalence verification:** **100% detection (20/20)** of divergent refactors, **0% false positives (0/15)** — on **Python + TS/JS only**. All other languages receive an honest `unverified` advisory rather than a false guarantee.
+
+**LLM-driven loop convergence:** **34.8% (16/46)** of real-OSS medium-complexity files reach ≥ 9.5, versus **0%** for the purely mechanical loop. No head-to-head against commercial tools exists (they are license-gated), so this is an absolute number without a competitive baseline.
+
+**The canonical, approved one-liner:** *measurably competitive, honestly validated, and proven robust.* The "world-best" claim is gated on a published decision rule (robustness + loop outcomes at n ≥ 500 + a publicly won field experiment) documented in [`claudedocs/2026-06-01-path-to-world-best.md`](claudedocs/) — and that bar is **not yet met**.
+
+---
+
+## OCHS — the open standard
+
+The **Open Code Health Score** spec ([`docs/ochs/`](docs/ochs/)) publishes the entire scoring contract — the formula, all 55 weights, every detection threshold, the rounding rule, and conformance requirements — under MIT + CC BY 4.0. The standalone `ochs-validate` CLI re-derives the score from a result object and checks it against the published JSON schema. A closed competitor structurally cannot offer this.
+
+---
+
+## Architecture
+
+A pnpm monorepo. `core` is the only analysis engine; everything else consumes it via `workspace:*`.
+
+```
+packages/
+  core/           @healthy-ai-code/core        — all analysis logic, language-agnostic
+  mcp-server/     @healthy-ai-code/mcp-server  — MCP wire protocol (stdio), one tool per file
+  gate/           @healthy-ai-code/gate        — deterministic delta-gating PreToolUse hook / CI gate
+  init/           @healthy-ai-code/init        — npx one-command installer
+  ochs-validate/  ochs-validate               — standalone OCHS conformance validator
 ```
 
 ---
 
-## Empirical Calibration (opt-in)
-
-Validated thresholds derived from the Defects4J Java defect dataset. Active for Java only.
-
-```
-set_config useCalibratedThresholds true
-```
-
-See [`docs/calibration/`](docs/calibration/) for methodology and ROC/AUC results.
-
----
-
-## Skills
-
-Nine prompt templates for common workflows in `skills/`:
-
-| Skill | Purpose |
-|-------|---------|
-| `installing-and-configuring` | First-time setup |
-| `explaining-code-health` | Audience-specific explanations (dev / lead / PM) |
-| `safeguarding-ai-generated-code` | Mandatory 3-gate review for AI output |
-| `guided-refactoring` | Score-driven refactoring loop |
-| `making-the-business-case` | ROI calculation and stakeholder framing |
-| `code-health-review-workflow` | Single-file and PR review workflows |
-| `knowledge-risk-assessment` | Bus factor and temporal coupling analysis |
-| `prioritizing-technical-debt` | Health × frequency priority matrix |
-| `pre-commit-protection` | Manual, Git hook, and CI/CD protection levels |
-
----
-
-## Local Development
+## Local development
 
 ```bash
-pnpm install          # install dependencies
-pnpm build            # build all packages
-pnpm test             # run all 1 013 tests
-pnpm -r typecheck     # TypeScript check all packages
-pnpm --filter @healthy-ai-code/core test        # core tests only
-pnpm --filter @healthy-ai-code/mcp-server test  # MCP server tests only
-node scripts/health-audit.mjs                   # self-audit
+pnpm build                                       # build all packages
+pnpm test                                        # run all tests
+pnpm -r typecheck                                # typecheck all packages
+pnpm --filter @healthy-ai-code/core test         # core only
+pnpm --filter @healthy-ai-code/gate selftest     # gate harness self-test
+node scripts/health-audit.mjs                    # self-audit: score every project file
 ```
 
 ---
 
-## Project Structure
+## Support the project
 
-```
-healthy-ai-code-mcp/
-├── packages/
-│   ├── core/                     # @healthy-ai-code/core — all analysis logic
-│   │   ├── src/
-│   │   │   ├── analyzers/        # Language-specific AST + regex parsers (46 languages)
-│   │   │   ├── refactor/         # auto-refactor-analyzer, smell-instructions, loop
-│   │   │   ├── scoring/          # weights, scorer, calibration
-│   │   │   ├── smells/           # 28 biomarker detectors
-│   │   │   ├── temporal/         # git-history biomarkers
-│   │   │   ├── validation/       # dataset runner, correlation metrics
-│   │   │   └── index.ts          # public API
-│   │   └── tests/                # 80 test files, 895 tests
-│   └── mcp-server/               # @healthy-ai-code/mcp-server — MCP wire protocol
-│       ├── src/
-│       │   ├── tools/            # one file per MCP tool (27 tools)
-│       │   └── server.ts         # tool registration
-│       └── tests/                # 20 test files, 118 tests
-├── docs/
-│   ├── benchmarks/               # refactoring-loop-benchmark.md + JSON, claude-benchmark
-│   └── calibration/              # Defects4J-derived Java threshold validation
-├── before-after/                 # real before/after files from refactoring runs
-├── skills/                       # 9 AI prompt templates
-├── scripts/                      # health-audit, benchmark, loop test scripts
-├── AGENTS.md                     # copy to your repo root for agent health enforcement
-├── CLAUDE.md                     # codebase reference for AI assistants
-└── server.json                   # MCP registry schema
-```
+Healthy AI Code MCP is free, local, and MIT-licensed. If it helps you ship healthier code, consider supporting development — it directly funds more language coverage, more validation, and the path toward the goal described above.
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/YOUR_USERNAME"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
+  &nbsp;
+  <a href="https://www.paypal.com/donate/?hosted_button_id=YOUR_ID"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
+</p>
 
 ---
+
+## Links
+
+- [GitHub repository](https://github.com/screamm/HealthyAICode_MCP) · [Issues](https://github.com/screamm/HealthyAICode_MCP/issues)
+- [`@healthy-ai-code/core`](https://www.npmjs.com/package/@healthy-ai-code/core) · [`@healthy-ai-code/mcp-server`](https://www.npmjs.com/package/@healthy-ai-code/mcp-server)
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).
