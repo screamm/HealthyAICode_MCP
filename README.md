@@ -11,9 +11,9 @@
 An MCP server that gives AI assistants an objective, score-based health signal — and the tooling to act on it — so generated code is refactored until it is genuinely safe to keep.
 
 <p align="center">
-  <a href="https://www.buymeacoffee.com/YOUR_USERNAME"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
+  <a href="https://www.buymeacoffee.com/gitstudio"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
   &nbsp;
-  <a href="https://www.paypal.com/donate/?hosted_button_id=YOUR_ID"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
+  <a href="https://www.paypal.com/donate/?business=BMNFKYM6BU3KG&no_recurring=0&item_name=Utveckling+av+mjukvara+och+Claude+Code+ekosystem&currency_code=USD"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
 </p>
 
 <p align="center">
@@ -335,9 +335,9 @@ node scripts/health-audit.mjs                    # self-audit: score every proje
 Healthy AI Code MCP is free, local, and MIT-licensed. If it helps you ship healthier code, consider supporting development — it directly funds more language coverage, more validation, and the path toward the goal described above.
 
 <p align="center">
-  <a href="https://www.buymeacoffee.com/YOUR_USERNAME"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
+  <a href="https://www.buymeacoffee.com/gitstudio"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee"></a>
   &nbsp;
-  <a href="https://www.paypal.com/donate/?hosted_button_id=YOUR_ID"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
+  <a href="https://www.paypal.com/donate/?business=BMNFKYM6BU3KG&no_recurring=0&item_name=Utveckling+av+mjukvara+och+Claude+Code+ekosystem&currency_code=USD"><img src="https://img.shields.io/badge/PayPal-donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
 </p>
 
 ---
